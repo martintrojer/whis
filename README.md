@@ -15,25 +15,20 @@ OpenAI's Whisper API delivers the most accurate transcriptions compared to local
 ## Quick Start
 
 ```bash
-# Clone and enter directory
-git clone https://github.com/frankdierolf/whispo
-cd whispo
+# Install
+cargo install whispo
 
-# Set your OpenAI API key
-cp .env.example .env
-# Edit .env and add: OPENAI_API_KEY=sk-your-key-here
-
-# Build
-cargo build --release
+# Set API key (add to ~/.bashrc or ~/.zshrc)
+export OPENAI_API_KEY=sk-your-key-here
 
 # Run
-./target/release/whispo
+whispo
 ```
 
 ## Usage
 
 ```bash
-./target/release/whispo
+whispo
 ```
 
 1. Recording starts automatically
