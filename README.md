@@ -1,102 +1,82 @@
-# whis
+<div align="center">
+<img src="./crates/whis-desktop/icons/128x128.png" alt="whis" width="80" height="80" />
+</div>
 
-Website: [whis.ink](https://whis.ink)
+<h3 align="center">whis</h3>
+<p align="center">
+  Your voice, piped to clipboard.
+  <br />
+  <a href="https://whis.ink">Website</a>
+  ·
+  <a href="./crates/whis-desktop/">Desktop</a>
+  ·
+  <a href="https://github.com/frankdierolf/whis/releases">Releases</a>
+</p>
 
-Minimal voice-to-text CLI for terminal users. Record your voice, get instant transcription to clipboard.
+## Why?
 
-## Demo
-
-![whis Demo](demo.gif)
+- **Built for AI workflows** — speak your prompt, paste to Claude/Copilot
+- **Cheap** — ~$0.006/minute via OpenAI Whisper API (no local GPU)
+- **Simple** — record → transcribe → clipboard
 
 ## Quick Start
 
 ```bash
-# Install
 cargo install whis
-
-# Set API key (add to ~/.bashrc or ~/.zshrc)
-export OPENAI_API_KEY=sk-your-key-here
-
-# Run
+whis config --api-key sk-your-key-here
 whis
 ```
+
+## Screenshot
+
+![whis Demo](demo.gif)
 
 ## Usage
 
+**One-shot mode:**
 ```bash
-whis
+whis    # Recording starts, press Enter to stop
 ```
 
-1. Recording starts automatically
-2. Press Enter to stop
-3. Transcription copies to clipboard
-
-That's it. Paste into your AI coding tool.
-
-## Hotkey Mode
-
-For hands-free operation with a global hotkey:
-
+**Hotkey mode (background service):**
 ```bash
-# One-time setup (run these once, then logout/login)
-sudo usermod -aG input $USER
-echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger
-
-# Start the service with built-in hotkey
-whis listen                        # Default: Ctrl+Shift+R
-whis listen --hotkey "ctrl+alt+r"  # Custom hotkey
-whis listen -k "super+r"           # Short form
+whis listen                    # Global Ctrl+Shift+R anywhere
+whis listen -k "super+space"   # Custom hotkey
+whis status                    # Check if running
+whis stop                      # Stop service
 ```
 
-Press your hotkey anywhere to toggle recording. Works on all Linux distros (X11 and Wayland).
-
-Other commands:
+**Configuration:**
 ```bash
-whis status          # Check service status
-whis stop            # Stop background service
+whis config --api-key sk-...   # Save API key (persists to ~/.config/whis/)
+whis config --show             # View current settings
 ```
+
+## Installation
+
+```bash
+cargo install whis
+```
+
+Or download binaries from [GitHub Releases](https://github.com/frankdierolf/whis/releases).
 
 ## Requirements
 
-- cargo (Rust package manager)
-- OpenAI API key ([get one here](https://platform.openai.com/api-keys))
-- FFmpeg (for audio compression)
-- Linux with working microphone
-- ALSA or PulseAudio
-- `input` group + uinput access (for hotkey mode, see setup above)
+- [OpenAI API key](https://platform.openai.com/api-keys)
+- FFmpeg (`sudo apt install ffmpeg` or `brew install ffmpeg`)
+- Linux (X11/Wayland) or macOS
 
-### Installing FFmpeg
-
+**For hotkey mode** (one-time setup on Linux):
 ```bash
-# Ubuntu/Debian
-sudo apt install ffmpeg
-
-# macOS
-brew install ffmpeg
+sudo usermod -aG input $USER
+echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
+# Logout and login again
 ```
 
-## Building from Source
+## Desktop App
 
-```bash
-cargo build --release
-```
-
-Binary will be at `./target/release/whis`
-
-## FAQ
-
-**How does hotkey mode work?**
-
-A lightweight background service listens for your hotkey via evdev (works on both X11 and Wayland). The `input` group and uinput access allow reading and re-emitting keyboard events without root.
-
-**What hotkeys can I use?**
-
-Combinations of modifiers (`ctrl`, `shift`, `alt`, `super`) and keys (`a-z`, `0-9`, `f1-f12`, `space`, `enter`, etc.). Examples: `ctrl+shift+r`, `super+space`, `alt+1`.
-
-**Does the simple mode still work?**
-
-Yes! Running `whis` without arguments works exactly as before. Hotkey mode is completely optional.
+Looking for a GUI with system tray? See [whis-desktop](./crates/whis-desktop/).
 
 ## License
 
