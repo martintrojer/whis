@@ -1,4 +1,5 @@
 <div align="center">
+<img src="https://raw.githubusercontent.com/frankdierolf/whis/main/crates/whis-desktop/icons/128x128.png" alt="whis" width="80" height="80" />
 
 <h3>whis</h3>
 <p>
@@ -6,7 +7,7 @@
   <br />
   <a href="https://whis.ink">Website</a>
   ·
-  <a href="../whis-desktop/">Desktop</a>
+  <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-desktop">Desktop</a>
   ·
   <a href="https://github.com/frankdierolf/whis/releases">Releases</a>
 </p>
@@ -63,7 +64,7 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ## Prefer a GUI?
 
-See [whis-desktop](../whis-desktop/) — same functionality, with system tray.
+See [whis-desktop](https://github.com/frankdierolf/whis/tree/main/crates/whis-desktop) — same functionality, with system tray.
 
 ## License
 
