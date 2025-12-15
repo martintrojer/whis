@@ -1,11 +1,13 @@
 use anyhow::Result;
-use whis_core::{Settings, TranscriptionProvider};
+use whis_core::{Polisher, Settings, TranscriptionProvider};
 
 pub fn run(
     openai_api_key: Option<String>,
     mistral_api_key: Option<String>,
     provider: Option<String>,
     language: Option<String>,
+    polisher: Option<String>,
+    polish_prompt: Option<String>,
     show: bool,
 ) -> Result<()> {
     let mut settings = Settings::load();
@@ -74,6 +76,33 @@ pub fn run(
         println!("Mistral API key saved");
     }
 
+    // Handle polisher change
+    if let Some(polisher_str) = polisher {
+        match polisher_str.parse::<Polisher>() {
+            Ok(p) => {
+                settings.polisher = p;
+                changed = true;
+                println!("Polisher set to: {}", polisher_str);
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::exit(1);
+            }
+        }
+    }
+
+    // Handle polish prompt change
+    if let Some(prompt) = polish_prompt {
+        let prompt_trimmed = prompt.trim();
+        if prompt_trimmed.is_empty() {
+            eprintln!("Invalid polish prompt: cannot be empty");
+            std::process::exit(1);
+        }
+        settings.polish_prompt = Some(prompt_trimmed.to_string());
+        changed = true;
+        println!("Polish prompt saved");
+    }
+
     // Save if anything changed
     if changed {
         settings.save()?;
@@ -104,6 +133,14 @@ pub fn run(
             println!("Mistral API key: (not set, using $MISTRAL_API_KEY)");
         }
 
+        // Polisher settings
+        println!("Polisher: {}", settings.polisher);
+        if let Some(prompt) = &settings.polish_prompt {
+            println!("Polish prompt: {}", truncate_prompt(prompt));
+        } else {
+            println!("Polish prompt: (default)");
+        }
+
         return Ok(());
     }
 
@@ -113,6 +150,8 @@ pub fn run(
     eprintln!("  whis config --language <en|de|fr|...|auto>");
     eprintln!("  whis config --openai-api-key <KEY>");
     eprintln!("  whis config --mistral-api-key <KEY>");
+    eprintln!("  whis config --polisher <none|openai|mistral>");
+    eprintln!("  whis config --polish-prompt <PROMPT>");
     eprintln!("  whis config --show");
     std::process::exit(1);
 }
@@ -122,5 +161,13 @@ fn mask_key(key: &str) -> String {
         format!("{}...{}", &key[..6], &key[key.len() - 4..])
     } else {
         "***".to_string()
+    }
+}
+
+fn truncate_prompt(prompt: &str) -> String {
+    if prompt.len() > 50 {
+        format!("{}...", &prompt[..47])
+    } else {
+        prompt.to_string()
     }
 }

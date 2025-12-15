@@ -20,8 +20,18 @@ fn main() -> Result<()> {
             mistral_api_key,
             provider,
             language,
+            polisher,
+            polish_prompt,
             show,
-        }) => commands::config::run(openai_api_key, mistral_api_key, provider, language, show),
-        None => commands::record_once::run(),
+        }) => commands::config::run(
+            openai_api_key,
+            mistral_api_key,
+            provider,
+            language,
+            polisher,
+            polish_prompt,
+            show,
+        ),
+        None => commands::record_once::run(cli.polish),
     }
 }

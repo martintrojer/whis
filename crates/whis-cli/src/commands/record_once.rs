@@ -1,12 +1,12 @@
 use anyhow::Result;
 use std::io::{self, Write};
 use whis_core::{
-    AudioRecorder, RecordingOutput, copy_to_clipboard, parallel_transcribe,
-    transcribe_audio,
+    AudioRecorder, Polisher, RecordingOutput, Settings, copy_to_clipboard,
+    parallel_transcribe, polish, transcribe_audio, DEFAULT_POLISH_PROMPT,
 };
 use crate::app;
 
-pub fn run() -> Result<()> {
+pub fn run(polish_flag: bool) -> Result<()> {
     // Create Tokio runtime for async operations
     let runtime = tokio::runtime::Runtime::new()?;
 
@@ -72,8 +72,66 @@ pub fn run() -> Result<()> {
         }
     };
 
+    // Apply polishing if enabled (via flag or settings)
+    let settings = Settings::load();
+    let should_polish = polish_flag || settings.polisher != Polisher::None;
+
+    let final_text = if should_polish {
+        // Determine which polisher to use
+        let polisher = if polish_flag && settings.polisher == Polisher::None {
+            // Flag enabled but no polisher configured - use transcription provider
+            match config.provider {
+                whis_core::TranscriptionProvider::OpenAI => Polisher::OpenAI,
+                whis_core::TranscriptionProvider::Mistral => Polisher::Mistral,
+            }
+        } else {
+            settings.polisher.clone()
+        };
+
+        // Get API key for polisher
+        let api_key = match &polisher {
+            Polisher::None => None,
+            Polisher::OpenAI => settings
+                .openai_api_key
+                .clone()
+                .or_else(|| std::env::var("OPENAI_API_KEY").ok()),
+            Polisher::Mistral => settings
+                .mistral_api_key
+                .clone()
+                .or_else(|| std::env::var("MISTRAL_API_KEY").ok()),
+        };
+
+        if let Some(api_key) = api_key {
+            print!("Polishing...");
+            io::stdout().flush()?;
+
+            let prompt = settings
+                .polish_prompt
+                .as_deref()
+                .unwrap_or(DEFAULT_POLISH_PROMPT);
+
+            match runtime.block_on(polish(&transcription, &polisher, &api_key, prompt)) {
+                Ok(polished) => {
+                    print!("\r              \r");
+                    io::stdout().flush()?;
+                    polished
+                }
+                Err(e) => {
+                    eprintln!("\rPolish warning: {e}");
+                    eprintln!("Falling back to raw transcript");
+                    transcription
+                }
+            }
+        } else {
+            eprintln!("Warning: No API key for polisher, skipping polish");
+            transcription
+        }
+    } else {
+        transcription
+    };
+
     // Copy to clipboard
-    copy_to_clipboard(&transcription)?;
+    copy_to_clipboard(&final_text)?;
 
     println!("Copied to clipboard");
 

@@ -8,6 +8,10 @@ use clap::{Parser, Subcommand};
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
+
+    /// Polish transcript with LLM (cleanup grammar, filler words)
+    #[arg(long)]
+    pub polish: bool,
 }
 
 #[derive(Subcommand)]
@@ -42,6 +46,14 @@ pub enum Commands {
         /// Set the language hint (ISO-639-1 code: en, de, fr, etc.) or "auto" for auto-detect
         #[arg(long)]
         language: Option<String>,
+
+        /// Set the polisher for transcript cleanup (none, openai, or mistral)
+        #[arg(long)]
+        polisher: Option<String>,
+
+        /// Set custom polish prompt for transcript cleanup
+        #[arg(long)]
+        polish_prompt: Option<String>,
 
         /// Show current configuration
         #[arg(long)]

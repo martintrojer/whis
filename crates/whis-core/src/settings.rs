@@ -4,6 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::config::TranscriptionProvider;
+use crate::polish::Polisher;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -18,6 +19,12 @@ pub struct Settings {
     pub openai_api_key: Option<String>,
     #[serde(default)]
     pub mistral_api_key: Option<String>,
+    /// LLM provider for polishing (cleaning up) transcripts
+    #[serde(default)]
+    pub polisher: Polisher,
+    /// Custom prompt for polishing (uses default if None)
+    #[serde(default)]
+    pub polish_prompt: Option<String>,
 }
 
 impl Default for Settings {
@@ -28,6 +35,8 @@ impl Default for Settings {
             language: None, // Auto-detect
             openai_api_key: None,
             mistral_api_key: None,
+            polisher: Polisher::default(),
+            polish_prompt: None,
         }
     }
 }
@@ -58,6 +67,21 @@ impl Settings {
     /// Check if an API key is configured for the current provider
     pub fn has_api_key(&self) -> bool {
         self.get_api_key().is_some()
+    }
+
+    /// Get the API key for the polisher, falling back to environment variables
+    pub fn get_polisher_api_key(&self) -> Option<String> {
+        match &self.polisher {
+            Polisher::None => None,
+            Polisher::OpenAI => self
+                .openai_api_key
+                .clone()
+                .or_else(|| std::env::var("OPENAI_API_KEY").ok()),
+            Polisher::Mistral => self
+                .mistral_api_key
+                .clone()
+                .or_else(|| std::env::var("MISTRAL_API_KEY").ok()),
+        }
     }
 
     /// Load settings from disk

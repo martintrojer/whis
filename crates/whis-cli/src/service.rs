@@ -8,8 +8,8 @@ use crate::app::TranscriptionConfig;
 use crate::ipc::{IpcMessage, IpcResponse, IpcServer};
 use std::time::Duration;
 use whis_core::{
-    AudioRecorder, RecordingOutput, TranscriptionProvider, copy_to_clipboard, parallel_transcribe,
-    transcribe_audio,
+    AudioRecorder, Polisher, RecordingOutput, Settings, TranscriptionProvider, copy_to_clipboard,
+    parallel_transcribe, polish, transcribe_audio, DEFAULT_POLISH_PROMPT,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -199,8 +199,28 @@ impl Service {
             }
         };
 
+        // Apply polishing if configured
+        let settings = Settings::load();
+        let final_text = if settings.polisher != Polisher::None {
+            if let Some(polisher_api_key) = settings.get_polisher_api_key() {
+                let prompt = settings
+                    .polish_prompt
+                    .as_deref()
+                    .unwrap_or(DEFAULT_POLISH_PROMPT);
+
+                match polish(&transcription, &settings.polisher, &polisher_api_key, prompt).await {
+                    Ok(polished) => polished,
+                    Err(_) => transcription, // Silently fallback in service mode
+                }
+            } else {
+                transcription
+            }
+        } else {
+            transcription
+        };
+
         // Copy to clipboard (blocking operation)
-        tokio::task::spawn_blocking(move || copy_to_clipboard(&transcription))
+        tokio::task::spawn_blocking(move || copy_to_clipboard(&final_text))
             .await
             .context("Failed to join task")??;
 
