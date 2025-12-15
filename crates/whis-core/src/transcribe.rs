@@ -1,45 +1,21 @@
+//! Audio transcription using provider registry
+//!
+//! This module provides transcription functionality using the extensible
+//! provider architecture. It handles both single-file and chunked parallel
+//! transcription with overlap merging.
+
 use anyhow::{Context, Result};
-use reqwest::blocking::multipart;
-use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
 use crate::audio::AudioChunk;
 use crate::config::TranscriptionProvider;
+use crate::provider::{registry, TranscriptionRequest, DEFAULT_TIMEOUT_SECS};
 
 /// Maximum concurrent API requests
 const MAX_CONCURRENT_REQUESTS: usize = 3;
 /// Maximum words to search for overlap between chunks
 const MAX_OVERLAP_WORDS: usize = 15;
-/// API request timeout in seconds
-const API_TIMEOUT_SECS: u64 = 300;
-
-/// OpenAI API endpoint
-const OPENAI_API_URL: &str = "https://api.openai.com/v1/audio/transcriptions";
-/// OpenAI Whisper model
-const OPENAI_MODEL: &str = "whisper-1";
-
-/// Mistral API endpoint
-const MISTRAL_API_URL: &str = "https://api.mistral.ai/v1/audio/transcriptions";
-/// Mistral Voxtral model
-const MISTRAL_MODEL: &str = "voxtral-mini-latest";
-
-/// Response from OpenAI transcription API
-#[derive(Deserialize, Debug)]
-struct OpenAITranscriptionResponse {
-    text: String,
-}
-
-/// Response from Mistral transcription API
-#[derive(Deserialize, Debug)]
-struct MistralTranscriptionResponse {
-    text: String,
-    // Additional fields available but not used yet:
-    // model: String,
-    // language: Option<String>,
-    // segments: Vec<...>,
-    // usage: UsageInfo,
-}
 
 /// Result of transcribing a single chunk
 pub struct ChunkTranscription {
@@ -61,216 +37,15 @@ pub fn transcribe_audio(
     language: Option<&str>,
     audio_data: Vec<u8>,
 ) -> Result<String> {
-    match provider {
-        TranscriptionProvider::OpenAI => transcribe_openai(api_key, language, audio_data),
-        TranscriptionProvider::Mistral => transcribe_mistral(api_key, language, audio_data),
-    }
-}
+    let provider_impl = registry().get_by_kind(provider);
+    let request = TranscriptionRequest {
+        audio_data,
+        language: language.map(String::from),
+        filename: "audio.mp3".to_string(),
+    };
 
-/// Transcribe using OpenAI Whisper API
-fn transcribe_openai(api_key: &str, language: Option<&str>, audio_data: Vec<u8>) -> Result<String> {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(API_TIMEOUT_SECS))
-        .build()
-        .context("Failed to create HTTP client")?;
-
-    let mut form = multipart::Form::new().text("model", OPENAI_MODEL).part(
-        "file",
-        multipart::Part::bytes(audio_data)
-            .file_name("audio.mp3")
-            .mime_str("audio/mpeg")?,
-    );
-
-    // Add language hint if provided (improves accuracy and latency)
-    if let Some(lang) = language {
-        form = form.text("language", lang.to_string());
-    }
-
-    let response = client
-        .post(OPENAI_API_URL)
-        .header("Authorization", format!("Bearer {api_key}"))
-        .multipart(form)
-        .send()
-        .context("Failed to send request to OpenAI API")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        anyhow::bail!("OpenAI API error ({status}): {error_text}");
-    }
-
-    let text = response.text().context("Failed to get response text")?;
-    let transcription: OpenAITranscriptionResponse =
-        serde_json::from_str(&text).context("Failed to parse OpenAI API response")?;
-
-    Ok(transcription.text)
-}
-
-/// Transcribe using Mistral Voxtral API
-fn transcribe_mistral(api_key: &str, language: Option<&str>, audio_data: Vec<u8>) -> Result<String> {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(API_TIMEOUT_SECS))
-        .build()
-        .context("Failed to create HTTP client")?;
-
-    let mut form = multipart::Form::new().text("model", MISTRAL_MODEL).part(
-        "file",
-        multipart::Part::bytes(audio_data)
-            .file_name("audio.mp3")
-            .mime_str("audio/mpeg")?,
-    );
-
-    // Add language hint if provided (boosts accuracy)
-    if let Some(lang) = language {
-        form = form.text("language", lang.to_string());
-    }
-
-    let response = client
-        .post(MISTRAL_API_URL)
-        .header("Authorization", format!("Bearer {api_key}"))
-        .multipart(form)
-        .send()
-        .context("Failed to send request to Mistral API")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        anyhow::bail!("Mistral API error ({status}): {error_text}");
-    }
-
-    let text = response.text().context("Failed to get response text")?;
-    let transcription: MistralTranscriptionResponse =
-        serde_json::from_str(&text).context("Failed to parse Mistral API response")?;
-
-    Ok(transcription.text)
-}
-
-/// Transcribe a single chunk asynchronously
-async fn transcribe_chunk_async(
-    provider: &TranscriptionProvider,
-    client: &reqwest::Client,
-    api_key: &str,
-    language: Option<&str>,
-    chunk: AudioChunk, // Take ownership to avoid clone
-) -> Result<ChunkTranscription> {
-    match provider {
-        TranscriptionProvider::OpenAI => transcribe_chunk_openai_async(client, api_key, language, chunk).await,
-        TranscriptionProvider::Mistral => transcribe_chunk_mistral_async(client, api_key, language, chunk).await,
-    }
-}
-
-/// Transcribe a single chunk using OpenAI Whisper API (async)
-async fn transcribe_chunk_openai_async(
-    client: &reqwest::Client,
-    api_key: &str,
-    language: Option<&str>,
-    chunk: AudioChunk,
-) -> Result<ChunkTranscription> {
-    let chunk_index = chunk.index;
-    let has_leading_overlap = chunk.has_leading_overlap;
-
-    let mut form = reqwest::multipart::Form::new()
-        .text("model", OPENAI_MODEL)
-        .part(
-            "file",
-            reqwest::multipart::Part::bytes(chunk.data)
-                .file_name(format!("audio_chunk_{chunk_index}.mp3"))
-                .mime_str("audio/mpeg")?,
-        );
-
-    // Add language hint if provided
-    if let Some(lang) = language {
-        form = form.text("language", lang.to_string());
-    }
-
-    let response = client
-        .post(OPENAI_API_URL)
-        .header("Authorization", format!("Bearer {api_key}"))
-        .multipart(form)
-        .send()
-        .await
-        .context("Failed to send request to OpenAI API")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        anyhow::bail!("OpenAI API error ({status}): {error_text}");
-    }
-
-    let text = response
-        .text()
-        .await
-        .context("Failed to get response text")?;
-    let transcription: OpenAITranscriptionResponse =
-        serde_json::from_str(&text).context("Failed to parse OpenAI API response")?;
-
-    Ok(ChunkTranscription {
-        index: chunk_index,
-        text: transcription.text,
-        has_leading_overlap,
-    })
-}
-
-/// Transcribe a single chunk using Mistral Voxtral API (async)
-async fn transcribe_chunk_mistral_async(
-    client: &reqwest::Client,
-    api_key: &str,
-    language: Option<&str>,
-    chunk: AudioChunk,
-) -> Result<ChunkTranscription> {
-    let chunk_index = chunk.index;
-    let has_leading_overlap = chunk.has_leading_overlap;
-
-    let mut form = reqwest::multipart::Form::new()
-        .text("model", MISTRAL_MODEL)
-        .part(
-            "file",
-            reqwest::multipart::Part::bytes(chunk.data)
-                .file_name(format!("audio_chunk_{chunk_index}.mp3"))
-                .mime_str("audio/mpeg")?,
-        );
-
-    // Add language hint if provided
-    if let Some(lang) = language {
-        form = form.text("language", lang.to_string());
-    }
-
-    let response = client
-        .post(MISTRAL_API_URL)
-        .header("Authorization", format!("Bearer {api_key}"))
-        .multipart(form)
-        .send()
-        .await
-        .context("Failed to send request to Mistral API")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        anyhow::bail!("Mistral API error ({status}): {error_text}");
-    }
-
-    let text = response
-        .text()
-        .await
-        .context("Failed to get response text")?;
-    let transcription: MistralTranscriptionResponse =
-        serde_json::from_str(&text).context("Failed to parse Mistral API response")?;
-
-    Ok(ChunkTranscription {
-        index: chunk_index,
-        text: transcription.text,
-        has_leading_overlap,
-    })
+    let result = provider_impl.transcribe_sync(api_key, request)?;
+    Ok(result.text)
 }
 
 /// Transcribe multiple chunks in parallel with rate limiting
@@ -285,7 +60,7 @@ pub async fn parallel_transcribe(
 
     // Create shared HTTP client with timeout
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(API_TIMEOUT_SECS))
+        .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT_SECS))
         .build()
         .context("Failed to create HTTP client")?;
 
@@ -294,7 +69,7 @@ pub async fn parallel_transcribe(
     let client = Arc::new(client);
     let api_key = Arc::new(api_key.to_string());
     let language = language.map(|s| Arc::new(s.to_string()));
-    let provider = provider.clone();
+    let provider_impl = registry().get_by_kind(provider);
     let completed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let progress_callback = progress_callback.map(Arc::new);
 
@@ -306,21 +81,33 @@ pub async fn parallel_transcribe(
         let client = client.clone();
         let api_key = api_key.clone();
         let language = language.clone();
-        let provider = provider.clone();
+        let provider_impl = provider_impl.clone();
         let completed = completed.clone();
         let progress_callback = progress_callback.clone();
 
         let handle = tokio::spawn(async move {
-            // Acquire permit INSIDE the task - this is the key fix!
-            // All tasks spawn immediately, then wait for permits
+            // Acquire permit INSIDE the task
             let _permit = semaphore.acquire_owned().await?;
 
-            // Transcribe this chunk (no retry - data is consumed by the request)
-            let lang_ref = language.as_ref().map(|s| s.as_str());
-            let result = transcribe_chunk_async(&provider, &client, &api_key, lang_ref, chunk).await;
+            let chunk_index = chunk.index;
+            let has_leading_overlap = chunk.has_leading_overlap;
+
+            let request = TranscriptionRequest {
+                audio_data: chunk.data,
+                language: language.as_ref().map(|s| s.to_string()),
+                filename: format!("audio_chunk_{chunk_index}.mp3"),
+            };
+
+            let result = provider_impl
+                .transcribe_async(&client, &api_key, request)
+                .await;
 
             let transcription = match result {
-                Ok(t) => t,
+                Ok(r) => ChunkTranscription {
+                    index: chunk_index,
+                    text: r.text,
+                    has_leading_overlap,
+                },
                 Err(e) => return Err(e),
             };
 

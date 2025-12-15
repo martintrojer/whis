@@ -102,8 +102,7 @@ pub async fn save_settings(
         let current = state.settings.lock().unwrap();
         (
             current.provider != settings.provider
-                || current.openai_api_key != settings.openai_api_key
-                || current.mistral_api_key != settings.mistral_api_key
+                || current.api_keys != settings.api_keys
                 || current.language != settings.language,
             current.shortcut != settings.shortcut,
         )
@@ -156,6 +155,45 @@ pub fn validate_mistral_api_key(api_key: String) -> Result<bool, String> {
     let trimmed = api_key.trim();
     if trimmed.len() < 20 {
         return Err("Invalid Mistral API key: key appears too short".to_string());
+    }
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn validate_groq_api_key(api_key: String) -> Result<bool, String> {
+    if api_key.is_empty() {
+        return Ok(true); // Empty is valid (will fall back to env var)
+    }
+
+    if !api_key.starts_with("gsk_") {
+        return Err("Invalid key format. Groq keys start with 'gsk_'".to_string());
+    }
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn validate_deepgram_api_key(api_key: String) -> Result<bool, String> {
+    if api_key.is_empty() {
+        return Ok(true);
+    }
+
+    if api_key.trim().len() < 20 {
+        return Err("Invalid Deepgram API key: key appears too short".to_string());
+    }
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn validate_elevenlabs_api_key(api_key: String) -> Result<bool, String> {
+    if api_key.is_empty() {
+        return Ok(true);
+    }
+
+    if api_key.trim().len() < 20 {
+        return Err("Invalid ElevenLabs API key: key appears too short".to_string());
     }
 
     Ok(true)

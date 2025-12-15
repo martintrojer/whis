@@ -4,6 +4,9 @@ use whis_core::{Polisher, Preset, Settings, TranscriptionProvider};
 pub fn run(
     openai_api_key: Option<String>,
     mistral_api_key: Option<String>,
+    groq_api_key: Option<String>,
+    deepgram_api_key: Option<String>,
+    elevenlabs_api_key: Option<String>,
     provider: Option<String>,
     language: Option<String>,
     polisher: Option<String>,
@@ -47,33 +50,55 @@ pub fn run(
         }
     }
 
-    // Handle OpenAI API key
+    // Handle API keys for all providers
     if let Some(key) = openai_api_key {
-        // Validate format for OpenAI
         if !key.starts_with("sk-") {
             eprintln!("Invalid key format. OpenAI keys start with 'sk-'");
             std::process::exit(1);
         }
-
-        settings.openai_api_key = Some(key);
+        settings.set_api_key(&TranscriptionProvider::OpenAI, key);
         changed = true;
         println!("OpenAI API key saved");
     }
 
-    // Handle Mistral API key (basic validation)
     if let Some(key) = mistral_api_key {
-        let key_trimmed = key.trim();
-        if key_trimmed.is_empty() {
-            eprintln!("Invalid Mistral API key: cannot be empty");
+        if let Err(msg) = validate_api_key(&key, "Mistral") {
+            eprintln!("{}", msg);
             std::process::exit(1);
         }
-        if key_trimmed.len() < 20 {
-            eprintln!("Invalid Mistral API key: key appears too short");
-            std::process::exit(1);
-        }
-        settings.mistral_api_key = Some(key_trimmed.to_string());
+        settings.set_api_key(&TranscriptionProvider::Mistral, key);
         changed = true;
         println!("Mistral API key saved");
+    }
+
+    if let Some(key) = groq_api_key {
+        if !key.starts_with("gsk_") {
+            eprintln!("Invalid key format. Groq keys start with 'gsk_'");
+            std::process::exit(1);
+        }
+        settings.set_api_key(&TranscriptionProvider::Groq, key);
+        changed = true;
+        println!("Groq API key saved");
+    }
+
+    if let Some(key) = deepgram_api_key {
+        if let Err(msg) = validate_api_key(&key, "Deepgram") {
+            eprintln!("{}", msg);
+            std::process::exit(1);
+        }
+        settings.set_api_key(&TranscriptionProvider::Deepgram, key);
+        changed = true;
+        println!("Deepgram API key saved");
+    }
+
+    if let Some(key) = elevenlabs_api_key {
+        if let Err(msg) = validate_api_key(&key, "ElevenLabs") {
+            eprintln!("{}", msg);
+            std::process::exit(1);
+        }
+        settings.set_api_key(&TranscriptionProvider::ElevenLabs, key);
+        changed = true;
+        println!("ElevenLabs API key saved");
     }
 
     // Handle polisher change
@@ -119,18 +144,14 @@ pub fn run(
         );
         println!("Shortcut: {}", settings.shortcut);
 
-        // OpenAI API key
-        if let Some(key) = &settings.openai_api_key {
-            println!("OpenAI API key: {}", mask_key(key));
-        } else {
-            println!("OpenAI API key: (not set, using $OPENAI_API_KEY)");
-        }
-
-        // Mistral API key
-        if let Some(key) = &settings.mistral_api_key {
-            println!("Mistral API key: {}", mask_key(key));
-        } else {
-            println!("Mistral API key: (not set, using $MISTRAL_API_KEY)");
+        // Show API keys for all providers
+        for provider in TranscriptionProvider::all() {
+            let key_status = if let Some(key) = settings.get_api_key_for(provider) {
+                mask_key(&key)
+            } else {
+                format!("(not set, using ${})", provider.api_key_env_var())
+            };
+            println!("{} API key: {}", provider.display_name(), key_status);
         }
 
         // Polisher settings
@@ -147,14 +168,28 @@ pub fn run(
 
     // No flags - show help
     eprintln!("Usage:");
-    eprintln!("  whis config --provider <openai|mistral>");
+    eprintln!("  whis config --provider <openai|mistral|groq|deepgram|elevenlabs>");
     eprintln!("  whis config --language <en|de|fr|...|auto>");
     eprintln!("  whis config --openai-api-key <KEY>");
     eprintln!("  whis config --mistral-api-key <KEY>");
+    eprintln!("  whis config --groq-api-key <KEY>");
+    eprintln!("  whis config --deepgram-api-key <KEY>");
+    eprintln!("  whis config --elevenlabs-api-key <KEY>");
     eprintln!("  whis config --polisher <none|openai|mistral>");
     eprintln!("  whis config --polish-prompt <PROMPT>");
     eprintln!("  whis config --show");
     std::process::exit(1);
+}
+
+fn validate_api_key(key: &str, provider_name: &str) -> Result<(), String> {
+    let key_trimmed = key.trim();
+    if key_trimmed.is_empty() {
+        return Err(format!("Invalid {} API key: cannot be empty", provider_name));
+    }
+    if key_trimmed.len() < 20 {
+        return Err(format!("Invalid {} API key: key appears too short", provider_name));
+    }
+    Ok(())
 }
 
 fn mask_key(key: &str) -> String {

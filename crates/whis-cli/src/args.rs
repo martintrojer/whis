@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand, ValueHint};
 #[derive(Parser)]
 #[command(name = "whis")]
 #[command(version)]
-#[command(about = "Voice-to-text CLI using OpenAI Whisper or Mistral Voxtral")]
+#[command(about = "Voice-to-text CLI with multiple transcription providers")]
 #[command(after_help = "Run 'whis' without arguments to record once (press Enter to stop).")]
 pub struct Cli {
     #[command(subcommand)]
@@ -43,7 +43,19 @@ pub enum Commands {
         #[arg(long)]
         mistral_api_key: Option<String>,
 
-        /// Set the transcription provider (openai or mistral)
+        /// Set your Groq API key
+        #[arg(long)]
+        groq_api_key: Option<String>,
+
+        /// Set your Deepgram API key
+        #[arg(long)]
+        deepgram_api_key: Option<String>,
+
+        /// Set your ElevenLabs API key
+        #[arg(long)]
+        elevenlabs_api_key: Option<String>,
+
+        /// Set the transcription provider (openai, mistral, groq, deepgram, elevenlabs)
         #[arg(long)]
         provider: Option<String>,
 

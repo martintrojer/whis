@@ -6,23 +6,28 @@ interface SaveResult {
   needs_restart: boolean;
 }
 
+type Provider = 'openai' | 'mistral' | 'groq' | 'deepgram' | 'elevenlabs';
+
 const props = defineProps<{
   currentShortcut: string;
-  provider: 'openai' | 'mistral';
+  provider: Provider;
   language: string | null;
-  openaiApiKey: string;
-  mistralApiKey: string;
+  apiKeys: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
-  'update:provider': [value: 'openai' | 'mistral'];
+  'update:provider': [value: Provider];
   'update:language': [value: string | null];
-  'update:openaiApiKey': [value: string];
-  'update:mistralApiKey': [value: string];
+  'update:apiKeys': [value: Record<string, string>];
 }>();
 
-const openaiKeyMasked = ref(true);
-const mistralKeyMasked = ref(true);
+const keyMasked = ref<Record<string, boolean>>({
+  openai: true,
+  mistral: true,
+  groq: true,
+  deepgram: true,
+  elevenlabs: true,
+});
 const status = ref("");
 
 // Common language codes for the dropdown
@@ -43,17 +48,32 @@ const languageOptions = [
 ];
 
 const currentApiKeyConfigured = computed(() => {
-  if (props.provider === 'openai') {
-    return props.openaiApiKey.length > 0;
-  }
-  return props.mistralApiKey.length > 0;
+  const key = props.apiKeys[props.provider] || '';
+  return key.length > 0;
 });
+
+function getApiKey(provider: Provider): string {
+  return props.apiKeys[provider] || '';
+}
+
+function updateApiKey(provider: Provider, value: string) {
+  const newKeys = { ...props.apiKeys, [provider]: value };
+  emit('update:apiKeys', newKeys);
+}
 
 async function saveSettings() {
   try {
     // Validate OpenAI key format if provided
-    if (props.openaiApiKey && !props.openaiApiKey.startsWith('sk-')) {
+    const openaiKey = props.apiKeys.openai || '';
+    if (openaiKey && !openaiKey.startsWith('sk-')) {
       status.value = "Invalid OpenAI key format. Keys start with 'sk-'";
+      return;
+    }
+
+    // Validate Groq key format if provided
+    const groqKey = props.apiKeys.groq || '';
+    if (groqKey && !groqKey.startsWith('gsk_')) {
+      status.value = "Invalid Groq key format. Keys start with 'gsk_'";
       return;
     }
 
@@ -62,8 +82,7 @@ async function saveSettings() {
         shortcut: props.currentShortcut,
         provider: props.provider,
         language: props.language,
-        openai_api_key: props.openaiApiKey || null,
-        mistral_api_key: props.mistralApiKey || null
+        api_keys: props.apiKeys
       }
     });
     status.value = "Saved";
@@ -96,19 +115,45 @@ function handleLanguageChange(event: Event) {
             :class="{ active: provider === 'openai' }"
             @click="emit('update:provider', 'openai')"
           >
-            OpenAI Whisper
+            OpenAI
           </button>
           <button
             class="provider-btn"
             :class="{ active: provider === 'mistral' }"
             @click="emit('update:provider', 'mistral')"
           >
-            Mistral Voxtral
+            Mistral
+          </button>
+          <button
+            class="provider-btn"
+            :class="{ active: provider === 'groq' }"
+            @click="emit('update:provider', 'groq')"
+          >
+            Groq
+          </button>
+        </div>
+        <div class="provider-options" style="margin-top: 8px;">
+          <button
+            class="provider-btn"
+            :class="{ active: provider === 'deepgram' }"
+            @click="emit('update:provider', 'deepgram')"
+          >
+            Deepgram
+          </button>
+          <button
+            class="provider-btn"
+            :class="{ active: provider === 'elevenlabs' }"
+            @click="emit('update:provider', 'elevenlabs')"
+          >
+            ElevenLabs
           </button>
         </div>
         <p class="hint">
-          {{ provider === 'openai' ? '~$0.006/minute' : '~$0.02/minute' }} · 
-          {{ provider === 'openai' ? 'whisper-1 model' : 'voxtral-mini-latest model' }}
+          <template v-if="provider === 'openai'">~$0.006/min · whisper-1</template>
+          <template v-else-if="provider === 'mistral'">~$0.02/min · voxtral-mini</template>
+          <template v-else-if="provider === 'groq'">~$0.0007/min · whisper-large-v3-turbo</template>
+          <template v-else-if="provider === 'deepgram'">~$0.0043/min · nova-2</template>
+          <template v-else-if="provider === 'elevenlabs'">~$0.0067/min · scribe_v1</template>
         </p>
       </div>
 
@@ -139,15 +184,15 @@ function handleLanguageChange(event: Event) {
         </label>
         <div class="api-key-input">
           <input
-            :type="openaiKeyMasked ? 'password' : 'text'"
-            :value="openaiApiKey"
-            @input="emit('update:openaiApiKey', ($event.target as HTMLInputElement).value)"
+            :type="keyMasked.openai ? 'password' : 'text'"
+            :value="getApiKey('openai')"
+            @input="updateApiKey('openai', ($event.target as HTMLInputElement).value)"
             placeholder="sk-..."
             spellcheck="false"
             autocomplete="off"
           />
-          <button @click="openaiKeyMasked = !openaiKeyMasked" class="toggle-btn" type="button">
-            {{ openaiKeyMasked ? 'show' : 'hide' }}
+          <button @click="keyMasked.openai = !keyMasked.openai" class="toggle-btn" type="button">
+            {{ keyMasked.openai ? 'show' : 'hide' }}
           </button>
         </div>
         <p class="hint">
@@ -164,20 +209,95 @@ function handleLanguageChange(event: Event) {
         </label>
         <div class="api-key-input">
           <input
-            :type="mistralKeyMasked ? 'password' : 'text'"
-            :value="mistralApiKey"
-            @input="emit('update:mistralApiKey', ($event.target as HTMLInputElement).value)"
+            :type="keyMasked.mistral ? 'password' : 'text'"
+            :value="getApiKey('mistral')"
+            @input="updateApiKey('mistral', ($event.target as HTMLInputElement).value)"
             placeholder="..."
             spellcheck="false"
             autocomplete="off"
           />
-          <button @click="mistralKeyMasked = !mistralKeyMasked" class="toggle-btn" type="button">
-            {{ mistralKeyMasked ? 'show' : 'hide' }}
+          <button @click="keyMasked.mistral = !keyMasked.mistral" class="toggle-btn" type="button">
+            {{ keyMasked.mistral ? 'show' : 'hide' }}
           </button>
         </div>
         <p class="hint">
           Get your key from
           <a href="https://console.mistral.ai/api-keys" target="_blank">console.mistral.ai</a>
+        </p>
+      </div>
+
+      <!-- Groq API Key -->
+      <div class="field">
+        <label>
+          Groq API Key
+          <span v-if="provider === 'groq'" class="active-badge">active</span>
+        </label>
+        <div class="api-key-input">
+          <input
+            :type="keyMasked.groq ? 'password' : 'text'"
+            :value="getApiKey('groq')"
+            @input="updateApiKey('groq', ($event.target as HTMLInputElement).value)"
+            placeholder="gsk_..."
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <button @click="keyMasked.groq = !keyMasked.groq" class="toggle-btn" type="button">
+            {{ keyMasked.groq ? 'show' : 'hide' }}
+          </button>
+        </div>
+        <p class="hint">
+          Get your key from
+          <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>
+        </p>
+      </div>
+
+      <!-- Deepgram API Key -->
+      <div class="field">
+        <label>
+          Deepgram API Key
+          <span v-if="provider === 'deepgram'" class="active-badge">active</span>
+        </label>
+        <div class="api-key-input">
+          <input
+            :type="keyMasked.deepgram ? 'password' : 'text'"
+            :value="getApiKey('deepgram')"
+            @input="updateApiKey('deepgram', ($event.target as HTMLInputElement).value)"
+            placeholder="..."
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <button @click="keyMasked.deepgram = !keyMasked.deepgram" class="toggle-btn" type="button">
+            {{ keyMasked.deepgram ? 'show' : 'hide' }}
+          </button>
+        </div>
+        <p class="hint">
+          Get your key from
+          <a href="https://console.deepgram.com/" target="_blank">console.deepgram.com</a>
+        </p>
+      </div>
+
+      <!-- ElevenLabs API Key -->
+      <div class="field">
+        <label>
+          ElevenLabs API Key
+          <span v-if="provider === 'elevenlabs'" class="active-badge">active</span>
+        </label>
+        <div class="api-key-input">
+          <input
+            :type="keyMasked.elevenlabs ? 'password' : 'text'"
+            :value="getApiKey('elevenlabs')"
+            @input="updateApiKey('elevenlabs', ($event.target as HTMLInputElement).value)"
+            placeholder="..."
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <button @click="keyMasked.elevenlabs = !keyMasked.elevenlabs" class="toggle-btn" type="button">
+            {{ keyMasked.elevenlabs ? 'show' : 'hide' }}
+          </button>
+        </div>
+        <p class="hint">
+          Get your key from
+          <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">elevenlabs.io</a>
         </p>
       </div>
 
@@ -187,7 +307,7 @@ function handleLanguageChange(event: Event) {
 
       <div v-if="!currentApiKeyConfigured" class="notice">
         <span class="notice-marker">[!]</span>
-        <p>Add your {{ provider === 'openai' ? 'OpenAI' : 'Mistral' }} API key to start transcribing.</p>
+        <p>Add your {{ provider.charAt(0).toUpperCase() + provider.slice(1) }} API key to start transcribing.</p>
       </div>
 
       <div class="notice">

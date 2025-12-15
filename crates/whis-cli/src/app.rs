@@ -32,43 +32,18 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
     let provider = settings.provider.clone();
     let language = settings.language.clone();
 
-    // Load API key based on provider
-    let api_key = match &provider {
-        TranscriptionProvider::OpenAI => {
-            // Priority: settings file > environment variable
-            if let Some(key) = settings.openai_api_key {
-                key
-            } else {
-                // Fallback to environment
-                match std::env::var("OPENAI_API_KEY") {
-                    Ok(key) => key,
-                    Err(_) => {
-                        eprintln!("Error: No OpenAI API key configured.");
-                        eprintln!("\nSet your key with:");
-                        eprintln!("  whis config --openai-api-key YOUR_KEY\n");
-                        eprintln!("Or set the OPENAI_API_KEY environment variable.");
-                        std::process::exit(1);
-                    }
-                }
-            }
-        }
-        TranscriptionProvider::Mistral => {
-            // Priority: settings file > environment variable
-            if let Some(key) = settings.mistral_api_key {
-                key
-            } else {
-                // Fallback to environment
-                match std::env::var("MISTRAL_API_KEY") {
-                    Ok(key) => key,
-                    Err(_) => {
-                        eprintln!("Error: No Mistral API key configured.");
-                        eprintln!("\nSet your key with:");
-                        eprintln!("  whis config --mistral-api-key YOUR_KEY\n");
-                        eprintln!("Or set the MISTRAL_API_KEY environment variable.");
-                        std::process::exit(1);
-                    }
-                }
-            }
+    // Load API key using the unified method
+    let api_key = match settings.get_api_key_for(&provider) {
+        Some(key) => key,
+        None => {
+            eprintln!("Error: No {} API key configured.", provider.display_name());
+            eprintln!("\nSet your key with:");
+            eprintln!("  whis config --{}-api-key YOUR_KEY\n", provider.as_str());
+            eprintln!(
+                "Or set the {} environment variable.",
+                provider.api_key_env_var()
+            );
+            std::process::exit(1);
         }
     };
 

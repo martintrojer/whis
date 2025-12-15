@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -15,10 +16,9 @@ pub struct Settings {
     /// None = auto-detect, Some("en") = English, etc.
     #[serde(default)]
     pub language: Option<String>,
+    /// API keys stored by provider name (e.g., "openai" -> "sk-...")
     #[serde(default)]
-    pub openai_api_key: Option<String>,
-    #[serde(default)]
-    pub mistral_api_key: Option<String>,
+    pub api_keys: HashMap<String, String>,
     /// LLM provider for polishing (cleaning up) transcripts
     #[serde(default)]
     pub polisher: Polisher,
@@ -33,8 +33,7 @@ impl Default for Settings {
             shortcut: "Ctrl+Shift+R".to_string(),
             provider: TranscriptionProvider::default(),
             language: None, // Auto-detect
-            openai_api_key: None,
-            mistral_api_key: None,
+            api_keys: HashMap::new(),
             polisher: Polisher::default(),
             polish_prompt: None,
         }
@@ -52,16 +51,29 @@ impl Settings {
 
     /// Get the API key for the current provider, falling back to environment variables
     pub fn get_api_key(&self) -> Option<String> {
-        match &self.provider {
-            TranscriptionProvider::OpenAI => self
-                .openai_api_key
-                .clone()
-                .or_else(|| std::env::var("OPENAI_API_KEY").ok()),
-            TranscriptionProvider::Mistral => self
-                .mistral_api_key
-                .clone()
-                .or_else(|| std::env::var("MISTRAL_API_KEY").ok()),
+        self.get_api_key_for(&self.provider)
+    }
+
+    /// Get the API key for a specific provider
+    ///
+    /// Checks in order:
+    /// 1. api_keys map
+    /// 2. Environment variable
+    pub fn get_api_key_for(&self, provider: &TranscriptionProvider) -> Option<String> {
+        // Check api_keys map first
+        if let Some(key) = self.api_keys.get(provider.as_str())
+            && !key.is_empty()
+        {
+            return Some(key.clone());
         }
+
+        // Fall back to environment variable
+        std::env::var(provider.api_key_env_var()).ok()
+    }
+
+    /// Set the API key for a provider
+    pub fn set_api_key(&mut self, provider: &TranscriptionProvider, key: String) {
+        self.api_keys.insert(provider.as_str().to_string(), key);
     }
 
     /// Check if an API key is configured for the current provider
@@ -73,14 +85,8 @@ impl Settings {
     pub fn get_polisher_api_key(&self) -> Option<String> {
         match &self.polisher {
             Polisher::None => None,
-            Polisher::OpenAI => self
-                .openai_api_key
-                .clone()
-                .or_else(|| std::env::var("OPENAI_API_KEY").ok()),
-            Polisher::Mistral => self
-                .mistral_api_key
-                .clone()
-                .or_else(|| std::env::var("MISTRAL_API_KEY").ok()),
+            Polisher::OpenAI => self.get_api_key_for(&TranscriptionProvider::OpenAI),
+            Polisher::Mistral => self.get_api_key_for(&TranscriptionProvider::Mistral),
         }
     }
 

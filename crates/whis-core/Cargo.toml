@@ -17,6 +17,7 @@ hound = { workspace = true, optional = true }
 arboard = { workspace = true, optional = true }
 dotenvy.workspace = true
 dirs = "5"
+async-trait = "0.1"
 
 # Embedded MP3 encoder for mobile (no FFmpeg dependency)
 mp3lame-encoder = { version = "0.2", optional = true }

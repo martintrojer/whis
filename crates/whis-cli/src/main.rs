@@ -18,6 +18,9 @@ fn main() -> Result<()> {
         Some(args::Commands::Config {
             openai_api_key,
             mistral_api_key,
+            groq_api_key,
+            deepgram_api_key,
+            elevenlabs_api_key,
             provider,
             language,
             polisher,
@@ -26,6 +29,9 @@ fn main() -> Result<()> {
         }) => commands::config::run(
             openai_api_key,
             mistral_api_key,
+            groq_api_key,
+            deepgram_api_key,
+            elevenlabs_api_key,
             provider,
             language,
             polisher,

@@ -36,7 +36,7 @@ Whis currently does one thing well: **transcribe and copy to clipboard**. But co
 | **HyperWhisper** | macOS-only, no Linux or Windows |
 | **Otter.ai** | Cloud-only, meeting-focused, no CLI |
 
-**Whis is unique in combining:** open-source Rust implementation, API-based transcription (no local GPU), multi-provider support (OpenAI + Mistral), and first-class Linux support with global hotkeys. Adding LLM post-processing would match the core value of $81M-funded competitors while maintaining the developer-focused, privacy-respecting, terminal-native identity.
+**Whis is unique in combining:** open-source Rust implementation, API-based transcription (no local GPU), extensible multi-provider support (5 providers: OpenAI, Mistral, Groq, Deepgram, ElevenLabs), and first-class Linux support with global hotkeys. The LLM post-processing pipeline matches the core value of $81M-funded competitors while maintaining the developer-focused, privacy-respecting, terminal-native identity.
 
 ---
 
@@ -68,7 +68,7 @@ Whis currently does one thing well: **transcribe and copy to clipboard**. But co
 | **AI Workflow Optimized** | Purpose-built for speaking prompts and pasting into AI tools |
 | **Cost Efficient** | $0.001-0.006/minute via cloud APIs — no expensive local GPU required |
 | **Minimalist Philosophy** | Record → Transcribe → Clipboard. No bloat. |
-| **Multi-Provider** | Choice between OpenAI Whisper and Mistral Voxtral |
+| **Multi-Provider** | Choice between 5 transcription providers |
 | **Open Source** | MIT licensed, fully transparent, community-driven |
 | **Native Performance** | Built in Rust with minimal runtime overhead |
 
@@ -187,18 +187,24 @@ For long recordings that exceed API limits:
 | Provider | Model | Endpoint | Cost |
 |----------|-------|----------|------|
 | **OpenAI** | `whisper-1` | `api.openai.com/v1/audio/transcriptions` | ~$0.006/min |
-| **Mistral** | `voxtral-mini-latest` | `api.mistral.ai/v1/audio/transcriptions` | ~$0.001/min |
+| **Mistral** | `voxtral-mini-latest` | `api.mistral.ai/v1/audio/transcriptions` | ~$0.02/min |
+| **Groq** | `whisper-large-v3-turbo` | `api.groq.com/openai/v1/audio/transcriptions` | ~$0.0007/min |
+| **Deepgram** | `nova-2` | `api.deepgram.com/v1/listen` | ~$0.0043/min |
+| **ElevenLabs** | `scribe_v1` | `api.elevenlabs.io/v1/speech-to-text` | ~$0.0067/min |
 
-> **Cost Note:** Mistral Voxtral is **6x cheaper** than OpenAI Whisper with comparable accuracy. This makes Whis's multi-provider support a significant cost advantage.
+> **Cost Note:** Groq is the cheapest option at ~$0.0007/min (nearly 10x cheaper than OpenAI). Deepgram and ElevenLabs offer competitive pricing with different accuracy/latency trade-offs.
 
 ### Cost Comparison
 
 | Provider | Cost/minute | 1 hour | 10 hours/month |
 |----------|-------------|--------|----------------|
+| Groq | $0.0007 | $0.042 | $0.42 |
+| Deepgram | $0.0043 | $0.26 | $2.58 |
 | OpenAI Whisper | $0.006 | $0.36 | $3.60 |
-| Mistral Voxtral | $0.001 | $0.06 | $0.60 |
+| ElevenLabs | $0.0067 | $0.40 | $4.02 |
+| Mistral Voxtral | $0.02 | $1.20 | $12.00 |
 
-**Recommendation:** Default to Mistral for cost-conscious users; OpenAI for users who need specific Whisper features.
+**Recommendation:** Groq for cost-conscious users; OpenAI for proven accuracy; Deepgram for low-latency applications.
 
 **Advanced Capabilities:**
 - **Parallel transcription** — Up to 3 concurrent API requests (semaphore-controlled)
@@ -244,18 +250,24 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
   "shortcut": "Ctrl+Shift+R",
   "provider": "openai",
   "language": null,
-  "openai_api_key": "sk-...",
-  "mistral_api_key": "..."
+  "api_keys": {
+    "openai": "sk-...",
+    "mistral": "...",
+    "groq": "gsk_...",
+    "deepgram": "...",
+    "elevenlabs": "..."
+  }
 }
 ```
 
 **API Key Sources (Priority Order):**
-1. Settings file (`~/.config/whis/settings.json`)
-2. Environment variables (`OPENAI_API_KEY`, `MISTRAL_API_KEY`)
+1. Settings file (`~/.config/whis/settings.json`) via `api_keys` map
+2. Environment variables (`OPENAI_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY`)
 
 **Validation Rules:**
 - OpenAI keys must start with `sk-`
-- Mistral keys must be ≥20 characters
+- Groq keys must start with `gsk_`
+- Mistral, Deepgram, ElevenLabs keys must be ≥20 characters
 - Language codes must be valid ISO-639-1 (2 lowercase letters)
 
 ---
@@ -277,7 +289,10 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 |------------|---------|--------------|
 | **FFmpeg** | Audio encoding | `apt install ffmpeg` / `brew install ffmpeg` |
 | **OpenAI API Key** | Transcription | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
-| **Mistral API Key** | Transcription (alternative) | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) |
+| **Mistral API Key** | Transcription | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) |
+| **Groq API Key** | Transcription | [console.groq.com/keys](https://console.groq.com/keys) |
+| **Deepgram API Key** | Transcription | [console.deepgram.com](https://console.deepgram.com/) |
+| **ElevenLabs API Key** | Transcription | [elevenlabs.io/app/settings/api-keys](https://elevenlabs.io/app/settings/api-keys) |
 
 ---
 
@@ -316,7 +331,7 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 - **Trade-off:** Requires network, has per-minute cost
 
 ### Versus Other Voice-to-Text Apps
-- **Multi-Provider** — First to offer both OpenAI and Mistral in one tool
+- **Multi-Provider** — 5 transcription providers (OpenAI, Mistral, Groq, Deepgram, ElevenLabs)
 - **AI Workflow Focus** — Designed specifically for prompt input
 - **CLI-First** — Power users get a native terminal experience
 - **Open Source** — Full transparency, no telemetry, self-hostable future
@@ -385,7 +400,7 @@ Whis can become the **"developer's Wispr Flow"** by adding LLM post-processing w
 - Linux-native support
 - No subscription model
 
-The existing multi-provider architecture (OpenAI + Mistral) means the foundation is already in place.
+The extensible multi-provider architecture (5 providers with trait-based design) means adding new providers requires only ~60-100 lines of code.
 
 ---
 
@@ -859,6 +874,25 @@ Future:   Audio → Transcribe → [Polish] → [Format] → Clipboard
                                    ↑           ↑
                                Mode file   --output format
 ```
+
+**Provider Architecture:**
+
+The transcription system uses a trait-based extensible architecture:
+
+```
+crates/whis-core/src/provider/
+├── mod.rs          # TranscriptionBackend trait + ProviderRegistry
+├── openai.rs       # OpenAI Whisper
+├── mistral.rs      # Mistral Voxtral
+├── groq.rs         # Groq (OpenAI-compatible API)
+├── deepgram.rs     # Deepgram Nova-2 (raw bytes API)
+└── elevenlabs.rs   # ElevenLabs Scribe
+```
+
+Adding a new provider requires:
+1. Create `provider/{name}.rs` implementing `TranscriptionBackend` trait
+2. Add variant to `TranscriptionProvider` enum in `config.rs`
+3. Register in `ProviderRegistry::new()` in `provider/mod.rs`
 
 The `Polisher` enum mirrors the `TranscriptionProvider` pattern. The `Preset` struct (with `PresetSource` enum) provides user-configurable polish prompts.
 

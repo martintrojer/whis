@@ -1,19 +1,20 @@
 use anyhow::{anyhow, Result};
 use std::io::{self, Write};
 use whis_core::{
-    AudioRecorder, Polisher, Preset, RecordingOutput, Settings, copy_to_clipboard,
-    parallel_transcribe, polish, transcribe_audio, DEFAULT_POLISH_PROMPT,
+    AudioRecorder, Polisher, Preset, RecordingOutput, Settings, TranscriptionProvider,
+    copy_to_clipboard, parallel_transcribe, polish, transcribe_audio, DEFAULT_POLISH_PROMPT,
 };
+
 use crate::app;
 
 /// Resolve which polisher to use based on priority:
 /// 1. Preset override (if specified and valid)
 /// 2. Settings polisher (if configured)
-/// 3. Transcription provider fallback
+/// 3. Transcription provider fallback (OpenAI/Mistral only, others check key availability)
 fn resolve_polisher(
     preset: &Option<Preset>,
     settings: &Settings,
-    provider: &whis_core::TranscriptionProvider,
+    provider: &TranscriptionProvider,
 ) -> Polisher {
     // 1. Preset override
     if let Some(p) = preset
@@ -31,9 +32,30 @@ fn resolve_polisher(
     }
 
     // 3. Transcription provider fallback
+    // OpenAI and Mistral have built-in polish capabilities
+    // Other providers need an available OpenAI or Mistral key
     match provider {
-        whis_core::TranscriptionProvider::OpenAI => Polisher::OpenAI,
-        whis_core::TranscriptionProvider::Mistral => Polisher::Mistral,
+        TranscriptionProvider::OpenAI => Polisher::OpenAI,
+        TranscriptionProvider::Mistral => Polisher::Mistral,
+        // For providers without LLM capability, check if we have a polisher key
+        TranscriptionProvider::Groq
+        | TranscriptionProvider::Deepgram
+        | TranscriptionProvider::ElevenLabs => {
+            // Try OpenAI first, then Mistral, then disable polishing
+            if settings
+                .get_api_key_for(&TranscriptionProvider::OpenAI)
+                .is_some()
+            {
+                Polisher::OpenAI
+            } else if settings
+                .get_api_key_for(&TranscriptionProvider::Mistral)
+                .is_some()
+            {
+                Polisher::Mistral
+            } else {
+                Polisher::None
+            }
+        }
     }
 }
 
@@ -102,18 +124,8 @@ pub fn run(polish_flag: bool, preset_name: Option<String>) -> Result<()> {
     let final_text = if should_polish {
         let polisher = resolve_polisher(&preset, &settings, &config.provider);
 
-        // Get API key for polisher
-        let api_key = match &polisher {
-            Polisher::None => None,
-            Polisher::OpenAI => settings
-                .openai_api_key
-                .clone()
-                .or_else(|| std::env::var("OPENAI_API_KEY").ok()),
-            Polisher::Mistral => settings
-                .mistral_api_key
-                .clone()
-                .or_else(|| std::env::var("MISTRAL_API_KEY").ok()),
-        };
+        // Get API key for polisher using the unified method
+        let api_key = settings.get_polisher_api_key();
 
         if let Some(api_key) = api_key {
             print!("Polishing...");

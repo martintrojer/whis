@@ -10,10 +10,9 @@ import AboutView from './views/AboutView.vue';
 
 interface Settings {
   shortcut: string;
-  provider: 'openai' | 'mistral';
+  provider: 'openai' | 'mistral' | 'groq' | 'deepgram' | 'elevenlabs';
   language: string | null;
-  openai_api_key: string | null;
-  mistral_api_key: string | null;
+  api_keys: Record<string, string>;
 }
 
 interface BackendInfo {
@@ -31,10 +30,9 @@ const activeSection = ref<Section>('home');
 const currentShortcut = ref("Ctrl+Shift+R");
 const portalShortcut = ref<string | null>(null);
 const portalBindError = ref<string | null>(null);
-const provider = ref<'openai' | 'mistral'>('openai');
+const provider = ref<'openai' | 'mistral' | 'groq' | 'deepgram' | 'elevenlabs'>('openai');
 const language = ref<string | null>(null);
-const openaiApiKey = ref("");
-const mistralApiKey = ref("");
+const apiKeys = ref<Record<string, string>>({});
 const backendInfo = ref<BackendInfo | null>(null);
 const loaded = ref(false);
 
@@ -52,8 +50,7 @@ async function loadSettings() {
     currentShortcut.value = settings.shortcut;
     provider.value = settings.provider || 'openai';
     language.value = settings.language;
-    openaiApiKey.value = settings.openai_api_key || '';
-    mistralApiKey.value = settings.mistral_api_key || '';
+    apiKeys.value = settings.api_keys || {};
   } catch (e) {
     console.error("Failed to load settings:", e);
   }
@@ -190,12 +187,10 @@ onMounted(async () => {
           :current-shortcut="currentShortcut"
           :provider="provider"
           :language="language"
-          :openai-api-key="openaiApiKey"
-          :mistral-api-key="mistralApiKey"
+          :api-keys="apiKeys"
           @update:provider="provider = $event"
           @update:language="language = $event"
-          @update:openai-api-key="openaiApiKey = $event"
-          @update:mistral-api-key="mistralApiKey = $event"
+          @update:api-keys="apiKeys = $event"
         />
 
         <AboutView
