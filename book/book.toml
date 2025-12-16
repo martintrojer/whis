@@ -1,0 +1,21 @@
+[book]
+title = "Whis Deep Dive"
+authors = ["Frank Dierolf"]
+language = "en"
+description = "A comprehensive guide to understanding the Whis codebase from the ground up"
+
+# mdbook-admonish has compatibility issues with mdbook 0.5.2
+# Using blockquotes (>) instead for now
+# [preprocessor.admonish]
+# command = "mdbook-admonish"
+# assets_version = "3.1.0"
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+[output.html]
+default-theme = "ayu"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/frankdierolf/whis"
+edit-url-template = "https://github.com/frankdierolf/whis/edit/main/book/{path}"
+additional-css = ["./mdbook-admonish.css"]
