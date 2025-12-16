@@ -10,7 +10,7 @@ use tokio::sync::Semaphore;
 
 use crate::audio::AudioChunk;
 use crate::config::TranscriptionProvider;
-use crate::provider::{registry, TranscriptionRequest, DEFAULT_TIMEOUT_SECS};
+use crate::provider::{DEFAULT_TIMEOUT_SECS, TranscriptionRequest, registry};
 
 /// Maximum concurrent API requests
 const MAX_CONCURRENT_REQUESTS: usize = 3;
@@ -37,7 +37,7 @@ pub fn transcribe_audio(
     language: Option<&str>,
     audio_data: Vec<u8>,
 ) -> Result<String> {
-    let provider_impl = registry().get_by_kind(provider);
+    let provider_impl = registry().get_by_kind(provider)?;
     let request = TranscriptionRequest {
         audio_data,
         language: language.map(String::from),
@@ -69,7 +69,7 @@ pub async fn parallel_transcribe(
     let client = Arc::new(client);
     let api_key = Arc::new(api_key.to_string());
     let language = language.map(|s| Arc::new(s.to_string()));
-    let provider_impl = registry().get_by_kind(provider);
+    let provider_impl = registry().get_by_kind(provider)?;
     let completed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let progress_callback = progress_callback.map(Arc::new);
 

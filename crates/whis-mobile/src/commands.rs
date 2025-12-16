@@ -72,9 +72,7 @@ pub async fn stop_recording(
         }
 
         let mut recorder_guard = state.recorder.lock().unwrap();
-        let recorder = recorder_guard
-            .as_mut()
-            .ok_or("No recorder available")?;
+        let recorder = recorder_guard.as_mut().ok_or("No recorder available")?;
 
         let data = recorder.stop_recording().map_err(|e| e.to_string())?;
         *recorder_guard = None;
@@ -86,9 +84,7 @@ pub async fn stop_recording(
     let (provider, api_key, language) = {
         let settings = state.settings.lock().unwrap();
         let provider = settings.provider.clone();
-        let api_key = settings
-            .get_api_key()
-            .ok_or("No API key configured")?;
+        let api_key = settings.get_api_key().ok_or("No API key configured")?;
         let language = settings.language.clone();
         (provider, api_key, language)
     };
@@ -101,14 +97,12 @@ pub async fn stop_recording(
 
     // Transcribe (wrap blocking calls in spawn_blocking to avoid tokio panic)
     let text = match output {
-        RecordingOutput::Single(data) => {
-            tokio::task::spawn_blocking(move || {
-                whis_core::transcribe_audio(&provider, &api_key, language.as_deref(), data)
-            })
-            .await
-            .map_err(|e| e.to_string())?
-            .map_err(|e| e.to_string())?
-        }
+        RecordingOutput::Single(data) => tokio::task::spawn_blocking(move || {
+            whis_core::transcribe_audio(&provider, &api_key, language.as_deref(), data)
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?,
         RecordingOutput::Chunked(chunks) => {
             whis_core::parallel_transcribe(&provider, &api_key, language.as_deref(), chunks, None)
                 .await

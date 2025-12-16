@@ -104,7 +104,11 @@ impl Preset {
                     Some(preset)
                 }
                 Err(e) => {
-                    eprintln!("Warning: Failed to parse preset '{}': {}", path.display(), e);
+                    eprintln!(
+                        "Warning: Failed to parse preset '{}': {}",
+                        path.display(),
+                        e
+                    );
                     None
                 }
             },
@@ -160,7 +164,11 @@ impl Preset {
                                 presets.insert(preset.name.clone(), (preset, PresetSource::User));
                             }
                             Err(e) => {
-                                eprintln!("Warning: Failed to parse preset '{}': {}", path.display(), e);
+                                eprintln!(
+                                    "Warning: Failed to parse preset '{}': {}",
+                                    path.display(),
+                                    e
+                                );
                             }
                         },
                         Err(e) => {

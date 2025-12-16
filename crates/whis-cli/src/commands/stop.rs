@@ -1,5 +1,5 @@
-use anyhow::Result;
 use crate::ipc;
+use anyhow::Result;
 
 pub fn run() -> Result<()> {
     let mut client = ipc::IpcClient::connect()?;

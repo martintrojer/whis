@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use rdev::{Event, EventType, Key, grab};
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Receiver;
+use std::sync::{Arc, Mutex};
 
 pub struct HotkeyGuard;
 

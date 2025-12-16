@@ -76,8 +76,7 @@ fn is_appimage_from_terminal() -> bool {
 
 /// Install a .desktop file for proper app menu integration
 fn install_desktop_file() {
-    let exec_path = std::env::var("APPIMAGE")
-        .unwrap_or_else(|_| "whis-desktop".to_string());
+    let exec_path = std::env::var("APPIMAGE").unwrap_or_else(|_| "whis-desktop".to_string());
 
     let desktop_content = format!(
         r#"[Desktop Entry]

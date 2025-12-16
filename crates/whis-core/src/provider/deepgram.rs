@@ -9,7 +9,9 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult, DEFAULT_TIMEOUT_SECS};
+use super::{
+    DEFAULT_TIMEOUT_SECS, TranscriptionBackend, TranscriptionRequest, TranscriptionResult,
+};
 
 const API_URL: &str = "https://api.deepgram.com/v1/listen";
 const MODEL: &str = "nova-2";
@@ -96,7 +98,11 @@ impl TranscriptionBackend for DeepgramProvider {
             .first()
             .and_then(|c| c.alternatives.first())
             .map(|a| a.transcript.clone())
-            .unwrap_or_default();
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Deepgram API returned unexpected response format: no transcript found"
+                )
+            })?;
 
         Ok(TranscriptionResult { text: transcript })
     }
@@ -147,7 +153,11 @@ impl TranscriptionBackend for DeepgramProvider {
             .first()
             .and_then(|c| c.alternatives.first())
             .map(|a| a.transcript.clone())
-            .unwrap_or_default();
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Deepgram API returned unexpected response format: no transcript found"
+                )
+            })?;
 
         Ok(TranscriptionResult { text: transcript })
     }

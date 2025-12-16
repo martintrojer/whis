@@ -121,8 +121,7 @@ pub async fn save_settings(
 
     // Only update shortcut if it actually changed
     let needs_restart = if shortcut_changed {
-        crate::shortcuts::update_shortcut(&app, &settings.shortcut)
-            .map_err(|e| e.to_string())?
+        crate::shortcuts::update_shortcut(&app, &settings.shortcut).map_err(|e| e.to_string())?
     } else {
         false
     };
@@ -204,7 +203,11 @@ pub fn validate_elevenlabs_api_key(api_key: String) -> Result<bool, String> {
 #[tauri::command]
 pub fn reset_shortcut() -> Result<(), String> {
     std::process::Command::new("dconf")
-        .args(["reset", "-f", "/org/gnome/settings-daemon/global-shortcuts/"])
+        .args([
+            "reset",
+            "-f",
+            "/org/gnome/settings-daemon/global-shortcuts/",
+        ])
         .status()
         .map_err(|e| e.to_string())?;
     Ok(())

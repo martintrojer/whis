@@ -1,6 +1,7 @@
 use anyhow::Result;
 use whis_core::{Polisher, Preset, Settings, TranscriptionProvider};
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     openai_api_key: Option<String>,
     mistral_api_key: Option<String>,
@@ -8,6 +9,10 @@ pub fn run(
     deepgram_api_key: Option<String>,
     elevenlabs_api_key: Option<String>,
     provider: Option<String>,
+    whisper_model_path: Option<String>,
+    remote_whisper_url: Option<String>,
+    ollama_url: Option<String>,
+    ollama_model: Option<String>,
     language: Option<String>,
     polisher: Option<String>,
     polish_prompt: Option<String>,
@@ -31,6 +36,64 @@ pub fn run(
         }
     }
 
+    // Handle whisper model path for local transcription
+    if let Some(path) = whisper_model_path {
+        let path_trimmed = path.trim();
+        if path_trimmed.is_empty() {
+            eprintln!("Invalid whisper model path: cannot be empty");
+            std::process::exit(1);
+        }
+        // Expand ~ to home directory
+        let expanded_path = if let Some(rest) = path_trimmed.strip_prefix("~/") {
+            if let Some(home) = dirs::home_dir() {
+                home.join(rest).to_string_lossy().to_string()
+            } else {
+                path_trimmed.to_string()
+            }
+        } else {
+            path_trimmed.to_string()
+        };
+        settings.whisper_model_path = Some(expanded_path.clone());
+        changed = true;
+        println!("Whisper model path set to: {}", expanded_path);
+    }
+
+    // Handle remote whisper server URL for self-hosted transcription
+    if let Some(url) = remote_whisper_url {
+        let url_trimmed = url.trim();
+        if url_trimmed.is_empty() {
+            eprintln!("Invalid remote whisper URL: cannot be empty");
+            std::process::exit(1);
+        }
+        settings.remote_whisper_url = Some(url_trimmed.to_string());
+        changed = true;
+        println!("Remote whisper URL set to: {}", url_trimmed);
+    }
+
+    // Handle Ollama URL for local polishing
+    if let Some(url) = ollama_url {
+        let url_trimmed = url.trim();
+        if url_trimmed.is_empty() {
+            eprintln!("Invalid Ollama URL: cannot be empty");
+            std::process::exit(1);
+        }
+        settings.ollama_url = Some(url_trimmed.to_string());
+        changed = true;
+        println!("Ollama URL set to: {}", url_trimmed);
+    }
+
+    // Handle Ollama model for local polishing
+    if let Some(model) = ollama_model {
+        let model_trimmed = model.trim();
+        if model_trimmed.is_empty() {
+            eprintln!("Invalid Ollama model: cannot be empty");
+            std::process::exit(1);
+        }
+        settings.ollama_model = Some(model_trimmed.to_string());
+        changed = true;
+        println!("Ollama model set to: {}", model_trimmed);
+    }
+
     // Handle language change
     if let Some(lang) = language {
         if lang.to_lowercase() == "auto" {
@@ -41,7 +104,9 @@ pub fn run(
             // Validate ISO-639-1 format: 2 lowercase alphabetic characters
             let lang_lower = lang.to_lowercase();
             if lang_lower.len() != 2 || !lang_lower.chars().all(|c| c.is_ascii_lowercase()) {
-                eprintln!("Invalid language code. Use ISO-639-1 format (e.g., 'en', 'de', 'fr') or 'auto'");
+                eprintln!(
+                    "Invalid language code. Use ISO-639-1 format (e.g., 'en', 'de', 'fr') or 'auto'"
+                );
                 std::process::exit(1);
             }
             settings.language = Some(lang_lower.clone());
@@ -161,6 +226,33 @@ pub fn run(
         } else {
             println!("Polish prompt: (default)");
         }
+
+        // Local transcription settings
+        if let Some(path) = &settings.whisper_model_path {
+            println!("Whisper model path: {}", path);
+        } else {
+            println!("Whisper model path: (not set, using $LOCAL_WHISPER_MODEL_PATH)");
+        }
+
+        // Remote whisper server settings
+        if let Some(url) = &settings.remote_whisper_url {
+            println!("Remote whisper URL: {}", url);
+        } else {
+            println!("Remote whisper URL: (not set, using $REMOTE_WHISPER_URL)");
+        }
+
+        // Ollama settings for local polishing
+        if let Some(url) = &settings.ollama_url {
+            println!("Ollama URL: {}", url);
+        } else {
+            println!("Ollama URL: (default: http://localhost:11434)");
+        }
+        if let Some(model) = &settings.ollama_model {
+            println!("Ollama model: {}", model);
+        } else {
+            println!("Ollama model: (default: phi3)");
+        }
+
         println!("Available --as presets: {}", Preset::all_names().join(", "));
 
         return Ok(());
@@ -168,14 +260,24 @@ pub fn run(
 
     // No flags - show help
     eprintln!("Usage:");
-    eprintln!("  whis config --provider <openai|mistral|groq|deepgram|elevenlabs>");
+    eprintln!(
+        "  whis config --provider <openai|mistral|groq|deepgram|elevenlabs|local-whisper|remote-whisper>"
+    );
     eprintln!("  whis config --language <en|de|fr|...|auto>");
     eprintln!("  whis config --openai-api-key <KEY>");
     eprintln!("  whis config --mistral-api-key <KEY>");
     eprintln!("  whis config --groq-api-key <KEY>");
     eprintln!("  whis config --deepgram-api-key <KEY>");
     eprintln!("  whis config --elevenlabs-api-key <KEY>");
-    eprintln!("  whis config --polisher <none|openai|mistral>");
+    eprintln!("  whis config --whisper-model-path <PATH>       # For local-whisper provider");
+    eprintln!("  whis config --remote-whisper-url <URL>        # For remote-whisper provider");
+    eprintln!("  whis config --polisher <none|openai|mistral|ollama>");
+    eprintln!(
+        "  whis config --ollama-url <URL>                # For ollama polisher (default: http://localhost:11434)"
+    );
+    eprintln!(
+        "  whis config --ollama-model <MODEL>            # For ollama polisher (default: phi3)"
+    );
     eprintln!("  whis config --polish-prompt <PROMPT>");
     eprintln!("  whis config --show");
     std::process::exit(1);
@@ -184,10 +286,16 @@ pub fn run(
 fn validate_api_key(key: &str, provider_name: &str) -> Result<(), String> {
     let key_trimmed = key.trim();
     if key_trimmed.is_empty() {
-        return Err(format!("Invalid {} API key: cannot be empty", provider_name));
+        return Err(format!(
+            "Invalid {} API key: cannot be empty",
+            provider_name
+        ));
     }
     if key_trimmed.len() < 20 {
-        return Err(format!("Invalid {} API key: key appears too short", provider_name));
+        return Err(format!(
+            "Invalid {} API key: key appears too short",
+            provider_name
+        ));
     }
     Ok(())
 }

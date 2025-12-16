@@ -1,5 +1,5 @@
-use anyhow::Result;
 use crate::ipc;
+use anyhow::Result;
 
 pub fn run() -> Result<()> {
     if !ipc::is_service_running() {

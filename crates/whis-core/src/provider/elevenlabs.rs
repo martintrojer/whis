@@ -7,7 +7,9 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult, DEFAULT_TIMEOUT_SECS};
+use super::{
+    DEFAULT_TIMEOUT_SECS, TranscriptionBackend, TranscriptionRequest, TranscriptionResult,
+};
 
 const API_URL: &str = "https://api.elevenlabs.io/v1/speech-to-text";
 const MODEL: &str = "scribe_v1";

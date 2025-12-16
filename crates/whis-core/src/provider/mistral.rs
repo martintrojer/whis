@@ -4,8 +4,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 use super::{
-    openai_compatible_transcribe_async, openai_compatible_transcribe_sync, TranscriptionBackend,
-    TranscriptionRequest, TranscriptionResult,
+    TranscriptionBackend, TranscriptionRequest, TranscriptionResult,
+    openai_compatible_transcribe_async, openai_compatible_transcribe_sync,
 };
 
 const API_URL: &str = "https://api.mistral.ai/v1/audio/transcriptions";

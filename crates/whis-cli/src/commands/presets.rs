@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use whis_core::{Preset, PresetSource};
 
 use crate::args::PresetsAction;
@@ -79,7 +79,9 @@ fn show(name: &str) -> Result<()> {
         println!();
         println!(
             "Location: {}",
-            Preset::presets_dir().join(format!("{}.json", name)).display()
+            Preset::presets_dir()
+                .join(format!("{}.json", name))
+                .display()
         );
     }
 
@@ -93,7 +95,9 @@ fn new(name: &str) -> Result<()> {
     eprintln!();
     eprintln!(
         "Save to: {}",
-        Preset::presets_dir().join(format!("{}.json", name)).display()
+        Preset::presets_dir()
+            .join(format!("{}.json", name))
+            .display()
     );
     Ok(())
 }

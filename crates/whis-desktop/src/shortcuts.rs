@@ -134,7 +134,10 @@ pub async fn register_app_with_portal() -> Result<(), Box<dyn std::error::Error 
             "/org/freedesktop/portal/desktop",
             Some("org.freedesktop.host.portal.Registry"),
             "Register",
-            &("ink.whis.Whis", HashMap::<String, zbus::zvariant::Value>::new()),
+            &(
+                "ink.whis.Whis",
+                HashMap::<String, zbus::zvariant::Value>::new(),
+            ),
         )
         .await
         .map(|_: zbus::Message| ());
@@ -256,32 +259,30 @@ where
     // Try to bind - pass None for parent window (GNOME may show dialog to user)
     // Note: GNOME shows a configuration dialog that user must interact with
     match shortcuts.bind_shortcuts(&session, &[shortcut], None).await {
-        Ok(request) => {
-            match request.response() {
-                Ok(bind_response) => {
-                    if let Some(bound) = bind_response
-                        .shortcuts()
-                        .iter()
-                        .find(|s| s.id() == "toggle-recording")
-                    {
-                        let trigger = bound.trigger_description().to_string();
-                        if !trigger.is_empty() {
-                            println!("Portal bound shortcut: {trigger}");
-                            let state = app_handle.state::<crate::state::AppState>();
-                            *state.portal_shortcut.lock().unwrap() = Some(trigger);
-                        }
+        Ok(request) => match request.response() {
+            Ok(bind_response) => {
+                if let Some(bound) = bind_response
+                    .shortcuts()
+                    .iter()
+                    .find(|s| s.id() == "toggle-recording")
+                {
+                    let trigger = bound.trigger_description().to_string();
+                    if !trigger.is_empty() {
+                        println!("Portal bound shortcut: {trigger}");
+                        let state = app_handle.state::<crate::state::AppState>();
+                        *state.portal_shortcut.lock().unwrap() = Some(trigger);
                     }
-                    println!("Portal shortcuts registered. Listening for activations...");
                 }
-                Err(e) => {
-                    let msg = format!("Portal bind response failed: {e}");
-                    eprintln!("{msg}");
-                    eprintln!("Will use dconf shortcut if available");
-                    let state = app_handle.state::<crate::state::AppState>();
-                    *state.portal_bind_error.lock().unwrap() = Some(msg);
-                }
+                println!("Portal shortcuts registered. Listening for activations...");
             }
-        }
+            Err(e) => {
+                let msg = format!("Portal bind response failed: {e}");
+                eprintln!("{msg}");
+                eprintln!("Will use dconf shortcut if available");
+                let state = app_handle.state::<crate::state::AppState>();
+                *state.portal_bind_error.lock().unwrap() = Some(msg);
+            }
+        },
         Err(e) => {
             let msg = format!("Portal bind_shortcuts failed: {e}");
             eprintln!("{msg}");
@@ -407,14 +408,13 @@ pub async fn bind_shortcut_with_trigger(
 
                     Ok(trigger)
                 }
-                Err(e) => {
-                    Err(format!("Portal bind failed: {e}. The shortcut may conflict with an existing binding.").into())
-                }
+                Err(e) => Err(format!(
+                    "Portal bind failed: {e}. The shortcut may conflict with an existing binding."
+                )
+                .into()),
             }
         }
-        Err(e) => {
-            Err(format!("Portal request failed: {e}").into())
-        }
+        Err(e) => Err(format!("Portal request failed: {e}").into()),
     }
 }
 
@@ -446,11 +446,15 @@ fn convert_to_xdg_format(shortcut: &str) -> String {
 }
 
 /// Setup global shortcuts using Tauri plugin (for X11, macOS, Windows)
-pub fn setup_tauri_shortcut(app: &tauri::App, shortcut_str: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup_tauri_shortcut(
+    app: &tauri::App,
+    shortcut_str: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let app_handle = app.handle().clone();
-    
+
     // Attempt to parse the shortcut
-    let shortcut = Shortcut::from_str(shortcut_str).map_err(|e| format!("Invalid shortcut: {e}"))?;
+    let shortcut =
+        Shortcut::from_str(shortcut_str).map_err(|e| format!("Invalid shortcut: {e}"))?;
 
     // Initialize plugin with generic handler
     app.handle().plugin(
@@ -524,7 +528,10 @@ pub fn setup_shortcuts(app: &tauri::App) {
 }
 
 /// Update shortcut. Returns Ok(true) if restart is needed, Ok(false) if applied immediately.
-pub fn update_shortcut(app: &AppHandle, new_shortcut: &str) -> Result<bool, Box<dyn std::error::Error>> {
+pub fn update_shortcut(
+    app: &AppHandle,
+    new_shortcut: &str,
+) -> Result<bool, Box<dyn std::error::Error>> {
     let capability = detect_backend();
 
     match capability.backend {
@@ -533,11 +540,12 @@ pub fn update_shortcut(app: &AppHandle, new_shortcut: &str) -> Result<bool, Box<
             app.global_shortcut().unregister_all()?;
 
             // Parse and register new one
-            let shortcut = Shortcut::from_str(new_shortcut).map_err(|e| format!("Invalid shortcut: {e}"))?;
+            let shortcut =
+                Shortcut::from_str(new_shortcut).map_err(|e| format!("Invalid shortcut: {e}"))?;
             app.global_shortcut().register(shortcut)?;
             println!("Updated Tauri global shortcut to: {new_shortcut}");
             Ok(false) // No restart needed
-        },
+        }
         _ => {
             // For portals and CLI, dynamic updates require restart.
             println!("Shortcut saved. Restart required for changes to take effect.");
@@ -545,7 +553,6 @@ pub fn update_shortcut(app: &AppHandle, new_shortcut: &str) -> Result<bool, Box<
         }
     }
 }
-
 
 fn print_manual_setup_instructions(compositor: &str, shortcut: &str) {
     println!();
@@ -567,11 +574,17 @@ fn print_manual_setup_instructions(compositor: &str, shortcut: &str) {
         }
         s if s.contains("sway") => {
             println!("Sway: Add to ~/.config/sway/config:");
-            println!("  bindsym {} exec whis-desktop --toggle", shortcut.to_lowercase());
+            println!(
+                "  bindsym {} exec whis-desktop --toggle",
+                shortcut.to_lowercase()
+            );
         }
         s if s.contains("hyprland") => {
             println!("Hyprland: Add to ~/.config/hypr/hyprland.conf:");
-            println!("  bind = {}, exec, whis-desktop --toggle", shortcut.replace("+", ", "));
+            println!(
+                "  bind = {}, exec, whis-desktop --toggle",
+                shortcut.replace("+", ", ")
+            );
         }
         _ => {
             println!("Configure your compositor to run: whis-desktop --toggle");

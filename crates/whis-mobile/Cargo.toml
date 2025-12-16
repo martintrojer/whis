@@ -14,7 +14,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-whis-core = { workspace = true, default-features = false, features = ["embedded-encoder"] }
+# Mobile uses lightweight build without local-whisper (smaller binary)
+whis-core = { path = "../whis-core", default-features = false, features = ["embedded-encoder"] }
 anyhow.workspace = true
 tokio.workspace = true
 serde.workspace = true

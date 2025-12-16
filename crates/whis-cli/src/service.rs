@@ -8,8 +8,8 @@ use crate::app::TranscriptionConfig;
 use crate::ipc::{IpcMessage, IpcResponse, IpcServer};
 use std::time::Duration;
 use whis_core::{
-    AudioRecorder, Polisher, RecordingOutput, Settings, TranscriptionProvider, copy_to_clipboard,
-    parallel_transcribe, polish, transcribe_audio, DEFAULT_POLISH_PROMPT,
+    AudioRecorder, DEFAULT_POLISH_PROMPT, Polisher, RecordingOutput, Settings,
+    TranscriptionProvider, copy_to_clipboard, parallel_transcribe, polish, transcribe_audio,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -208,7 +208,15 @@ impl Service {
                     .as_deref()
                     .unwrap_or(DEFAULT_POLISH_PROMPT);
 
-                match polish(&transcription, &settings.polisher, &polisher_api_key, prompt, None).await {
+                match polish(
+                    &transcription,
+                    &settings.polisher,
+                    &polisher_api_key,
+                    prompt,
+                    None,
+                )
+                .await
+                {
                     Ok(polished) => polished,
                     Err(_) => transcription, // Silently fallback in service mode
                 }

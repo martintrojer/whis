@@ -207,7 +207,9 @@ impl RecordingData {
 
     #[cfg(not(any(feature = "ffmpeg", feature = "embedded-encoder")))]
     fn samples_to_mp3(&self, _samples: &[f32], _suffix: &str) -> Result<Vec<u8>> {
-        anyhow::bail!("No MP3 encoder available. Enable either 'ffmpeg' or 'embedded-encoder' feature.")
+        anyhow::bail!(
+            "No MP3 encoder available. Enable either 'ffmpeg' or 'embedded-encoder' feature."
+        )
     }
 
     /// Convert samples to MP3 using FFmpeg process (desktop)
@@ -316,7 +318,9 @@ impl RecordingData {
             .set_quality(mp3lame_encoder::Quality::Best)
             .map_err(|e| anyhow::anyhow!("Failed to set quality: {:?}", e))?;
 
-        let mut encoder = builder.build().map_err(|e| anyhow::anyhow!("Failed to initialize LAME encoder: {:?}", e))?;
+        let mut encoder = builder
+            .build()
+            .map_err(|e| anyhow::anyhow!("Failed to initialize LAME encoder: {:?}", e))?;
 
         // Prepare output buffer
         let mut mp3_data = Vec::new();

@@ -1,12 +1,12 @@
 use crate::state::{AppState, RecordingState, TranscriptionConfig};
 use tauri::{
+    AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder,
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Emitter, Manager, WebviewWindowBuilder, WebviewUrl,
 };
 use whis_core::{
-    copy_to_clipboard, parallel_transcribe, transcribe_audio, AudioRecorder, RecordingOutput,
+    AudioRecorder, RecordingOutput, copy_to_clipboard, parallel_transcribe, transcribe_audio,
 };
 
 // Static icons for each state (pre-loaded at compile time)
@@ -15,7 +15,6 @@ const ICON_RECORDING: &[u8] = include_bytes!("../icons/icon-recording.png");
 const ICON_TRANSCRIBING: &[u8] = include_bytes!("../icons/icon-processing.png");
 
 pub const TRAY_ID: &str = "whis-tray";
-
 
 pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Create menu items
@@ -40,7 +39,10 @@ pub fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     // Use app cache dir for tray icons so Flatpak host can access them
     // (default /tmp is sandboxed and GNOME AppIndicator can't read it)
-    let cache_dir = app.path().app_cache_dir().expect("Failed to get app cache dir");
+    let cache_dir = app
+        .path()
+        .app_cache_dir()
+        .expect("Failed to get app cache dir");
 
     let _tray = TrayIconBuilder::with_id(TRAY_ID)
         .icon(idle_icon)
@@ -86,18 +88,14 @@ fn open_settings_window(app: AppHandle) {
         return;
     }
 
-    let window = WebviewWindowBuilder::new(
-        &app,
-        "settings",
-        WebviewUrl::App("index.html".into())
-    )
-    .title("Whis Settings")
-    .inner_size(600.0, 400.0)
-    .min_inner_size(400.0, 300.0)
-    .resizable(true)
-    .decorations(false)
-    .transparent(true)
-    .build();
+    let window = WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("index.html".into()))
+        .title("Whis Settings")
+        .inner_size(600.0, 400.0)
+        .min_inner_size(400.0, 300.0)
+        .resizable(true)
+        .decorations(false)
+        .transparent(true)
+        .build();
 
     // Fix Wayland window dragging by unsetting GTK titlebar
     // On Wayland, GTK's titlebar is required for dragging, but decorations(false)
@@ -147,9 +145,9 @@ fn start_recording_sync(app: &AppHandle, state: &AppState) -> Result<(), String>
             let provider = settings.provider.clone();
 
             // Get API key using the helper method
-            let api_key = settings
-                .get_api_key()
-                .ok_or_else(|| format!("No {} API key configured. Add it in Settings.", provider))?;
+            let api_key = settings.get_api_key().ok_or_else(|| {
+                format!("No {} API key configured. Add it in Settings.", provider)
+            })?;
 
             let language = settings.language.clone();
 

@@ -1,8 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::io::{self, Write};
 use whis_core::{
-    AudioRecorder, Polisher, Preset, RecordingOutput, Settings, TranscriptionProvider,
-    copy_to_clipboard, parallel_transcribe, polish, transcribe_audio, DEFAULT_POLISH_PROMPT,
+    AudioRecorder, DEFAULT_POLISH_PROMPT, Polisher, Preset, RecordingOutput, Settings,
+    TranscriptionProvider, copy_to_clipboard, ollama, parallel_transcribe, polish,
+    transcribe_audio,
 };
 
 use crate::app;
@@ -37,11 +38,10 @@ fn resolve_polisher(
     match provider {
         TranscriptionProvider::OpenAI => Polisher::OpenAI,
         TranscriptionProvider::Mistral => Polisher::Mistral,
-        // For providers without LLM capability, check if we have a polisher key
+        // Cloud providers without built-in LLM: try OpenAI/Mistral keys
         TranscriptionProvider::Groq
         | TranscriptionProvider::Deepgram
         | TranscriptionProvider::ElevenLabs => {
-            // Try OpenAI first, then Mistral, then disable polishing
             if settings
                 .get_api_key_for(&TranscriptionProvider::OpenAI)
                 .is_some()
@@ -55,6 +55,10 @@ fn resolve_polisher(
             } else {
                 Polisher::None
             }
+        }
+        // Self-hosted transcription: default to Ollama (likely also self-hosted)
+        TranscriptionProvider::LocalWhisper | TranscriptionProvider::RemoteWhisper => {
+            Polisher::Ollama
         }
     }
 }
@@ -124,10 +128,35 @@ pub fn run(polish_flag: bool, preset_name: Option<String>) -> Result<()> {
     let final_text = if should_polish {
         let polisher = resolve_polisher(&preset, &settings, &config.provider);
 
-        // Get API key for polisher using the unified method
-        let api_key = settings.get_polisher_api_key();
+        // Get API key or URL depending on polisher type
+        // For cloud polishers: need API key
+        // For Ollama: need server URL (defaults to localhost:11434)
+        let api_key_or_url = if polisher.requires_api_key() {
+            settings.get_polisher_api_key()
+        } else if polisher == Polisher::Ollama {
+            // For local-whisper provider, auto-start Ollama if not running
+            let ollama_url = settings
+                .get_ollama_url()
+                .unwrap_or_else(|| ollama::DEFAULT_OLLAMA_URL.to_string());
 
-        if let Some(api_key) = api_key {
+            if matches!(config.provider, TranscriptionProvider::LocalWhisper) {
+                // Auto-start Ollama for embedded (local) mode
+                match ollama::ensure_ollama_running(&ollama_url) {
+                    Ok(_) => Some(ollama_url),
+                    Err(e) => {
+                        eprintln!("Warning: Could not start Ollama: {}", e);
+                        eprintln!("Skipping polish. Start Ollama manually: ollama serve");
+                        None // Skip polish
+                    }
+                }
+            } else {
+                Some(ollama_url)
+            }
+        } else {
+            None
+        };
+
+        if let Some(key_or_url) = api_key_or_url {
             print!("Polishing...");
             io::stdout().flush()?;
 
@@ -141,8 +170,22 @@ pub fn run(polish_flag: bool, preset_name: Option<String>) -> Result<()> {
                     .unwrap_or(DEFAULT_POLISH_PROMPT)
             };
 
-            let model = preset.as_ref().and_then(|p| p.model.as_deref());
-            match runtime.block_on(polish(&transcription, &polisher, &api_key, prompt, model)) {
+            // For Ollama, use settings model if preset doesn't specify one
+            let ollama_model = settings.get_ollama_model();
+            let model = if let Some(ref p) = preset {
+                p.model.as_deref()
+            } else if polisher == Polisher::Ollama {
+                ollama_model.as_deref()
+            } else {
+                None
+            };
+            match runtime.block_on(polish(
+                &transcription,
+                &polisher,
+                &key_or_url,
+                prompt,
+                model,
+            )) {
                 Ok(polished) => {
                     print!("\r              \r");
                     io::stdout().flush()?;
@@ -155,7 +198,14 @@ pub fn run(polish_flag: bool, preset_name: Option<String>) -> Result<()> {
                 }
             }
         } else {
-            eprintln!("Warning: No API key for polisher, skipping polish");
+            // Warn when polish was requested but we can't perform it
+            // (Ollama case already warned above when auto-start failed)
+            if polisher != Polisher::None && polisher.requires_api_key() {
+                eprintln!(
+                    "Warning: No API key for {} polisher, skipping polish",
+                    polisher
+                );
+            }
             transcription
         }
     } else {

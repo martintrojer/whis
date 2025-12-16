@@ -1,5 +1,5 @@
-use anyhow::Result;
 use crate::{app, hotkey, ipc, service};
+use anyhow::Result;
 
 /// Guard to clean up PID and socket files on exit
 struct CleanupGuard;
@@ -37,11 +37,11 @@ pub fn run(hotkey_str: String) -> Result<()> {
 
     // Create Tokio runtime
     let runtime = tokio::runtime::Runtime::new()?;
-    
+
     runtime.block_on(async {
         // Create service
         let service = service::Service::new(config)?;
-        
+
         // Run service loop
         tokio::select! {
             result = service.run(Some(hotkey_rx)) => result,

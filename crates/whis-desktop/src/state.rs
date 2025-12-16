@@ -1,7 +1,7 @@
+use crate::settings::Settings;
 use std::sync::Mutex;
 use tauri::menu::MenuItem;
 use whis_core::{AudioRecorder, TranscriptionProvider};
-use crate::settings::Settings;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RecordingState {
