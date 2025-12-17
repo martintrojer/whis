@@ -1,176 +1,141 @@
-<script setup lang="ts" vapor>
-import { ref, computed, onMounted } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
-import { relaunch } from '@tauri-apps/plugin-process';
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { relaunch } from '@tauri-apps/plugin-process'
+import { settingsStore } from '../stores/settings'
 
-interface BackendInfo {
-  backend: string;
-  requires_restart: boolean;
-  compositor: string;
-  portal_version: number;
-}
+const isRecording = ref(false)
+const status = ref('')
+const needsRestart = ref(false)
+const toggleCommand = ref('whis-desktop --toggle')
+const localShortcut = ref(settingsStore.state.shortcut)
 
-interface SaveResult {
-  needs_restart: boolean;
-}
-
-const props = defineProps<{
-  backendInfo: BackendInfo | null;
-  currentShortcut: string;
-  portalShortcut: string | null;
-  portalBindError: string | null;
-}>();
-
-const emit = defineEmits<{
-  'update:currentShortcut': [value: string];
-  'update:portalShortcut': [value: string | null];
-}>();
-
-const isRecording = ref(false);
-const status = ref("");
-const needsRestart = ref(false);
-const toggleCommand = ref("whis-desktop --toggle");
+// Computed properties from store
+const backendInfo = computed(() => settingsStore.state.backendInfo)
+const portalShortcut = computed(() => settingsStore.state.portalShortcut)
+const portalBindError = computed(() => settingsStore.state.portalBindError)
+const currentShortcut = computed(() => localShortcut.value)
 
 onMounted(async () => {
+  localShortcut.value = settingsStore.state.shortcut
   try {
-    toggleCommand.value = await invoke<string>('get_toggle_command');
+    toggleCommand.value = await invoke<string>('get_toggle_command')
   } catch (e) {
-    console.error('Failed to get toggle command:', e);
+    console.error('Failed to get toggle command:', e)
   }
-});
+})
 
 // Parse portal shortcut format like "Press <Control><Alt>l" or "<Shift><Control>r"
 function parsePortalShortcut(portalStr: string): string[] {
-  // Remove "Press " prefix if present
-  const cleaned = portalStr.replace(/^Press\s+/i, '');
-
-  const keys: string[] = [];
-  // Extract modifiers in <brackets>
-  const matches = cleaned.matchAll(/<(\w+)>/g);
+  const cleaned = portalStr.replace(/^Press\s+/i, '')
+  const keys: string[] = []
+  const matches = cleaned.matchAll(/<(\w+)>/g)
   for (const match of matches) {
-    const mod = (match[1] ?? '').toLowerCase();
-    if (mod === 'control') keys.push('Ctrl');
-    else if (mod === 'shift') keys.push('Shift');
-    else if (mod === 'alt') keys.push('Alt');
-    else if (mod === 'super') keys.push('Super');
-    else if (mod) keys.push(mod.charAt(0).toUpperCase() + mod.slice(1));
+    const mod = (match[1] ?? '').toLowerCase()
+    if (mod === 'control') keys.push('Ctrl')
+    else if (mod === 'shift') keys.push('Shift')
+    else if (mod === 'alt') keys.push('Alt')
+    else if (mod === 'super') keys.push('Super')
+    else if (mod) keys.push(mod.charAt(0).toUpperCase() + mod.slice(1))
   }
-  // Get the final key (everything after last >)
-  const finalKey = cleaned.replace(/<\w+>/g, '').trim();
+  const finalKey = cleaned.replace(/<\w+>/g, '').trim()
   if (finalKey) {
-    keys.push(finalKey.toUpperCase());
+    keys.push(finalKey.toUpperCase())
   }
-  return keys;
+  return keys
 }
 
 // Split shortcut into individual keys for display
 const shortcutKeys = computed(() => {
-  // For portal backend with bound shortcut, parse the portal format
-  if (props.backendInfo?.backend === 'PortalGlobalShortcuts' && props.portalShortcut) {
-    return parsePortalShortcut(props.portalShortcut);
+  if (backendInfo.value?.backend === 'PortalGlobalShortcuts' && portalShortcut.value) {
+    return parsePortalShortcut(portalShortcut.value)
   }
-
-  // For other cases, split on '+'
-  if (props.currentShortcut === "Press keys...") {
-    return ["..."];
+  if (currentShortcut.value === 'Press keys...') {
+    return ['...']
   }
-  return props.currentShortcut.split('+');
-});
+  return currentShortcut.value.split('+')
+})
 
 async function resetAndRestart() {
   try {
-    status.value = "Resetting...";
-    await invoke('reset_shortcut');
-    await relaunch();
+    status.value = 'Resetting...'
+    await invoke('reset_shortcut')
+    await relaunch()
   } catch (e) {
-    status.value = "Failed: " + e;
+    status.value = 'Failed: ' + e
   }
 }
 
 async function saveShortcut() {
   try {
-    // Get current settings and only update shortcut
-    const currentSettings = await invoke<{
-      shortcut: string;
-      provider: string;
-      language: string | null;
-      openai_api_key: string | null;
-      mistral_api_key: string | null;
-    }>('get_settings');
-
-    const result = await invoke<SaveResult>('save_settings', {
-      settings: {
-        ...currentSettings,
-        shortcut: props.currentShortcut,
-      }
-    });
-    if (result.needs_restart) {
-      needsRestart.value = true;
-      status.value = "";
+    settingsStore.setShortcut(localShortcut.value)
+    const restartNeeded = await settingsStore.save()
+    if (restartNeeded) {
+      needsRestart.value = true
+      status.value = ''
     } else {
-      status.value = "Saved";
-      setTimeout(() => status.value = "", 2000);
+      status.value = 'Saved'
+      setTimeout(() => status.value = '', 2000)
     }
   } catch (e) {
-    status.value = "Failed to save: " + e;
+    status.value = 'Failed to save: ' + e
   }
 }
 
 async function configureWithCapturedKey() {
-  if (props.currentShortcut === "Press keys..." || !props.currentShortcut) {
-    status.value = "Press a key combination first";
-    return;
+  if (localShortcut.value === 'Press keys...' || !localShortcut.value) {
+    status.value = 'Press a key combination first'
+    return
   }
 
   try {
-    status.value = "Configuring...";
+    status.value = 'Configuring...'
     const newBinding = await invoke<string | null>('configure_shortcut_with_trigger', {
-      trigger: props.currentShortcut
-    });
+      trigger: localShortcut.value
+    })
     if (newBinding) {
-      emit('update:portalShortcut', newBinding);
-      status.value = "Configured!";
+      settingsStore.setPortalShortcut(newBinding)
+      status.value = 'Configured!'
     } else {
-      status.value = "Cancelled";
+      status.value = 'Cancelled'
     }
-    setTimeout(() => status.value = "", 2000);
+    setTimeout(() => status.value = '', 2000)
   } catch (e) {
-    status.value = "Failed: " + e;
+    status.value = 'Failed: ' + e
   }
 }
 
 async function restartApp() {
-  await relaunch();
+  await relaunch()
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  if (!isRecording.value) return;
-  e.preventDefault();
+  if (!isRecording.value) return
+  e.preventDefault()
 
-  const keys = [];
-  if (e.ctrlKey) keys.push('Ctrl');
-  if (e.shiftKey) keys.push('Shift');
-  if (e.altKey) keys.push('Alt');
-  if (e.metaKey) keys.push('Super');
+  const keys = []
+  if (e.ctrlKey) keys.push('Ctrl')
+  if (e.shiftKey) keys.push('Shift')
+  if (e.altKey) keys.push('Alt')
+  if (e.metaKey) keys.push('Super')
 
-  const key = e.key.toUpperCase();
+  const key = e.key.toUpperCase()
   if (!['CONTROL', 'SHIFT', 'ALT', 'META'].includes(key)) {
-    keys.push(key);
+    keys.push(key)
   }
 
   if (keys.length > 0) {
-    emit('update:currentShortcut', keys.join('+'));
+    localShortcut.value = keys.join('+')
   }
 }
 
 function startRecording() {
-  isRecording.value = true;
-  emit('update:currentShortcut', "Press keys...");
+  isRecording.value = true
+  localShortcut.value = 'Press keys...'
 }
 
 function stopRecording() {
-  isRecording.value = false;
-  // Parent will reload settings if needed
+  isRecording.value = false
 }
 </script>
 
@@ -218,7 +183,7 @@ function stopRecording() {
                   :class="{ placeholder: key === '...' }"
                 >{{ key }}</span>
               </div>
-              <span v-if="isRecording" class="recording-dot"></span>
+              <span v-show="isRecording" class="recording-dot" aria-hidden="true"></span>
             </div>
           </div>
 
@@ -338,7 +303,7 @@ function stopRecording() {
                 :class="{ placeholder: key === '...' }"
               >{{ key }}</span>
             </div>
-            <span v-if="isRecording" class="recording-dot"></span>
+            <span v-show="isRecording" class="recording-dot" aria-hidden="true"></span>
           </div>
         </div>
 

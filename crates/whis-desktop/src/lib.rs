@@ -32,10 +32,8 @@ pub fn run() {
             // Start IPC listener for --toggle CLI commands
             shortcuts::start_ipc_listener(app.handle().clone());
 
-            // If no tray, show main window immediately
-            if !tray_available {
-                window::show_main_window(app)?;
-            }
+            // Always show main window on startup
+            window::show_main_window(app)?;
 
             Ok(())
         })
@@ -58,6 +56,22 @@ pub fn run() {
             commands::get_toggle_command,
             commands::toggle_recording,
             commands::can_reopen_window,
+            commands::download_whisper_model,
+            commands::test_remote_whisper,
+            commands::test_ollama_connection,
+            commands::list_ollama_models,
+            commands::pull_ollama_model,
+            commands::start_ollama,
+            commands::get_whisper_models,
+            commands::is_whisper_model_valid,
+            commands::list_presets,
+            commands::apply_preset,
+            commands::get_active_preset,
+            commands::set_active_preset,
+            commands::get_preset_details,
+            commands::create_preset,
+            commands::update_preset,
+            commands::delete_preset,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

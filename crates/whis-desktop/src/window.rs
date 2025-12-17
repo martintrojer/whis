@@ -10,6 +10,7 @@ pub fn show_main_window(app: &tauri::App) -> Result<(), Box<dyn std::error::Erro
         .resizable(true)
         .decorations(false)
         .transparent(true)
+        .visible(false)
         .build()?;
 
     // Fix Wayland window dragging by unsetting GTK titlebar

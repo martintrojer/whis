@@ -1,50 +1,51 @@
-<script setup lang="ts" vapor>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { settingsStore } from '../stores/settings'
+import type { StatusResponse } from '../types'
 
-interface StatusResponse {
-  state: 'Idle' | 'Recording' | 'Transcribing';
-  config_valid: boolean;
-}
-
-const props = defineProps<{
-  currentShortcut: string;
-  portalShortcut: string | null;
-}>();
-
-const status = ref<StatusResponse>({ state: 'Idle', config_valid: false });
-const error = ref<string | null>(null);
-let pollInterval: number | null = null;
+const status = ref<StatusResponse>({ state: 'Idle', config_valid: false })
+const error = ref<string | null>(null)
+const polishWarning = ref<string | null>(null)
+const isPolishing = ref(false)
+let pollInterval: number | null = null
+let unlistenPolishWarning: UnlistenFn | null = null
+let unlistenPolishStarted: UnlistenFn | null = null
+let unlistenTranscriptionComplete: UnlistenFn | null = null
 
 const buttonText = computed(() => {
   switch (status.value.state) {
-    case 'Idle': return 'Start Recording';
-    case 'Recording': return 'Stop Recording';
-    case 'Transcribing': return 'Transcribing...';
+    case 'Idle': return 'Start Recording'
+    case 'Recording': return 'Stop Recording'
+    case 'Transcribing': return 'Transcribing...'
   }
-});
+})
 
 const canRecord = computed(() => {
-  return status.value.config_valid && status.value.state !== 'Transcribing';
-});
+  return status.value.config_valid && status.value.state !== 'Transcribing'
+})
 
 const displayShortcut = computed(() => {
-  if (props.portalShortcut) {
-    let shortcut = props.portalShortcut;
+  const portalShortcut = settingsStore.state.portalShortcut
+  const currentShortcut = settingsStore.state.shortcut
+
+  if (portalShortcut) {
+    let shortcut = portalShortcut
     shortcut = shortcut
       .replace(/<Control>/gi, 'Ctrl+')
       .replace(/<Shift>/gi, 'Shift+')
       .replace(/<Alt>/gi, 'Alt+')
-      .replace(/<Super>/gi, 'Super+');
-    shortcut = shortcut.replace(/\+$/, '');
-    const parts = shortcut.split('+');
+      .replace(/<Super>/gi, 'Super+')
+    shortcut = shortcut.replace(/\+$/, '')
+    const parts = shortcut.split('+')
     if (parts.length > 0 && parts[parts.length - 1]) {
-      parts[parts.length - 1] = parts[parts.length - 1]!.toUpperCase();
+      parts[parts.length - 1] = parts[parts.length - 1]!.toUpperCase()
     }
-    return parts.join('+');
+    return parts.join('+')
   }
-  return props.currentShortcut || null;
-});
+  return currentShortcut || null
+})
 
 async function fetchStatus() {
   try {
@@ -67,15 +68,35 @@ async function toggleRecording() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   fetchStatus();
   pollInterval = window.setInterval(fetchStatus, 500);
+
+  // Listen for polish events
+  unlistenPolishWarning = await listen<string>('polish-warning', (event) => {
+    polishWarning.value = event.payload;
+    // Auto-dismiss after 8 seconds
+    setTimeout(() => {
+      polishWarning.value = null;
+    }, 8000);
+  });
+
+  unlistenPolishStarted = await listen('polish-started', () => {
+    isPolishing.value = true;
+  });
+
+  unlistenTranscriptionComplete = await listen('transcription-complete', () => {
+    isPolishing.value = false;
+  });
 });
 
 onUnmounted(() => {
   if (pollInterval) {
     clearInterval(pollInterval);
   }
+  unlistenPolishWarning?.();
+  unlistenPolishStarted?.();
+  unlistenTranscriptionComplete?.();
 });
 </script>
 
@@ -104,22 +125,32 @@ onUnmounted(() => {
           or press <kbd>{{ displayShortcut }}</kbd>
         </span>
 
-        <!-- State hints -->
-        <span v-if="status.state === 'Recording'" class="state-hint recording">
-          speak now...
-        </span>
-        <span v-else-if="status.state === 'Transcribing'" class="state-hint">
-          processing audio...
+        <!-- State hints (announced to screen readers) -->
+        <span role="status" aria-live="polite" class="state-hints">
+          <span v-if="status.state === 'Recording'" class="state-hint recording">
+            speak now...
+          </span>
+          <span v-else-if="isPolishing" class="state-hint polishing">
+            polishing...
+          </span>
+          <span v-else-if="status.state === 'Transcribing'" class="state-hint">
+            processing audio...
+          </span>
         </span>
       </div>
 
       <!-- Error message -->
       <p v-if="error" class="error-msg">{{ error }}</p>
 
+      <!-- Polish warning -->
+      <div v-if="polishWarning" class="warning-msg">
+        <strong>Polishing skipped:</strong> {{ polishWarning }}
+      </div>
+
       <!-- Only show notice when something needs attention -->
       <div v-if="!status.config_valid" class="notice">
         <span class="notice-marker">[!]</span>
-        <p>Configure your API key in <strong>settings</strong> to start transcribing.</p>
+        <p>Configure your provider in <strong>settings</strong> to start transcribing.</p>
       </div>
 
       <div v-else-if="!displayShortcut" class="notice">
@@ -217,6 +248,10 @@ onUnmounted(() => {
   color: var(--recording);
 }
 
+.state-hint.polishing {
+  color: var(--accent);
+}
+
 /* Error message */
 .error-msg {
   font-size: 12px;
@@ -225,6 +260,20 @@ onUnmounted(() => {
   background: rgba(255, 68, 68, 0.1);
   border: 1px solid rgba(255, 68, 68, 0.3);
   border-radius: 4px;
+}
+
+/* Warning message (for polish warnings) */
+.warning-msg {
+  font-size: 12px;
+  color: var(--text);
+  padding: 8px 12px;
+  background: rgba(255, 180, 68, 0.1);
+  border: 1px solid rgba(255, 180, 68, 0.3);
+  border-radius: 4px;
+}
+
+.warning-msg strong {
+  color: #ffb444;
 }
 
 /* Notice overrides */

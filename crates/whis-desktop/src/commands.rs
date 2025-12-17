@@ -28,7 +28,7 @@ pub async fn get_status(state: State<'_, AppState>) -> Result<StatusResponse, St
     let config_valid = {
         let has_cached_config = state.transcription_config.lock().unwrap().is_some();
         let settings = state.settings.lock().unwrap();
-        has_cached_config || settings.has_api_key()
+        has_cached_config || settings.is_provider_configured()
     };
 
     Ok(StatusResponse {
@@ -103,7 +103,9 @@ pub async fn save_settings(
         (
             current.provider != settings.provider
                 || current.api_keys != settings.api_keys
-                || current.language != settings.language,
+                || current.language != settings.language
+                || current.whisper_model_path != settings.whisper_model_path
+                || current.remote_whisper_url != settings.remote_whisper_url,
             current.shortcut != settings.shortcut,
         )
     };
@@ -250,5 +252,434 @@ pub fn can_reopen_window(state: State<'_, AppState>) -> bool {
             has_shortcut && no_error
         }
         _ => false,
+    }
+}
+
+/// Progress event payload for model download
+#[derive(Clone, serde::Serialize)]
+pub struct DownloadProgress {
+    pub downloaded: u64,
+    pub total: u64,
+}
+
+/// Download a whisper model for local transcription
+/// Emits 'download-progress' events with { downloaded, total } during download
+/// Returns the path where the model was saved
+#[tauri::command]
+pub async fn download_whisper_model(
+    app: AppHandle,
+    model_name: String,
+) -> Result<String, String> {
+    use tauri::Emitter;
+
+    // Run blocking download in a separate thread
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = whis_core::model::default_model_path(&model_name);
+
+        // Skip download if model already exists
+        if path.exists() {
+            return Ok(path.to_string_lossy().to_string());
+        }
+
+        // Download with progress callback
+        whis_core::model::download_model_with_progress(&model_name, &path, |downloaded, total| {
+            let _ = app.emit("download-progress", DownloadProgress { downloaded, total });
+        })
+        .map_err(|e| e.to_string())?;
+
+        Ok(path.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Test connection to a remote whisper server
+/// Returns true if the server is reachable
+#[tauri::command]
+pub async fn test_remote_whisper(url: String) -> Result<bool, String> {
+    // Validate URL format first
+    let url_trimmed = url.trim();
+    if !url_trimmed.starts_with("http://") && !url_trimmed.starts_with("https://") {
+        return Err("URL must start with http:// or https://".to_string());
+    }
+
+    // Try to reach the server's health endpoint or base URL
+    let test_url = format!("{}/v1/models", url_trimmed.trim_end_matches('/'));
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    match client.get(&test_url).send().await {
+        Ok(resp) => {
+            // Any response (even 404) means server is reachable
+            // 200 means it's a valid OpenAI-compatible endpoint
+            if resp.status().is_success() || resp.status().as_u16() == 404 {
+                Ok(true)
+            } else {
+                Err(format!("Server returned: {}", resp.status()))
+            }
+        }
+        Err(e) => {
+            if e.is_timeout() {
+                Err("Connection timed out".to_string())
+            } else if e.is_connect() {
+                Err("Could not connect to server".to_string())
+            } else {
+                Err(format!("Connection failed: {}", e))
+            }
+        }
+    }
+}
+
+/// Check if the configured whisper model path points to an existing file
+#[tauri::command]
+pub fn is_whisper_model_valid(state: State<'_, AppState>) -> bool {
+    let settings = state.settings.lock().unwrap();
+    settings
+        .get_whisper_model_path()
+        .map(|p| std::path::Path::new(&p).exists())
+        .unwrap_or(false)
+}
+
+/// Get available whisper models for download
+#[tauri::command]
+pub fn get_whisper_models() -> Vec<WhisperModelInfo> {
+    whis_core::model::WHISPER_MODELS
+        .iter()
+        .map(|(name, _, desc)| {
+            let path = whis_core::model::default_model_path(name);
+            WhisperModelInfo {
+                name: name.to_string(),
+                description: desc.to_string(),
+                installed: path.exists(),
+                path: path.to_string_lossy().to_string(),
+            }
+        })
+        .collect()
+}
+
+#[derive(serde::Serialize)]
+pub struct WhisperModelInfo {
+    pub name: String,
+    pub description: String,
+    pub installed: bool,
+    pub path: String,
+}
+
+/// Preset info for the UI
+#[derive(serde::Serialize)]
+pub struct PresetInfo {
+    pub name: String,
+    pub description: String,
+    pub is_builtin: bool,
+}
+
+/// List all available presets (built-in + user)
+#[tauri::command]
+pub fn list_presets() -> Vec<PresetInfo> {
+    use whis_core::preset::{Preset, PresetSource};
+
+    Preset::list_all()
+        .into_iter()
+        .map(|(p, source)| PresetInfo {
+            name: p.name,
+            description: p.description,
+            is_builtin: source == PresetSource::BuiltIn,
+        })
+        .collect()
+}
+
+/// Apply a preset - updates settings with the preset's configuration and sets it as active
+#[tauri::command]
+pub async fn apply_preset(
+    name: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    use whis_core::preset::Preset;
+
+    let (preset, _) = Preset::load(&name)?;
+
+    {
+        let mut settings = state.settings.lock().unwrap();
+
+        // Apply preset's polish prompt
+        settings.polish_prompt = Some(preset.prompt.clone());
+
+        // Apply preset's polisher override if specified
+        if let Some(polisher_str) = &preset.polisher {
+            if let Ok(polisher) = polisher_str.parse() {
+                settings.polisher = polisher;
+            }
+        }
+
+        // Set this preset as active
+        settings.active_preset = Some(name);
+
+        // Save the settings
+        settings.save().map_err(|e| e.to_string())?;
+    }
+
+    // Clear cached transcription config since settings changed
+    *state.transcription_config.lock().unwrap() = None;
+
+    Ok(())
+}
+
+/// Get the active preset name (if any)
+#[tauri::command]
+pub fn get_active_preset(state: State<'_, AppState>) -> Option<String> {
+    let settings = state.settings.lock().unwrap();
+    settings.active_preset.clone()
+}
+
+/// Set the active preset
+#[tauri::command]
+pub async fn set_active_preset(
+    name: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let mut settings = state.settings.lock().unwrap();
+    settings.active_preset = name;
+    settings.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Full preset details for editing
+#[derive(serde::Serialize)]
+pub struct PresetDetails {
+    pub name: String,
+    pub description: String,
+    pub prompt: String,
+    pub polisher: Option<String>,
+    pub model: Option<String>,
+    pub is_builtin: bool,
+}
+
+/// Input for creating a new preset
+#[derive(serde::Deserialize)]
+pub struct CreatePresetInput {
+    pub name: String,
+    pub description: String,
+    pub prompt: String,
+    pub polisher: Option<String>,
+    pub model: Option<String>,
+}
+
+/// Input for updating an existing preset
+#[derive(serde::Deserialize)]
+pub struct UpdatePresetInput {
+    pub description: String,
+    pub prompt: String,
+    pub polisher: Option<String>,
+    pub model: Option<String>,
+}
+
+/// Get full details of a preset for viewing/editing
+#[tauri::command]
+pub fn get_preset_details(name: String) -> Result<PresetDetails, String> {
+    use whis_core::preset::{Preset, PresetSource};
+
+    let (preset, source) = Preset::load(&name)?;
+
+    Ok(PresetDetails {
+        name: preset.name,
+        description: preset.description,
+        prompt: preset.prompt,
+        polisher: preset.polisher,
+        model: preset.model,
+        is_builtin: source == PresetSource::BuiltIn,
+    })
+}
+
+/// Create a new user preset
+#[tauri::command]
+pub fn create_preset(input: CreatePresetInput) -> Result<PresetInfo, String> {
+    use whis_core::preset::Preset;
+
+    // Validate name
+    Preset::validate_name(&input.name, false)?;
+
+    // Check if preset already exists
+    if Preset::load(&input.name).is_ok() {
+        return Err(format!("A preset named '{}' already exists", input.name));
+    }
+
+    // Create and save the preset
+    let preset = Preset {
+        name: input.name.clone(),
+        description: input.description.clone(),
+        prompt: input.prompt,
+        polisher: input.polisher,
+        model: input.model,
+    };
+
+    preset.save()?;
+
+    Ok(PresetInfo {
+        name: input.name,
+        description: input.description,
+        is_builtin: false,
+    })
+}
+
+/// Update an existing user preset
+#[tauri::command]
+pub fn update_preset(name: String, input: UpdatePresetInput) -> Result<PresetInfo, String> {
+    use whis_core::preset::Preset;
+
+    // Check it's not a built-in
+    if Preset::is_builtin(&name) {
+        return Err(format!("Cannot edit built-in preset '{}'", name));
+    }
+
+    // Check preset exists
+    let (mut preset, _) = Preset::load(&name)?;
+
+    // Update fields
+    preset.description = input.description.clone();
+    preset.prompt = input.prompt;
+    preset.polisher = input.polisher;
+    preset.model = input.model;
+
+    // Save
+    preset.save()?;
+
+    Ok(PresetInfo {
+        name,
+        description: input.description,
+        is_builtin: false,
+    })
+}
+
+/// Delete a user preset
+#[tauri::command]
+pub fn delete_preset(name: String, state: State<'_, AppState>) -> Result<(), String> {
+    use whis_core::preset::Preset;
+
+    // Delete the preset file
+    Preset::delete(&name)?;
+
+    // If this was the active preset, clear it
+    {
+        let mut settings = state.settings.lock().unwrap();
+        if settings.active_preset.as_deref() == Some(&name) {
+            settings.active_preset = None;
+            settings.save().map_err(|e| e.to_string())?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Test connection to Ollama server
+#[tauri::command]
+pub fn test_ollama_connection(url: String) -> Result<bool, String> {
+    let url = if url.trim().is_empty() {
+        whis_core::ollama::DEFAULT_OLLAMA_URL.to_string()
+    } else {
+        url
+    };
+    Ok(whis_core::ollama::is_ollama_running(&url))
+}
+
+/// List available models from Ollama
+#[tauri::command]
+pub async fn list_ollama_models(url: String) -> Result<Vec<String>, String> {
+    let url = if url.trim().is_empty() {
+        whis_core::ollama::DEFAULT_OLLAMA_URL.to_string()
+    } else {
+        url
+    };
+
+    // Run blocking call in separate thread
+    tauri::async_runtime::spawn_blocking(move || {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(5))
+            .build()
+            .map_err(|e| e.to_string())?;
+
+        let tags_url = format!("{}/api/tags", url.trim_end_matches('/'));
+        let response = client
+            .get(&tags_url)
+            .send()
+            .map_err(|e| format!("Failed to connect to Ollama: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Ollama returned error: {}", response.status()));
+        }
+
+        #[derive(serde::Deserialize)]
+        struct TagsResponse {
+            models: Vec<ModelInfo>,
+        }
+
+        #[derive(serde::Deserialize)]
+        struct ModelInfo {
+            name: String,
+        }
+
+        let tags: TagsResponse = response
+            .json()
+            .map_err(|e| format!("Failed to parse Ollama response: {}", e))?;
+
+        Ok(tags.models.into_iter().map(|m| m.name).collect())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Progress payload for Ollama pull events
+#[derive(Clone, serde::Serialize)]
+pub struct OllamaPullProgress {
+    pub downloaded: u64,
+    pub total: u64,
+}
+
+/// Pull an Ollama model with progress events
+/// Emits 'ollama-pull-progress' events with { downloaded, total } during download
+#[tauri::command]
+pub async fn pull_ollama_model(
+    app: tauri::AppHandle,
+    url: String,
+    model: String,
+) -> Result<(), String> {
+    use tauri::Emitter;
+
+    let url = if url.trim().is_empty() {
+        whis_core::ollama::DEFAULT_OLLAMA_URL.to_string()
+    } else {
+        url
+    };
+
+    // Run blocking call in separate thread with progress callback
+    tauri::async_runtime::spawn_blocking(move || {
+        whis_core::ollama::pull_model_with_progress(&url, &model, |downloaded, total| {
+            let _ = app.emit(
+                "ollama-pull-progress",
+                OllamaPullProgress { downloaded, total },
+            );
+        })
+        .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Start Ollama server if not running
+/// Returns "started" if we started it, "running" if already running
+#[tauri::command]
+pub fn start_ollama(url: String) -> Result<String, String> {
+    let url = if url.trim().is_empty() {
+        whis_core::ollama::DEFAULT_OLLAMA_URL.to_string()
+    } else {
+        url
+    };
+
+    match whis_core::ollama::ensure_ollama_running(&url) {
+        Ok(true) => Ok("started".to_string()),  // Was started
+        Ok(false) => Ok("running".to_string()), // Already running
+        Err(e) => Err(e.to_string()),           // Not installed / error
     }
 }

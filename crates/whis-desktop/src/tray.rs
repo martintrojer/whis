@@ -6,7 +6,8 @@ use tauri::{
     tray::TrayIconBuilder,
 };
 use whis_core::{
-    AudioRecorder, RecordingOutput, copy_to_clipboard, parallel_transcribe, transcribe_audio,
+    AudioRecorder, DEFAULT_POLISH_PROMPT, Polisher, RecordingOutput, TranscriptionProvider,
+    copy_to_clipboard, ollama, parallel_transcribe, polish, transcribe_audio,
 };
 
 // Static icons for each state (pre-loaded at compile time)
@@ -101,12 +102,18 @@ fn open_settings_window(app: AppHandle) {
     // On Wayland, GTK's titlebar is required for dragging, but decorations(false)
     // removes it. By calling set_titlebar(None), we restore drag functionality
     // while keeping our custom chrome.
-    #[cfg(target_os = "linux")]
-    if let Ok(window) = window {
-        use gtk::prelude::GtkWindowExt;
-        if let Ok(gtk_window) = window.gtk_window() {
-            gtk_window.set_titlebar(Option::<&gtk::Widget>::None);
+    match window {
+        Ok(window) => {
+            #[cfg(target_os = "linux")]
+            {
+                use gtk::prelude::GtkWindowExt;
+                if let Ok(gtk_window) = window.gtk_window() {
+                    gtk_window.set_titlebar(Option::<&gtk::Widget>::None);
+                }
+            }
+            let _ = window.show();
         }
+        Err(e) => eprintln!("Failed to create settings window: {e}"),
     }
 }
 
@@ -144,10 +151,22 @@ fn start_recording_sync(app: &AppHandle, state: &AppState) -> Result<(), String>
             let settings = state.settings.lock().unwrap();
             let provider = settings.provider.clone();
 
-            // Get API key using the helper method
-            let api_key = settings.get_api_key().ok_or_else(|| {
-                format!("No {} API key configured. Add it in Settings.", provider)
-            })?;
+            // Get API key/model path/URL based on provider type
+            let api_key = match provider {
+                TranscriptionProvider::LocalWhisper => {
+                    settings.get_whisper_model_path().ok_or_else(|| {
+                        "Whisper model path not configured. Add it in Settings.".to_string()
+                    })?
+                }
+                TranscriptionProvider::RemoteWhisper => {
+                    settings.get_remote_whisper_url().ok_or_else(|| {
+                        "Remote Whisper URL not configured. Add it in Settings.".to_string()
+                    })?
+                }
+                _ => settings.get_api_key().ok_or_else(|| {
+                    format!("No {} API key configured. Add it in Settings.", provider)
+                })?,
+            };
 
             let language = settings.language.clone();
 
@@ -241,13 +260,80 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
         }
     };
 
-    // Copy to clipboard
-    copy_to_clipboard(&transcription).map_err(|e| e.to_string())?;
+    // Extract polishing config from settings (lock scope limited)
+    let polish_config = {
+        let settings = state.settings.lock().unwrap();
+        if settings.polisher != Polisher::None {
+            let polisher = settings.polisher.clone();
+            let prompt = settings
+                .polish_prompt
+                .clone()
+                .unwrap_or_else(|| DEFAULT_POLISH_PROMPT.to_string());
+            let ollama_model = settings.ollama_model.clone();
 
-    println!("Done: {}", &transcription[..transcription.len().min(50)]);
+            // Get API key or URL based on polisher type
+            let api_key_or_url = if polisher.requires_api_key() {
+                settings.get_polisher_api_key()
+            } else if polisher == Polisher::Ollama {
+                let ollama_url = settings
+                    .get_ollama_url()
+                    .unwrap_or_else(|| ollama::DEFAULT_OLLAMA_URL.to_string());
+                Some(ollama_url)
+            } else {
+                None
+            };
+
+            api_key_or_url.map(|key_or_url| (polisher, prompt, ollama_model, key_or_url))
+        } else {
+            None
+        }
+    };
+
+    // Apply polishing if enabled (outside of lock scope)
+    let final_text = if let Some((polisher, prompt, ollama_model, key_or_url)) = polish_config {
+        // Auto-start Ollama if needed (and installed)
+        if polisher == Polisher::Ollama {
+            if let Err(e) = ollama::ensure_ollama_running(&key_or_url) {
+                let warning = format!("Ollama: {e}");
+                eprintln!("Polish warning: {warning}");
+                let _ = app.emit("polish-warning", &warning);
+                // Skip polishing, return raw transcription
+                copy_to_clipboard(&transcription).map_err(|e| e.to_string())?;
+                println!("Done (unpolished): {}", &transcription[..transcription.len().min(50)]);
+                let _ = app.emit("transcription-complete", &transcription);
+                return Ok(());
+            }
+        }
+
+        println!("Polishing...");
+        let _ = app.emit("polish-started", ());
+
+        let model = if polisher == Polisher::Ollama {
+            ollama_model.as_deref()
+        } else {
+            None
+        };
+
+        match polish(&transcription, &polisher, &key_or_url, &prompt, model).await {
+            Ok(polished) => polished,
+            Err(e) => {
+                let warning = e.to_string();
+                eprintln!("Polish warning: {warning}");
+                let _ = app.emit("polish-warning", &warning);
+                transcription
+            }
+        }
+    } else {
+        transcription
+    };
+
+    // Copy to clipboard
+    copy_to_clipboard(&final_text).map_err(|e| e.to_string())?;
+
+    println!("Done: {}", &final_text[..final_text.len().min(50)]);
 
     // Emit event to frontend so it knows transcription completed
-    let _ = app.emit("transcription-complete", &transcription);
+    let _ = app.emit("transcription-complete", &final_text);
 
     Ok(())
 }

@@ -15,6 +15,7 @@ anyhow.workspace = true
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+reqwest.workspace = true
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-process = "2"
@@ -27,5 +28,6 @@ image = "0.25"
 gtk = "0.18"
 
 [features]
-default = ["custom-protocol"]
+default = ["custom-protocol", "local-whisper"]
 custom-protocol = ["tauri/custom-protocol"]
+local-whisper = ["whis-core/local-whisper"]

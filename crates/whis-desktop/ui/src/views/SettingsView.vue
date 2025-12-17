@@ -1,34 +1,69 @@
-<script setup lang="ts" vapor>
-import { ref, computed } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import { settingsStore } from '../stores/settings'
+import type { Provider, Polisher } from '../types'
+import {
+  ModeCards,
+  CloudProviderConfig,
+  LocalWhisperConfig,
+  RemoteWhisperConfig,
+  OllamaConfig,
+  PolishingConfig,
+  type TranscriptionMode,
+} from '../components'
 
-interface SaveResult {
-  needs_restart: boolean;
-}
+const savingStatus = ref('')
+const showAdvanced = ref(false)
 
-type Provider = 'openai' | 'mistral' | 'groq' | 'deepgram' | 'elevenlabs';
+// Settings from store
+const provider = computed(() => settingsStore.state.provider)
+const language = computed(() => settingsStore.state.language)
+const apiKeys = computed(() => settingsStore.state.api_keys)
+const remoteWhisperUrl = computed(() => settingsStore.state.remote_whisper_url)
+const polisher = computed(() => settingsStore.state.polisher)
 
-const props = defineProps<{
-  currentShortcut: string;
-  provider: Provider;
-  language: string | null;
-  apiKeys: Record<string, string>;
-}>();
+// Transcription mode: cloud vs local
+const transcriptionMode = ref<TranscriptionMode>(
+  ['local-whisper', 'remote-whisper'].includes(provider.value) ? 'local' : 'cloud'
+)
 
-const emit = defineEmits<{
-  'update:provider': [value: Provider];
-  'update:language': [value: string | null];
-  'update:apiKeys': [value: Record<string, string>];
-}>();
+// Whisper model validation (for local provider)
+const whisperModelValid = ref(false)
 
-const keyMasked = ref<Record<string, boolean>>({
-  openai: true,
-  mistral: true,
-  groq: true,
-  deepgram: true,
-  elevenlabs: true,
-});
-const status = ref("");
+// Watch for provider changes to validate model
+watch(provider, async () => {
+  if (provider.value === 'local-whisper') {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      whisperModelValid.value = await invoke<boolean>('is_whisper_model_valid')
+    } catch {
+      whisperModelValid.value = false
+    }
+  }
+}, { immediate: true })
+
+// Configuration status - shows if ready or what's needed
+const configStatus = computed(() => {
+  if (transcriptionMode.value === 'cloud') {
+    const key = apiKeys.value[provider.value] || ''
+    if (!key) return { ready: false, message: 'API key required' }
+    return { ready: true, message: 'Ready' }
+  } else {
+    if (provider.value === 'local-whisper' && !whisperModelValid.value) {
+      return { ready: false, message: 'Model required' }
+    }
+    if (provider.value === 'remote-whisper' && !remoteWhisperUrl.value) {
+      return { ready: false, message: 'Server URL required' }
+    }
+    return { ready: true, message: provider.value === 'local-whisper' ? 'Local Whisper' : 'Remote Whisper' }
+  }
+})
+
+// Local mode options for dropdown
+const localModeOptions = [
+  { value: 'local-whisper', label: 'Local Whisper' },
+  { value: 'remote-whisper', label: 'Remote Whisper' },
+]
 
 // Common language codes for the dropdown
 const languageOptions = [
@@ -45,56 +80,72 @@ const languageOptions = [
   { value: 'ja', label: 'Japanese (ja)' },
   { value: 'ko', label: 'Korean (ko)' },
   { value: 'zh', label: 'Chinese (zh)' },
-];
+]
 
-const currentApiKeyConfigured = computed(() => {
-  const key = props.apiKeys[props.provider] || '';
-  return key.length > 0;
-});
-
-function getApiKey(provider: Provider): string {
-  return props.apiKeys[provider] || '';
+function handleModeChange(mode: TranscriptionMode) {
+  transcriptionMode.value = mode
+  if (mode === 'cloud') {
+    // Switch to default cloud provider if currently on local
+    if (['local-whisper', 'remote-whisper'].includes(provider.value)) {
+      settingsStore.setProvider('openai')
+      // Auto-sync polisher to match (if user has cloud polisher enabled)
+      if (polisher.value !== 'none' && polisher.value !== 'ollama') {
+        settingsStore.setPolisher('openai')
+      }
+    }
+  } else {
+    // Switch to local-whisper if currently on cloud
+    if (!['local-whisper', 'remote-whisper'].includes(provider.value)) {
+      settingsStore.setProvider('local-whisper')
+    }
+  }
 }
 
-function updateApiKey(provider: Provider, value: string) {
-  const newKeys = { ...props.apiKeys, [provider]: value };
-  emit('update:apiKeys', newKeys);
+function handleProviderUpdate(newProvider: Provider) {
+  settingsStore.setProvider(newProvider)
+  // Auto-sync polisher to match provider (if user has cloud polisher enabled)
+  if ((newProvider === 'openai' || newProvider === 'mistral') &&
+      polisher.value !== 'none' && polisher.value !== 'ollama') {
+    settingsStore.setPolisher(newProvider as Polisher)
+  }
+}
+
+function handleApiKeyUpdate(providerKey: string, value: string) {
+  settingsStore.setApiKey(providerKey, value)
+}
+
+function handleLocalModeChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value as Provider
+  settingsStore.setProvider(value)
+}
+
+function handleLanguageChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  settingsStore.setLanguage(value === '' ? null : value)
 }
 
 async function saveSettings() {
   try {
     // Validate OpenAI key format if provided
-    const openaiKey = props.apiKeys.openai || '';
+    const openaiKey = apiKeys.value.openai || ''
     if (openaiKey && !openaiKey.startsWith('sk-')) {
-      status.value = "Invalid OpenAI key format. Keys start with 'sk-'";
-      return;
+      savingStatus.value = "Invalid OpenAI key format. Keys start with 'sk-'"
+      return
     }
 
     // Validate Groq key format if provided
-    const groqKey = props.apiKeys.groq || '';
+    const groqKey = apiKeys.value.groq || ''
     if (groqKey && !groqKey.startsWith('gsk_')) {
-      status.value = "Invalid Groq key format. Keys start with 'gsk_'";
-      return;
+      savingStatus.value = "Invalid Groq key format. Keys start with 'gsk_'"
+      return
     }
 
-    await invoke<SaveResult>('save_settings', {
-      settings: {
-        shortcut: props.currentShortcut,
-        provider: props.provider,
-        language: props.language,
-        api_keys: props.apiKeys
-      }
-    });
-    status.value = "Saved";
-    setTimeout(() => status.value = "", 2000);
+    await settingsStore.save()
+    savingStatus.value = 'Saved'
+    setTimeout(() => savingStatus.value = '', 2000)
   } catch (e) {
-    status.value = "Failed to save: " + e;
+    savingStatus.value = 'Failed to save: ' + e
   }
-}
-
-function handleLanguageChange(event: Event) {
-  const value = (event.target as HTMLSelectElement).value;
-  emit('update:language', value === '' ? null : value);
 }
 </script>
 
@@ -102,251 +153,200 @@ function handleLanguageChange(event: Event) {
   <section class="section">
     <header class="section-header">
       <h1>Settings</h1>
-      <p>Configure transcription provider and API keys</p>
+      <p>Configure transcription</p>
     </header>
 
     <div class="section-content">
-      <!-- Provider Selection -->
-      <div class="field">
-        <label>Transcription Provider</label>
-        <div class="provider-options">
-          <button
-            class="provider-btn"
-            :class="{ active: provider === 'openai' }"
-            @click="emit('update:provider', 'openai')"
+      <!-- Mode Cards (Cloud/Local) -->
+      <ModeCards
+        :model-value="transcriptionMode"
+        @update:model-value="handleModeChange"
+      />
+
+      <!-- Status - Ready -->
+      <div v-if="configStatus.ready" class="notice">
+        <span class="notice-marker">[*]</span>
+        <p>Ready to transcribe · {{ configStatus.message }}</p>
+      </div>
+
+      <!-- Cloud Provider Config -->
+      <CloudProviderConfig
+        v-if="transcriptionMode === 'cloud'"
+        :provider="provider"
+        :api-keys="apiKeys"
+        :show-config-card="!configStatus.ready"
+        @update:provider="handleProviderUpdate"
+        @update:api-key="handleApiKeyUpdate"
+      />
+
+      <!-- Local Whisper Config -->
+      <LocalWhisperConfig
+        v-if="transcriptionMode === 'local' && provider === 'local-whisper'"
+        :show-config-card="!configStatus.ready"
+      />
+
+      <!-- Remote Whisper Config -->
+      <RemoteWhisperConfig
+        v-if="transcriptionMode === 'local' && provider === 'remote-whisper'"
+        :show-config-card="!configStatus.ready"
+      />
+
+      <!-- Primary Options (always visible) -->
+      <div class="primary-options">
+        <!-- Local Mode Selection -->
+        <div v-if="transcriptionMode === 'local'" class="field-row">
+          <label>Mode</label>
+          <select
+            class="select-input"
+            :value="provider"
+            @change="handleLocalModeChange"
           >
-            OpenAI
-          </button>
-          <button
-            class="provider-btn"
-            :class="{ active: provider === 'mistral' }"
-            @click="emit('update:provider', 'mistral')"
+            <option v-for="opt in localModeOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Language Hint -->
+        <div class="field-row">
+          <label>Language</label>
+          <select
+            class="select-input"
+            :value="language ?? ''"
+            @change="handleLanguageChange"
           >
-            Mistral
-          </button>
-          <button
-            class="provider-btn"
-            :class="{ active: provider === 'groq' }"
-            @click="emit('update:provider', 'groq')"
-          >
-            Groq
-          </button>
+            <option v-for="opt in languageOptions" :key="opt.value ?? 'auto'" :value="opt.value ?? ''">
+              {{ opt.label }}
+            </option>
+          </select>
         </div>
-        <div class="provider-options" style="margin-top: 8px;">
-          <button
-            class="provider-btn"
-            :class="{ active: provider === 'deepgram' }"
-            @click="emit('update:provider', 'deepgram')"
-          >
-            Deepgram
-          </button>
-          <button
-            class="provider-btn"
-            :class="{ active: provider === 'elevenlabs' }"
-            @click="emit('update:provider', 'elevenlabs')"
-          >
-            ElevenLabs
-          </button>
-        </div>
-        <p class="hint">
-          <template v-if="provider === 'openai'">~$0.006/min · whisper-1</template>
-          <template v-else-if="provider === 'mistral'">~$0.02/min · voxtral-mini</template>
-          <template v-else-if="provider === 'groq'">~$0.0007/min · whisper-large-v3-turbo</template>
-          <template v-else-if="provider === 'deepgram'">~$0.0043/min · nova-2</template>
-          <template v-else-if="provider === 'elevenlabs'">~$0.0067/min · scribe_v1</template>
-        </p>
       </div>
 
-      <!-- Language Hint -->
-      <div class="field">
-        <label>Language Hint</label>
-        <select
-          class="select-input"
-          :value="language ?? ''"
-          @change="handleLanguageChange"
-        >
-          <option v-for="opt in languageOptions" :key="opt.value ?? 'auto'" :value="opt.value ?? ''">
-            {{ opt.label }}
-          </option>
-        </select>
-        <p class="hint">
-          Helps improve accuracy. Leave on auto-detect if you speak multiple languages.
-        </p>
+      <!-- Advanced Options Toggle -->
+      <button class="advanced-toggle" @click="showAdvanced = !showAdvanced">
+        <span class="toggle-arrow">{{ showAdvanced ? 'v' : '>' }}</span>
+        <span>Advanced options</span>
+      </button>
+
+      <!-- Advanced Options Content -->
+      <div v-show="showAdvanced" class="advanced-content">
+        <PolishingConfig />
+
+        <!-- Ollama Config (only when polisher is ollama) -->
+        <template v-if="polisher === 'ollama'">
+          <OllamaConfig />
+        </template>
       </div>
 
-      <div class="divider"></div>
+      <button @click="saveSettings" class="btn btn-secondary save-btn">Save</button>
 
-      <!-- OpenAI API Key -->
-      <div class="field">
-        <label>
-          OpenAI API Key
-          <span v-if="provider === 'openai'" class="active-badge">active</span>
-        </label>
-        <div class="api-key-input">
-          <input
-            :type="keyMasked.openai ? 'password' : 'text'"
-            :value="getApiKey('openai')"
-            @input="updateApiKey('openai', ($event.target as HTMLInputElement).value)"
-            placeholder="sk-..."
-            spellcheck="false"
-            autocomplete="off"
-          />
-          <button @click="keyMasked.openai = !keyMasked.openai" class="toggle-btn" type="button">
-            {{ keyMasked.openai ? 'show' : 'hide' }}
-          </button>
-        </div>
-        <p class="hint">
-          Get your key from
-          <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>
-        </p>
-      </div>
-
-      <!-- Mistral API Key -->
-      <div class="field">
-        <label>
-          Mistral API Key
-          <span v-if="provider === 'mistral'" class="active-badge">active</span>
-        </label>
-        <div class="api-key-input">
-          <input
-            :type="keyMasked.mistral ? 'password' : 'text'"
-            :value="getApiKey('mistral')"
-            @input="updateApiKey('mistral', ($event.target as HTMLInputElement).value)"
-            placeholder="..."
-            spellcheck="false"
-            autocomplete="off"
-          />
-          <button @click="keyMasked.mistral = !keyMasked.mistral" class="toggle-btn" type="button">
-            {{ keyMasked.mistral ? 'show' : 'hide' }}
-          </button>
-        </div>
-        <p class="hint">
-          Get your key from
-          <a href="https://console.mistral.ai/api-keys" target="_blank">console.mistral.ai</a>
-        </p>
-      </div>
-
-      <!-- Groq API Key -->
-      <div class="field">
-        <label>
-          Groq API Key
-          <span v-if="provider === 'groq'" class="active-badge">active</span>
-        </label>
-        <div class="api-key-input">
-          <input
-            :type="keyMasked.groq ? 'password' : 'text'"
-            :value="getApiKey('groq')"
-            @input="updateApiKey('groq', ($event.target as HTMLInputElement).value)"
-            placeholder="gsk_..."
-            spellcheck="false"
-            autocomplete="off"
-          />
-          <button @click="keyMasked.groq = !keyMasked.groq" class="toggle-btn" type="button">
-            {{ keyMasked.groq ? 'show' : 'hide' }}
-          </button>
-        </div>
-        <p class="hint">
-          Get your key from
-          <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>
-        </p>
-      </div>
-
-      <!-- Deepgram API Key -->
-      <div class="field">
-        <label>
-          Deepgram API Key
-          <span v-if="provider === 'deepgram'" class="active-badge">active</span>
-        </label>
-        <div class="api-key-input">
-          <input
-            :type="keyMasked.deepgram ? 'password' : 'text'"
-            :value="getApiKey('deepgram')"
-            @input="updateApiKey('deepgram', ($event.target as HTMLInputElement).value)"
-            placeholder="..."
-            spellcheck="false"
-            autocomplete="off"
-          />
-          <button @click="keyMasked.deepgram = !keyMasked.deepgram" class="toggle-btn" type="button">
-            {{ keyMasked.deepgram ? 'show' : 'hide' }}
-          </button>
-        </div>
-        <p class="hint">
-          Get your key from
-          <a href="https://console.deepgram.com/" target="_blank">console.deepgram.com</a>
-        </p>
-      </div>
-
-      <!-- ElevenLabs API Key -->
-      <div class="field">
-        <label>
-          ElevenLabs API Key
-          <span v-if="provider === 'elevenlabs'" class="active-badge">active</span>
-        </label>
-        <div class="api-key-input">
-          <input
-            :type="keyMasked.elevenlabs ? 'password' : 'text'"
-            :value="getApiKey('elevenlabs')"
-            @input="updateApiKey('elevenlabs', ($event.target as HTMLInputElement).value)"
-            placeholder="..."
-            spellcheck="false"
-            autocomplete="off"
-          />
-          <button @click="keyMasked.elevenlabs = !keyMasked.elevenlabs" class="toggle-btn" type="button">
-            {{ keyMasked.elevenlabs ? 'show' : 'hide' }}
-          </button>
-        </div>
-        <p class="hint">
-          Get your key from
-          <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">elevenlabs.io</a>
-        </p>
-      </div>
-
-      <button @click="saveSettings" class="btn btn-secondary">Save</button>
-
-      <div class="status" :class="{ visible: status }">{{ status }}</div>
-
-      <div v-if="!currentApiKeyConfigured" class="notice">
-        <span class="notice-marker">[!]</span>
-        <p>Add your {{ provider.charAt(0).toUpperCase() + provider.slice(1) }} API key to start transcribing.</p>
-      </div>
+      <div class="status" :class="{ visible: savingStatus }" role="status" aria-live="polite">{{ savingStatus }}</div>
 
       <div class="notice">
         <span class="notice-marker">[i]</span>
-        <p>Settings stored locally in ~/.config/whis/settings.json</p>
+        <p>Settings stored in ~/.config/whis/settings.json</p>
       </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-/* Provider selection buttons */
-.provider-options {
+/* Notice (matches App.vue pattern) */
+.notice {
   display: flex;
-  gap: 8px;
-}
-
-.provider-btn {
-  flex: 1;
-  padding: 10px 16px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
   background: var(--bg-weak);
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-family: var(--font);
-  font-size: 12px;
-  color: var(--text-weak);
-  cursor: pointer;
-  transition: all 0.15s ease;
+  margin-bottom: 16px;
 }
 
-.provider-btn:hover {
-  border-color: var(--text-weak);
+.notice-marker {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.notice p {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Primary Options (always visible) */
+.primary-options {
+  padding: 16px;
+  background: var(--bg-weak);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+/* Advanced Options */
+.advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  color: var(--text-weak);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 12px;
+  width: 100%;
+  text-align: left;
+}
+
+.advanced-toggle:hover {
   color: var(--text);
 }
 
-.provider-btn.active {
-  border-color: var(--accent);
+.advanced-toggle:focus-visible {
+  outline: none;
   color: var(--accent);
-  background: rgba(255, 213, 79, 0.1);
+}
+
+.toggle-arrow {
+  font-size: 10px;
+  width: 12px;
+}
+
+.advanced-content {
+  padding: 16px;
+  background: var(--bg-weak);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.field-row > label {
+  width: 110px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-weak);
+}
+
+.field-row > select,
+.field-row > input {
+  flex: 1;
+}
+
+/* Save button spacing */
+.save-btn {
+  margin-top: 8px;
 }
 
 /* Select input */
@@ -374,70 +374,6 @@ function handleLanguageChange(event: Event) {
 
 .select-input option {
   background: var(--bg);
-  color: var(--text);
-}
-
-/* Divider */
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 8px 0;
-}
-
-/* Active badge */
-.active-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  margin-left: 8px;
-  font-size: 9px;
-  text-transform: uppercase;
-  color: var(--accent);
-  background: rgba(255, 213, 79, 0.15);
-  border-radius: 3px;
-  vertical-align: middle;
-}
-
-/* API key input */
-.api-key-input {
-  display: flex;
-  gap: 8px;
-}
-
-.api-key-input input {
-  flex: 1;
-  padding: 10px 12px;
-  background: var(--bg-weak);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-family: var(--font);
-  font-size: 12px;
-  color: var(--text);
-  transition: border-color 0.15s ease;
-}
-
-.api-key-input input::placeholder {
-  color: var(--text-weak);
-}
-
-.api-key-input input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.toggle-btn {
-  padding: 10px 12px;
-  background: var(--bg-weak);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-family: var(--font);
-  font-size: 11px;
-  color: var(--text-weak);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.toggle-btn:hover {
-  border-color: var(--text-weak);
   color: var(--text);
 }
 </style>

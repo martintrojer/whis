@@ -1,7 +1,7 @@
-import { createVaporApp } from 'vue';
-import App from './App.vue';
+import { createApp } from 'vue'
+import App from './App.vue'
+import router from './router'
 
-type VaporRoot = Parameters<typeof createVaporApp>[0];
-const RootComponent = App as unknown as VaporRoot;
-
-createVaporApp(RootComponent).mount('#app');
+const app = createApp(App)
+app.use(router)
+app.mount('#app')

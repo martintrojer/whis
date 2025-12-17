@@ -1,106 +1,62 @@
-<script setup lang="ts" vapor>
-import { ref, onMounted } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { invoke } from '@tauri-apps/api/core'
+import { settingsStore } from './stores/settings'
 
-import HomeView from './views/HomeView.vue';
-import ShortcutView from './views/ShortcutView.vue';
-import ApiKeyView from './views/ApiKeyView.vue';
-import AboutView from './views/AboutView.vue';
-
-interface Settings {
-  shortcut: string;
-  provider: 'openai' | 'mistral' | 'groq' | 'deepgram' | 'elevenlabs';
-  language: string | null;
-  api_keys: Record<string, string>;
-}
-
-interface BackendInfo {
-  backend: string;
-  requires_restart: boolean;
-  compositor: string;
-  portal_version: number;
-}
-
-// Navigation
-type Section = 'home' | 'shortcut' | 'api-key' | 'about';
-const activeSection = ref<Section>('home');
-
-// Settings state
-const currentShortcut = ref("Ctrl+Shift+R");
-const portalShortcut = ref<string | null>(null);
-const portalBindError = ref<string | null>(null);
-const provider = ref<'openai' | 'mistral' | 'groq' | 'deepgram' | 'elevenlabs'>('openai');
-const language = ref<string | null>(null);
-const apiKeys = ref<Record<string, string>>({});
-const backendInfo = ref<BackendInfo | null>(null);
-const loaded = ref(false);
+const route = useRoute()
 
 // App info
-const appVersion = "0.5.8";
-const appRepo = "https://github.com/frankdierolf/whis";
-const appSite = "https://whis.ink";
+const appVersion = '0.5.8'
+const appRepo = 'https://github.com/frankdierolf/whis'
+const appSite = 'https://whis.ink'
 
-// Window decoration detection
-const showCustomControls = ref(true);
+// Provide app info to AboutView via route meta or props
+// For now, we'll pass them through router
 
-async function loadSettings() {
-  try {
-    const settings = await invoke<Settings>('get_settings');
-    currentShortcut.value = settings.shortcut;
-    provider.value = settings.provider || 'openai';
-    language.value = settings.language;
-    apiKeys.value = settings.api_keys || {};
-  } catch (e) {
-    console.error("Failed to load settings:", e);
-  }
+// Window controls
+const showCustomControls = ref(true)
+const loaded = computed(() => settingsStore.state.loaded)
+
+// Current route name for navigation highlighting
+const currentRoute = computed(() => route.name as string)
+
+// Navigation items
+const navItems = [
+  { name: 'home', label: 'home', path: '/' },
+  { name: 'shortcut', label: 'shortcut', path: '/shortcut' },
+  { name: 'settings', label: 'settings', path: '/settings' },
+  { name: 'presets', label: 'presets', path: '/presets' },
+  { name: 'about', label: 'about', path: '/about' },
+]
+
+function isActive(name: string): boolean {
+  return currentRoute.value === name
 }
 
 // Window controls
 async function minimizeWindow() {
-  await getCurrentWindow().minimize();
+  await getCurrentWindow().minimize()
 }
 
 async function closeWindow() {
   try {
-    const canReopen = await invoke<boolean>('can_reopen_window');
+    const canReopen = await invoke<boolean>('can_reopen_window')
     if (canReopen) {
-      await getCurrentWindow().hide();
+      await getCurrentWindow().hide()
     } else {
-      // No way to reopen (no tray, no working shortcut) - actually quit
-      await getCurrentWindow().close();
+      await getCurrentWindow().close()
     }
-  } catch (e) {
-    // On error, safer to quit than leave user stranded
-    await getCurrentWindow().close();
+  } catch {
+    await getCurrentWindow().close()
   }
 }
 
 onMounted(async () => {
-  // Get backend info first
-  try {
-    backendInfo.value = await invoke<BackendInfo>('shortcut_backend');
-  } catch (e) {
-    console.error('Failed to get backend info:', e);
-  }
-
-  // Always show custom controls - GTK titlebar fix enables dragging on Wayland
-  showCustomControls.value = true;
-
-  await loadSettings();
-
-  // For portal backend, fetch actual binding and any errors
-  if (backendInfo.value?.backend === 'PortalGlobalShortcuts') {
-    try {
-      portalShortcut.value = await invoke<string | null>('portal_shortcut');
-      portalBindError.value = await invoke<string | null>('portal_bind_error');
-    } catch (e) {
-      console.error('Failed to get portal shortcut:', e);
-    }
-  }
-
-  setTimeout(() => loaded.value = true, 50);
-});
+  showCustomControls.value = true
+  await settingsStore.initialize()
+})
 </script>
 
 <template>
@@ -113,47 +69,22 @@ onMounted(async () => {
         </div>
 
         <nav class="nav">
-          <button
+          <router-link
+            v-for="item in navItems"
+            :key="item.name"
+            :to="item.path"
             class="nav-item"
-            :class="{ active: activeSection === 'home' }"
-            @click="activeSection = 'home'"
+            :class="{ active: isActive(item.name) }"
           >
-            <span class="nav-marker">{{ activeSection === 'home' ? '>' : ' ' }}</span>
-            <span>home</span>
-          </button>
-
-          <button
-            class="nav-item"
-            :class="{ active: activeSection === 'shortcut' }"
-            @click="activeSection = 'shortcut'"
-          >
-            <span class="nav-marker">{{ activeSection === 'shortcut' ? '>' : ' ' }}</span>
-            <span>shortcut</span>
-          </button>
-
-          <button
-            class="nav-item"
-            :class="{ active: activeSection === 'api-key' }"
-            @click="activeSection = 'api-key'"
-          >
-            <span class="nav-marker">{{ activeSection === 'api-key' ? '>' : ' ' }}</span>
-            <span>settings</span>
-          </button>
-
-          <button
-            class="nav-item"
-            :class="{ active: activeSection === 'about' }"
-            @click="activeSection = 'about'"
-          >
-            <span class="nav-marker">{{ activeSection === 'about' ? '>' : ' ' }}</span>
-            <span>about</span>
-          </button>
+            <span class="nav-marker" aria-hidden="true">{{ isActive(item.name) ? '>' : ' ' }}</span>
+            <span>{{ item.label }}</span>
+          </router-link>
         </nav>
       </aside>
 
       <!-- Content -->
       <main class="content">
-        <!-- Title bar for dragging (only shown when native decorations are hidden) -->
+        <!-- Title bar for dragging -->
         <div v-if="showCustomControls" class="titlebar" data-tauri-drag-region>
           <div class="window-controls">
             <button class="control-btn" @click="minimizeWindow" title="Minimize">
@@ -165,36 +96,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Views -->
-        <HomeView
-          v-if="activeSection === 'home'"
-          :current-shortcut="currentShortcut"
-          :portal-shortcut="portalShortcut"
-        />
-
-        <ShortcutView
-          v-if="activeSection === 'shortcut'"
-          :backend-info="backendInfo"
-          :current-shortcut="currentShortcut"
-          :portal-shortcut="portalShortcut"
-          :portal-bind-error="portalBindError"
-          @update:current-shortcut="currentShortcut = $event"
-          @update:portal-shortcut="portalShortcut = $event"
-        />
-
-        <ApiKeyView
-          v-if="activeSection === 'api-key'"
-          :current-shortcut="currentShortcut"
-          :provider="provider"
-          :language="language"
-          :api-keys="apiKeys"
-          @update:provider="provider = $event"
-          @update:language="language = $event"
-          @update:api-keys="apiKeys = $event"
-        />
-
-        <AboutView
-          v-if="activeSection === 'about'"
+        <!-- Router view with props for static data -->
+        <router-view
           :app-version="appVersion"
           :app-site="appSite"
           :app-repo="appRepo"
@@ -420,6 +323,19 @@ body {
 .status.visible {
   opacity: 1;
 }
+
+/* Screen reader only - visually hidden but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
 </style>
 
 <style scoped>
@@ -485,6 +401,7 @@ body {
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: left;
+  text-decoration: none;
 }
 
 .nav-item:hover {
