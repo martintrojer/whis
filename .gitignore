@@ -20,6 +20,13 @@ Thumbs.db
 node_modules/
 dist/
 
+# TypeScript build cache
+*.tsbuildinfo
+
+# Compiled vite config (source is vite.config.ts)
+vite.config.js
+vite.config.d.ts
+
 # Tauri generated
 gen/
 
