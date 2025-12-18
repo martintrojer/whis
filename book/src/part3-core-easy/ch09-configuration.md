@@ -4,7 +4,7 @@ Every application needs configuration: API keys, user preferences, default value
 
 ## The Settings Struct
 
-Let's start with the core data structure from `whis-core/src/settings.rs:10-42`:
+Let's start with the core data structure from `whis-core/src/settings.rs:11-49`:
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +28,10 @@ pub struct Settings {
     pub ollama_model: Option<String>,
     #[serde(default)]
     pub remote_whisper_url: Option<String>,
+    #[serde(default)]
+    pub active_preset: Option<String>,
+    #[serde(default)]
+    pub clipboard_method: ClipboardMethod,
 }
 ```
 
@@ -58,7 +62,9 @@ Here's what `~/.config/whis/settings.json` looks like:
   "whisper_model_path": null,
   "ollama_url": "http://localhost:11434",
   "ollama_model": "ministral-3:3b",
-  "remote_whisper_url": null
+  "remote_whisper_url": null,
+  "active_preset": "ai-prompt",
+  "clipboard_method": "auto"
 }
 ```
 
@@ -69,6 +75,8 @@ Here's what `~/.config/whis/settings.json` looks like:
 - Language hint: English (`"en"`)
 - Ollama configured for local LLM polishing
 - No local whisper model configured (using cloud)
+- Active preset: `ai-prompt` (for AI assistant prompts)
+- Clipboard method: auto-detected
 
 > **Note**: For local transcription setup, see [Chapter 14b: Local Transcription](../part4-core-advanced/ch14b-local-transcription.md).
 
@@ -90,12 +98,14 @@ impl Default for Settings {
             ollama_url: None,
             ollama_model: None,
             remote_whisper_url: None,
+            active_preset: None,
+            clipboard_method: ClipboardMethod::default(), // Auto
         }
     }
 }
 ```
 
-**From `whis-core/src/settings.rs:44-59`**
+**From `whis-core/src/settings.rs:51-67`**
 
 **Why these defaults?**
 - `"Ctrl+Shift+R"`: Unlikely to conflict with other apps
@@ -258,7 +268,8 @@ pub fn api_key_env_var(&self) -> &'static str {
     match self {
         TranscriptionProvider::OpenAI => "OPENAI_API_KEY",
         TranscriptionProvider::Groq => "GROQ_API_KEY",
-        TranscriptionProvider::LocalWhisper => "WHISPER_MODEL_PATH",
+        TranscriptionProvider::LocalWhisper => "LOCAL_WHISPER_MODEL_PATH",
+        TranscriptionProvider::RemoteWhisper => "REMOTE_WHISPER_URL",
         // ... etc
     }
 }
@@ -266,7 +277,7 @@ pub fn api_key_env_var(&self) -> &'static str {
 
 **From `whis-core/src/config.rs:35-45`**
 
-> **Key Insight**: Local providers use different env vars. `WHISPER_MODEL_PATH` is a file path, not an API key. This same pattern (config → env fallback) applies to all providers.
+> **Key Insight**: Local and remote providers use different env vars. `LOCAL_WHISPER_MODEL_PATH` is a file path, `REMOTE_WHISPER_URL` is a server URL—not API keys. This same pattern (config → env fallback) applies to all providers.
 
 ### Local Transcription Settings
 
@@ -288,7 +299,7 @@ pub ollama_model: Option<String>,
 
 | Setting | Config Flag | Env Var | Default |
 |---------|-------------|---------|---------|
-| Model path | `--whisper-model-path` | `WHISPER_MODEL_PATH` | None |
+| Model path | `--whisper-model-path` | `LOCAL_WHISPER_MODEL_PATH` | None |
 | Server URL | `--remote-whisper-url` | `REMOTE_WHISPER_URL` | None |
 | Ollama URL | `--ollama-url` | `OLLAMA_URL` | `http://localhost:11434` |
 | Ollama model | `--ollama-model` | `OLLAMA_MODEL` | `ministral-3:3b` |

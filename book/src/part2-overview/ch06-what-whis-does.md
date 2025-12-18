@@ -153,13 +153,14 @@ Apple's dictation only works well on macOS. Windows Speech Recognition only work
 
 Most transcription tools lock you into one provider. If OpenAI's API is down, you're stuck.
 
-**Whis supports 6+ providers:**
+**Whis supports 7 providers:**
 - OpenAI (Whisper API)
 - Groq (fastest inference)
 - Deepgram (streaming transcription)
 - Mistral
 - ElevenLabs
-- Local Whisper (via `whisper.cpp`)
+- Local Whisper (via `whisper.cpp` - no internet required)
+- Remote Whisper (self-hosted server - Docker deployment)
 
 You can switch providers in settings without changing your workflow.
 

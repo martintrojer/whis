@@ -20,8 +20,12 @@ Whis CLI has this command hierarchy:
 
 ```
 whis                          # Record once (default)
+  -v, --verbose               # Enable debug output
   --polish                    # Polish transcript with LLM
   --as <preset>               # Apply output preset
+  -f, --file <path>           # Transcribe from file
+  --stdin                     # Read audio from stdin
+  --format <fmt>              # Input format for stdin (default: mp3)
 
 whis listen                   # Start daemon with hotkey listener
   --hotkey <KEY>              # Hotkey combination
@@ -32,6 +36,10 @@ whis status                   # Check daemon status
 whis config                   # Configure settings
   --openai-api-key <KEY>
   --provider <NAME>
+  --whisper-model-path <PATH> # Local whisper model
+  --remote-whisper-url <URL>  # Self-hosted server URL
+  --ollama-url <URL>          # Ollama server for polishing
+  --ollama-model <NAME>       # Ollama model name
   --show                      # Display current config
 
 whis presets                  # List presets
@@ -44,6 +52,10 @@ whis setup                    # Interactive setup wizard
   cloud                       # Configure cloud API provider
   local                       # Setup local whisper + Ollama
   self-hosted [url]           # Configure Docker server
+
+whis models                   # List available models
+  whisper                     # Show whisper models with install status
+  ollama                      # List Ollama models from server
 ```
 
 ## The Root CLI Struct
@@ -58,6 +70,10 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
 
+    /// Enable verbose output for debugging (audio device, clipboard, etc.)
+    #[arg(short, long, global = true)]
+    pub verbose: bool,
+
     /// Polish transcript with LLM (cleanup grammar, filler words)
     #[arg(long)]
     pub polish: bool,
@@ -65,10 +81,22 @@ pub struct Cli {
     /// Output preset for transcript (run 'whis presets' to see all)
     #[arg(long = "as", value_name = "PRESET")]
     pub preset: Option<String>,
+
+    /// Transcribe audio from file instead of recording
+    #[arg(short = 'f', long, value_hint = ValueHint::FilePath)]
+    pub file: Option<PathBuf>,
+
+    /// Read audio from stdin (use with pipes, e.g., `yt-dlp ... | whis --stdin`)
+    #[arg(long)]
+    pub stdin: bool,
+
+    /// Input audio format when using --stdin (default: mp3)
+    #[arg(long, default_value = "mp3")]
+    pub format: String,
 }
 ```
 
-**From `whis-cli/src/args.rs:3-19`**
+**From `whis-cli/src/args.rs:4-36`**
 
 ### Derive Macros
 
@@ -98,13 +126,21 @@ Usage: whis [OPTIONS] [COMMAND]
 Commands:
   listen   Start the background service that listens for hotkey triggers
   stop     Stop the background service
-  ...
+  status   Check service status
+  config   Configure settings (API keys, provider, etc.)
+  presets  Manage output presets
+  setup    Quick setup wizard for different usage modes
+  models   List available models (whisper, ollama)
 
 Options:
-  --polish        Polish transcript with LLM (cleanup grammar, filler words)
-  --as <PRESET>   Output preset for transcript (run 'whis presets' to see all)
-  -h, --help      Print help
-  -V, --version   Print version
+  -v, --verbose         Enable verbose output for debugging
+      --polish          Polish transcript with LLM (cleanup grammar, filler words)
+      --as <PRESET>     Output preset for transcript (run 'whis presets' to see all)
+  -f, --file <FILE>     Transcribe audio from file instead of recording
+      --stdin           Read audio from stdin (use with pipes)
+      --format <FORMAT> Input audio format when using --stdin [default: mp3]
+  -h, --help            Print help
+  -V, --version         Print version
 
 Run 'whis' without arguments to record once (press Enter to stop).
 ```
@@ -123,6 +159,15 @@ pub command: Option<Commands>,
 ### Global Flags
 
 ```rust
+#[arg(short, long, global = true)]
+pub verbose: bool,
+```
+
+**`#[arg(short, long, global = true)]`**: Enables `-v` and `--verbose` flags
+- `global = true`: Works with any subcommand (`whis -v config --show`)
+- Useful for debugging audio device detection, clipboard operations, etc.
+
+```rust
 #[arg(long)]
 pub polish: bool,
 ```
@@ -138,10 +183,39 @@ pub preset: Option<String>,
 
 **`long = "as"`**: Custom flag name (otherwise would be `--preset`)
 - Usage: `whis --as markdown`
-- `value_name = "PRESET"`: Shows `<PRESET>` in help (not `<PRESET>`)
+- `value_name = "PRESET"`: Shows `<PRESET>` in help
 
-**Why `long = "as"`?**  
+**Why `long = "as"`?**
 More natural English: "output as markdown" vs "output preset markdown"
+
+### File and Stdin Input
+
+Instead of recording from the microphone, Whis can transcribe from existing audio:
+
+```rust
+#[arg(short = 'f', long, value_hint = ValueHint::FilePath)]
+pub file: Option<PathBuf>,
+
+#[arg(long)]
+pub stdin: bool,
+
+#[arg(long, default_value = "mp3")]
+pub format: String,
+```
+
+**Usage examples**:
+```bash
+# Transcribe a local file
+whis -f recording.mp3
+
+# Transcribe from a URL (with yt-dlp)
+yt-dlp -x --audio-format mp3 -o - "https://youtube.com/..." | whis --stdin
+
+# Transcribe with custom format
+ffmpeg -i video.mkv -f wav - | whis --stdin --format wav
+```
+
+**`value_hint = ValueHint::FilePath`**: Shell completion hint for file paths
 
 ## Subcommands Enum
 
@@ -165,10 +239,10 @@ pub enum Commands {
     Config {
         #[arg(long)]
         openai_api_key: Option<String>,
-        
+
         #[arg(long)]
         provider: Option<String>,
-        
+
         #[arg(long)]
         show: bool,
         // ... more config options
@@ -179,10 +253,22 @@ pub enum Commands {
         #[command(subcommand)]
         action: Option<PresetsAction>,
     },
+
+    /// Quick setup wizard for different usage modes
+    Setup {
+        #[command(subcommand)]
+        mode: SetupMode,
+    },
+
+    /// List available models (whisper, ollama)
+    Models {
+        #[command(subcommand)]
+        action: Option<ModelsAction>,
+    },
 }
 ```
 
-**From `whis-cli/src/args.rs:21-101`**
+**From `whis-cli/src/args.rs:38-130`**
 
 ### Subcommand Variants
 
@@ -370,6 +456,53 @@ The setup wizard handles:
 - **Self-hosted**: Tests server connectivity, configures URLs
 
 For implementation details, see [Chapter 14b: Local Transcription](../part4-core-advanced/ch14b-local-transcription.md).
+
+## The Models Command
+
+The models command helps users manage Whisper models and check Ollama availability:
+
+```rust
+#[derive(Subcommand)]
+pub enum ModelsAction {
+    /// List available whisper models with install status (default)
+    Whisper,
+
+    /// List available Ollama models from server
+    Ollama {
+        /// Ollama server URL (default: http://localhost:11434)
+        #[arg(long)]
+        url: Option<String>,
+    },
+}
+```
+
+**From `whis-cli/src/args.rs:175-186`**
+
+**Usage examples**:
+```bash
+# List whisper models and their install status
+$ whis models whisper
+Available Whisper models:
+  ✓ tiny (75 MB)    - Installed
+  ✓ base (142 MB)   - Installed
+    small (466 MB)  - Not installed
+    medium (1.5 GB) - Not installed
+
+# List Ollama models
+$ whis models ollama
+Available Ollama models:
+  - ministral-3:3b (default)
+  - llama3.2:3b
+  - mistral:latest
+
+# Check Ollama on a remote server
+$ whis models ollama --url http://my-server:11434
+```
+
+This command is useful for:
+- Checking which Whisper models are downloaded
+- Verifying Ollama is running and has models available
+- Discovering model options before configuration
 
 ## Parsing Arguments in Main
 
