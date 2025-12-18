@@ -17,6 +17,7 @@ mod non_linux;
 use non_linux as platform;
 
 /// Opaque guard that keeps the hotkey listener alive
+#[allow(dead_code)]
 pub struct HotkeyGuard(platform::HotkeyGuard);
 
 /// Setup the hotkey listener.

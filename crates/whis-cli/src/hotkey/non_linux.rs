@@ -2,7 +2,7 @@
 //!
 //! IMPORTANT: On macOS, HotkeyManager must be created on the main thread.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, hotkey::HotKey};
 use std::sync::mpsc::Receiver;
 
