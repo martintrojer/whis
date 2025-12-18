@@ -62,6 +62,7 @@ pub fn run() {
             commands::list_ollama_models,
             commands::pull_ollama_model,
             commands::start_ollama,
+            commands::check_config_readiness,
             commands::get_whisper_models,
             commands::is_whisper_model_valid,
             commands::list_presets,

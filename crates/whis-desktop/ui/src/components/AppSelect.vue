@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { SelectOption } from '../types'
 
-defineProps<{
+const props = defineProps<{
   modelValue: string | null
   options: SelectOption[]
   disabled?: boolean
@@ -12,33 +13,91 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | null]
 }>()
 
-function handleChange(event: Event) {
-  const value = (event.target as HTMLSelectElement).value
-  emit('update:modelValue', value === '' ? null : value)
+const isOpen = ref(false)
+const selectRef = ref<HTMLElement | null>(null)
+
+const selectedLabel = computed(() => {
+  const opt = props.options.find(o => o.value === props.modelValue)
+  return opt?.label || ''
+})
+
+function toggle() {
+  if (!props.disabled) isOpen.value = !isOpen.value
 }
+
+function select(value: string | null) {
+  emit('update:modelValue', value)
+  isOpen.value = false
+}
+
+function handleClickOutside(e: MouseEvent) {
+  if (selectRef.value && !selectRef.value.contains(e.target as Node)) {
+    isOpen.value = false
+  }
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    isOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
-  <select
-    class="app-select"
-    :value="modelValue ?? ''"
-    :disabled="disabled"
-    :aria-label="ariaLabel"
-    @change="handleChange"
+  <div
+    ref="selectRef"
+    class="custom-select"
+    :class="{ open: isOpen, disabled }"
   >
-    <option
-      v-for="opt in options"
-      :key="opt.value ?? 'null'"
-      :value="opt.value ?? ''"
+    <button
+      type="button"
+      class="select-trigger"
+      :disabled="disabled"
+      :aria-label="ariaLabel"
+      :aria-expanded="isOpen"
+      @click="toggle"
     >
-      {{ opt.label }}
-    </option>
-  </select>
+      <span class="select-value">{{ selectedLabel }}</span>
+      <span class="select-chevron">›</span>
+    </button>
+    <div v-show="isOpen" class="select-dropdown" role="listbox">
+      <button
+        v-for="opt in options"
+        :key="opt.value ?? 'null'"
+        type="button"
+        class="select-option"
+        :class="{ selected: opt.value === modelValue }"
+        role="option"
+        :aria-selected="opt.value === modelValue"
+        @click="select(opt.value)"
+      >
+        {{ opt.label }}
+      </button>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.app-select {
-  padding: 10px 12px;
+.custom-select {
+  position: relative;
+}
+
+.select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
   background: var(--bg-weak);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -47,25 +106,78 @@ function handleChange(event: Event) {
   color: var(--text);
   cursor: pointer;
   transition: border-color 0.15s ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23808080' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
 }
 
-.app-select:focus {
+.select-trigger:hover:not(:disabled) {
+  border-color: var(--text-weak);
+}
+
+.select-trigger:focus {
   outline: none;
   border-color: var(--accent);
 }
 
-.app-select:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.custom-select.open .select-trigger {
+  border-color: var(--accent);
 }
 
-.app-select option {
+.select-value {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-chevron {
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+  color: var(--text-weak);
+  font-size: 14px;
+  margin-left: 8px;
+}
+
+.custom-select.open .select-chevron {
+  transform: rotate(-90deg);
+}
+
+.select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
   background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.select-option {
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 12px;
   color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+
+.select-option:hover {
+  background: var(--bg-weak);
+}
+
+.select-option.selected {
+  color: var(--accent);
+}
+
+.custom-select.disabled .select-trigger {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

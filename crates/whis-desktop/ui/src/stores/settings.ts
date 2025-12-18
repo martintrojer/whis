@@ -1,6 +1,15 @@
-import { reactive, readonly } from 'vue'
+import { reactive, readonly, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import type { Settings, BackendInfo, Provider, Polisher } from '../types'
+
+// Simple debounce utility
+function debounce<T extends (...args: unknown[]) => unknown>(fn: T, ms: number) {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  return (...args: Parameters<T>) => {
+    if (timeoutId) clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn(...args), ms)
+  }
+}
 
 // Default settings values
 const defaultSettings: Settings = {
@@ -30,6 +39,49 @@ const state = reactive({
   // Loading state
   loaded: false,
 })
+
+// Debounced auto-save (500ms delay)
+const debouncedSave = debounce(async () => {
+  try {
+    await invoke<{ needs_restart: boolean }>('save_settings', {
+      settings: {
+        shortcut: state.shortcut,
+        provider: state.provider,
+        language: state.language,
+        api_keys: state.api_keys,
+        whisper_model_path: state.whisper_model_path,
+        remote_whisper_url: state.remote_whisper_url,
+        polisher: state.polisher,
+        ollama_url: state.ollama_url,
+        ollama_model: state.ollama_model,
+        polish_prompt: state.polish_prompt,
+        active_preset: state.active_preset,
+      },
+    })
+  } catch (e) {
+    console.error('Auto-save failed:', e)
+  }
+}, 500)
+
+// Watch settings and auto-save on change
+watch(
+  () => [
+    state.provider,
+    state.language,
+    state.api_keys,
+    state.whisper_model_path,
+    state.remote_whisper_url,
+    state.polisher,
+    state.ollama_url,
+    state.ollama_model,
+    state.polish_prompt,
+    state.active_preset,
+  ],
+  () => {
+    if (state.loaded) debouncedSave()
+  },
+  { deep: true }
+)
 
 // Actions
 async function load() {

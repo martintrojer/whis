@@ -3,6 +3,8 @@ import { ref, computed, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { settingsStore } from '../../stores/settings'
+import { AppSelect } from '..'
+import type { SelectOption } from '../../types'
 
 const ollamaUrl = computed(() => settingsStore.state.ollama_url)
 const ollamaModel = computed(() => settingsStore.state.ollama_model)
@@ -13,7 +15,7 @@ const ollamaStatusMessage = ref('')
 const ollamaModels = ref<string[]>([])
 
 // Pull state
-const pullModelName = ref('phi3')
+const pullModelName = ref('ministral-3:3b')
 const pullingModel = ref(false)
 const pullStatus = ref('')
 const pullProgress = ref<{ downloaded: number; total: number } | null>(null)
@@ -126,9 +128,14 @@ async function pullOllamaModel() {
   }
 }
 
-function handleOllamaModelChange(event: Event) {
-  const value = (event.target as HTMLSelectElement).value
-  settingsStore.setOllamaModel(value || null)
+// Convert models to SelectOption format
+const modelOptions = computed<SelectOption[]>(() => [
+  { value: null, label: 'Select a model...' },
+  ...ollamaModels.value.map(model => ({ value: model, label: model }))
+])
+
+function handleOllamaModelChange(value: string | null) {
+  settingsStore.setOllamaModel(value)
 }
 </script>
 
@@ -162,17 +169,12 @@ function handleOllamaModelChange(event: Event) {
   <!-- Model Selection (only if connected) -->
   <div v-if="ollamaStatus === 'connected'" class="field-row">
     <label>Model</label>
-    <select
-      class="select-input"
-      :value="ollamaModel || ''"
-      @change="handleOllamaModelChange"
+    <AppSelect
+      :model-value="ollamaModel"
+      :options="modelOptions"
       aria-label="Select Ollama model"
-    >
-      <option value="" disabled>Select a model...</option>
-      <option v-for="model in ollamaModels" :key="model" :value="model">
-        {{ model }}
-      </option>
-    </select>
+      @update:model-value="handleOllamaModelChange"
+    />
   </div>
   <p v-if="ollamaStatus === 'connected' && ollamaModels.length > 0" class="hint ollama-hint">
     First polish may be slow while model loads into memory.
@@ -191,7 +193,7 @@ function handleOllamaModelChange(event: Event) {
       <input
         type="text"
         v-model="pullModelName"
-        placeholder="phi3"
+        placeholder="ministral-3:3b"
         spellcheck="false"
         :disabled="pullingModel"
         aria-label="Model name to pull"
@@ -227,8 +229,11 @@ function handleOllamaModelChange(event: Event) {
   color: var(--text-weak);
 }
 
-.field-row > select,
 .field-row > input {
+  flex: 1;
+}
+
+.field-row :deep(.custom-select) {
   flex: 1;
 }
 
@@ -290,7 +295,7 @@ function handleOllamaModelChange(event: Event) {
 }
 
 .hint.success {
-  color: #4ade80;
+  color: var(--text-weak);
 }
 
 .hint.error {
@@ -335,33 +340,6 @@ function handleOllamaModelChange(event: Event) {
 .ollama-notice {
   margin-left: 122px;
   margin-bottom: 0;
-}
-
-.select-input {
-  padding: 10px 12px;
-  background: var(--bg-weak);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-family: var(--font);
-  font-size: 12px;
-  color: var(--text);
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23808080' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
-}
-
-.select-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.select-input option {
-  background: var(--bg);
-  color: var(--text);
 }
 
 .pull-model-input {

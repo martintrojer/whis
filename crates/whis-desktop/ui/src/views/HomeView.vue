@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { settingsStore } from '../stores/settings'
@@ -14,6 +14,21 @@ let unlistenPolishWarning: UnlistenFn | null = null
 let unlistenPolishStarted: UnlistenFn | null = null
 let unlistenTranscriptionComplete: UnlistenFn | null = null
 
+// Configuration readiness state (proactive checks)
+const configReadiness = ref<{
+  transcriptionReady: boolean
+  transcriptionError: string | null
+  polishingReady: boolean
+  polishingError: string | null
+  checking: boolean
+}>({
+  transcriptionReady: true,
+  transcriptionError: null,
+  polishingReady: true,
+  polishingError: null,
+  checking: false
+})
+
 const buttonText = computed(() => {
   switch (status.value.state) {
     case 'Idle': return 'Start Recording'
@@ -22,9 +37,86 @@ const buttonText = computed(() => {
   }
 })
 
-const canRecord = computed(() => {
-  return status.value.config_valid && status.value.state !== 'Transcribing'
+// Configuration summary for status display (compact single line)
+const configSummary = computed(() => {
+  const { provider, language, polisher, active_preset } = settingsStore.state
+
+  // Mode + Provider
+  let mode = 'Cloud'
+  let providerName: string = provider
+  if (provider === 'local-whisper') {
+    mode = 'Local'
+    providerName = 'Whisper'
+  } else if (provider === 'remote-whisper') {
+    mode = 'Remote'
+    providerName = 'Whisper'
+  } else {
+    // Capitalize cloud provider names
+    providerName = provider.charAt(0).toUpperCase() + provider.slice(1)
+  }
+
+  // Language: show code or omit if auto-detect
+  const lang = language ? language.toUpperCase() : null
+
+  // Polishing status: show preset name if active, "Polishing ON" if enabled but no preset, omit if off
+  let polishStatus: string | null = null
+  if (polisher !== 'none') {
+    polishStatus = active_preset || 'Polishing'
+  }
+
+  return { mode, provider: providerName, lang, polishStatus }
 })
+
+const canRecord = computed(() => {
+  return status.value.config_valid &&
+         status.value.state !== 'Transcribing' &&
+         configReadiness.value.transcriptionReady
+})
+
+// Check configuration readiness (proactive check for better UX)
+async function checkConfigReadiness() {
+  const { provider, polisher, api_keys, whisper_model_path, remote_whisper_url, ollama_url } = settingsStore.state
+
+  configReadiness.value.checking = true
+  try {
+    const result = await invoke<{
+      transcription_ready: boolean
+      transcription_error: string | null
+      polishing_ready: boolean
+      polishing_error: string | null
+    }>('check_config_readiness', {
+      provider,
+      polisher,
+      apiKeys: api_keys,
+      whisperModelPath: whisper_model_path,
+      remoteWhisperUrl: remote_whisper_url,
+      ollamaUrl: ollama_url
+    })
+    configReadiness.value = {
+      transcriptionReady: result.transcription_ready,
+      transcriptionError: result.transcription_error,
+      polishingReady: result.polishing_ready,
+      polishingError: result.polishing_error,
+      checking: false
+    }
+  } catch (e) {
+    console.error('Failed to check config readiness:', e)
+    configReadiness.value.checking = false
+  }
+}
+
+// Watch for settings changes to re-check readiness
+watch(
+  () => [
+    settingsStore.state.provider,
+    settingsStore.state.polisher,
+    settingsStore.state.api_keys,
+    settingsStore.state.whisper_model_path,
+    settingsStore.state.ollama_url
+  ],
+  () => checkConfigReadiness(),
+  { deep: true }
+)
 
 const displayShortcut = computed(() => {
   const portalShortcut = settingsStore.state.portalShortcut
@@ -70,6 +162,7 @@ async function toggleRecording() {
 
 onMounted(async () => {
   fetchStatus();
+  checkConfigReadiness();
   pollInterval = window.setInterval(fetchStatus, 500);
 
   // Listen for polish events
@@ -125,6 +218,11 @@ onUnmounted(() => {
           or press <kbd>{{ displayShortcut }}</kbd>
         </span>
 
+        <!-- Config summary - compact single line status -->
+        <span v-if="status.config_valid && status.state === 'Idle'" class="config-summary">
+          <span :class="{ 'config-error': !configReadiness.transcriptionReady }">{{ configSummary.mode }} · {{ configSummary.provider }}</span><span v-if="configSummary.lang"> · {{ configSummary.lang }}</span><span v-if="configSummary.polishStatus" :class="{ 'config-warning': !configReadiness.polishingReady }"> · {{ configSummary.polishStatus }}</span>
+        </span>
+
         <!-- State hints (announced to screen readers) -->
         <span role="status" aria-live="polite" class="state-hints">
           <span v-if="status.state === 'Recording'" class="state-hint recording">
@@ -142,9 +240,27 @@ onUnmounted(() => {
       <!-- Error message -->
       <p v-if="error" class="error-msg">{{ error }}</p>
 
-      <!-- Polish warning -->
+      <!-- Polish warning (runtime) -->
       <div v-if="polishWarning" class="warning-msg">
         <strong>Polishing skipped:</strong> {{ polishWarning }}
+      </div>
+
+      <!-- Transcription not ready (blocking) -->
+      <div v-if="!configReadiness.transcriptionReady && status.config_valid" class="config-notice error">
+        <span class="notice-marker">[!]</span>
+        <div>
+          <p>{{ configReadiness.transcriptionError }}</p>
+          <router-link to="/settings">Configure →</router-link>
+        </div>
+      </div>
+
+      <!-- Polishing not ready (non-blocking warning) -->
+      <div v-else-if="!configReadiness.polishingReady && settingsStore.state.polisher !== 'none' && status.config_valid" class="config-notice warning">
+        <span class="notice-marker">[!]</span>
+        <div>
+          <p>Polishing unavailable: {{ configReadiness.polishingError }}</p>
+          <router-link to="/settings">Configure →</router-link>
+        </div>
       </div>
 
       <!-- Only show notice when something needs attention -->
@@ -226,6 +342,13 @@ onUnmounted(() => {
   color: var(--text-weak);
 }
 
+/* Config summary */
+.config-summary {
+  font-size: 10px;
+  color: var(--text-weak);
+  opacity: 0.7;
+}
+
 .shortcut-hint kbd {
   display: inline-block;
   padding: 2px 6px;
@@ -279,5 +402,49 @@ onUnmounted(() => {
 /* Notice overrides */
 .notice strong {
   color: var(--text-strong);
+}
+
+/* Config readiness warnings in summary */
+.config-error {
+  color: #f87171;
+}
+
+.config-warning {
+  opacity: 0.5;
+}
+
+/* Config readiness notice cards */
+.config-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-weak);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.config-notice p {
+  margin: 0 0 4px 0;
+  color: var(--text);
+}
+
+.config-notice a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 11px;
+}
+
+.config-notice a:hover {
+  text-decoration: underline;
+}
+
+.config-notice.error .notice-marker {
+  color: #f87171;
+}
+
+.config-notice.warning .notice-marker {
+  color: var(--accent);
 }
 </style>

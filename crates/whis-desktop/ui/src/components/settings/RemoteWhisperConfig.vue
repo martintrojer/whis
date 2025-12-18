@@ -33,80 +33,41 @@ async function testConnection() {
 </script>
 
 <template>
-  <!-- Remote URL Configuration Card (shown when URL is missing) -->
-  <div v-if="showConfigCard && !remoteWhisperUrl" class="config-card">
-    <div class="notice">
-      <span class="notice-marker">[!]</span>
-      <p>Server URL required</p>
+  <!-- Remote URL Configuration Card -->
+  <div v-if="showConfigCard" class="config-card">
+    <div class="url-config">
+      <input
+        type="text"
+        :value="remoteWhisperUrl || ''"
+        @input="settingsStore.setRemoteWhisperUrl(($event.target as HTMLInputElement).value || null)"
+        placeholder="http://localhost:8765"
+        spellcheck="false"
+        aria-label="Remote Whisper server URL"
+      />
+      <button
+        class="btn-secondary"
+        @click="testConnection"
+        :disabled="testingConnection"
+      >
+        {{ testingConnection ? 'Testing...' : 'Test' }}
+      </button>
     </div>
-    <div class="config-section">
-      <div class="url-config">
-        <input
-          type="text"
-          :value="remoteWhisperUrl || ''"
-          @input="settingsStore.setRemoteWhisperUrl(($event.target as HTMLInputElement).value || null)"
-          placeholder="http://localhost:8765"
-          spellcheck="false"
-          aria-label="Remote Whisper server URL"
-        />
-        <button
-          class="btn-secondary"
-          @click="testConnection"
-          :disabled="testingConnection"
-        >
-          {{ testingConnection ? 'Testing...' : 'Test' }}
-        </button>
-      </div>
-      <p v-if="connectionStatus" class="hint" :class="{ success: connectionStatus === 'Connected!', error: !connectionStatus.includes('Connected') && connectionStatus !== 'Testing...' }" role="status" aria-live="polite">
-        {{ connectionStatus }}
-      </p>
-    </div>
+    <p v-if="connectionStatus" class="hint" :class="{ success: connectionStatus === 'Connected!', error: !connectionStatus.includes('Connected') && connectionStatus !== 'Testing...' }" role="status" aria-live="polite">
+      {{ connectionStatus }}
+    </p>
   </div>
 </template>
 
 <style scoped>
 .config-card {
-  margin-bottom: 16px;
-}
-
-.config-card .notice {
-  margin-bottom: 0;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
   padding: 12px;
   background: var(--bg-weak);
   border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-.notice-marker {
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
-.notice p {
-  font-size: 12px;
-  color: var(--text);
-  line-height: 1.5;
-  margin: 0;
-}
-
-.config-section {
-  padding: 10px 12px;
-  background: var(--bg-weak);
-  border: 1px solid var(--border);
-  border-top: none;
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px;
+  border-radius: 6px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-bottom: 16px;
 }
 
 .url-config {

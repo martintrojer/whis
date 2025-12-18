@@ -239,8 +239,10 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
 
     // Transcribe
     let transcription = match audio_result {
-        // transcribe_audio is synchronous (blocking HTTP), so we should wrap it in spawn_blocking
-        // to avoid blocking the async runtime
+        // Use spawn_blocking to run transcription on a dedicated thread pool.
+        // This allows reqwest::blocking::Client (used by cloud providers and Ollama)
+        // to create its internal tokio runtime safely. block_in_place() would panic
+        // because it forbids runtime creation/destruction inside its context.
         RecordingOutput::Single(data) => {
             let provider = provider.clone();
             let api_key = api_key.clone();
@@ -249,7 +251,7 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
                 transcribe_audio(&provider, &api_key, language.as_deref(), data)
             })
             .await
-            .map_err(|e| e.to_string())?
+            .map_err(|e| format!("Task join failed: {e}"))?
             .map_err(|e| e.to_string())?
         }
         RecordingOutput::Chunked(chunks) => {
@@ -294,8 +296,17 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
     // Apply polishing if enabled (outside of lock scope)
     let final_text = if let Some((polisher, prompt, ollama_model, key_or_url)) = polish_config {
         // Auto-start Ollama if needed (and installed)
+        // Use spawn_blocking because ensure_ollama_running uses reqwest::blocking::Client
+        // which creates an internal tokio runtime that would panic if dropped in async context
         if polisher == Polisher::Ollama {
-            if let Err(e) = ollama::ensure_ollama_running(&key_or_url) {
+            let url_for_check = key_or_url.clone();
+            let ollama_result = tauri::async_runtime::spawn_blocking(move || {
+                ollama::ensure_ollama_running(&url_for_check)
+            })
+            .await
+            .map_err(|e| format!("Task join failed: {e}"))?;
+
+            if let Err(e) = ollama_result {
                 let warning = format!("Ollama: {e}");
                 eprintln!("Polish warning: {warning}");
                 let _ = app.emit("polish-warning", &warning);

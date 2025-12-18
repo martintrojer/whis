@@ -266,10 +266,7 @@ pub struct DownloadProgress {
 /// Emits 'download-progress' events with { downloaded, total } during download
 /// Returns the path where the model was saved
 #[tauri::command]
-pub async fn download_whisper_model(
-    app: AppHandle,
-    model_name: String,
-) -> Result<String, String> {
+pub async fn download_whisper_model(app: AppHandle, model_name: String) -> Result<String, String> {
     use tauri::Emitter;
 
     // Run blocking download in a separate thread
@@ -393,10 +390,7 @@ pub fn list_presets() -> Vec<PresetInfo> {
 
 /// Apply a preset - updates settings with the preset's configuration and sets it as active
 #[tauri::command]
-pub async fn apply_preset(
-    name: String,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn apply_preset(name: String, state: State<'_, AppState>) -> Result<(), String> {
     use whis_core::preset::Preset;
 
     let (preset, _) = Preset::load(&name)?;
@@ -574,14 +568,21 @@ pub fn delete_preset(name: String, state: State<'_, AppState>) -> Result<(), Str
 }
 
 /// Test connection to Ollama server
+/// Must be async with spawn_blocking because reqwest::blocking::Client
+/// creates an internal tokio runtime that would panic if called from Tauri's async context
 #[tauri::command]
-pub fn test_ollama_connection(url: String) -> Result<bool, String> {
+pub async fn test_ollama_connection(url: String) -> Result<bool, String> {
     let url = if url.trim().is_empty() {
         whis_core::ollama::DEFAULT_OLLAMA_URL.to_string()
     } else {
         url
     };
-    Ok(whis_core::ollama::is_ollama_running(&url))
+
+    tauri::async_runtime::spawn_blocking(move || {
+        whis_core::ollama::is_ollama_running(&url)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// List available models from Ollama
@@ -653,6 +654,10 @@ pub async fn pull_ollama_model(
         url
     };
 
+    // Validate Ollama is running before attempting pull
+    // This gives a clear error if Ollama is not installed or not running
+    whis_core::ollama::ensure_ollama_running(&url).map_err(|e| e.to_string())?;
+
     // Run blocking call in separate thread with progress callback
     tauri::async_runtime::spawn_blocking(move || {
         whis_core::ollama::pull_model_with_progress(&url, &model, |downloaded, total| {
@@ -669,17 +674,111 @@ pub async fn pull_ollama_model(
 
 /// Start Ollama server if not running
 /// Returns "started" if we started it, "running" if already running
+/// Must be async with spawn_blocking because reqwest::blocking::Client
+/// creates an internal tokio runtime that would panic if called from Tauri's async context
 #[tauri::command]
-pub fn start_ollama(url: String) -> Result<String, String> {
+pub async fn start_ollama(url: String) -> Result<String, String> {
     let url = if url.trim().is_empty() {
         whis_core::ollama::DEFAULT_OLLAMA_URL.to_string()
     } else {
         url
     };
 
-    match whis_core::ollama::ensure_ollama_running(&url) {
-        Ok(true) => Ok("started".to_string()),  // Was started
-        Ok(false) => Ok("running".to_string()), // Already running
-        Err(e) => Err(e.to_string()),           // Not installed / error
+    tauri::async_runtime::spawn_blocking(move || {
+        match whis_core::ollama::ensure_ollama_running(&url) {
+            Ok(true) => Ok("started".to_string()),  // Was started
+            Ok(false) => Ok("running".to_string()), // Already running
+            Err(e) => Err(e.to_string()),           // Not installed / error
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Configuration readiness check result
+#[derive(serde::Serialize)]
+pub struct ConfigReadiness {
+    pub transcription_ready: bool,
+    pub transcription_error: Option<String>,
+    pub polishing_ready: bool,
+    pub polishing_error: Option<String>,
+}
+
+/// Check if transcription and polishing are properly configured
+/// Called on app load and settings changes to show proactive warnings
+#[tauri::command]
+pub async fn check_config_readiness(
+    provider: String,
+    polisher: String,
+    api_keys: std::collections::HashMap<String, String>,
+    whisper_model_path: Option<String>,
+    remote_whisper_url: Option<String>,
+    ollama_url: Option<String>,
+) -> ConfigReadiness {
+    // Check transcription readiness
+    let (transcription_ready, transcription_error) = match provider.as_str() {
+        "local-whisper" => match &whisper_model_path {
+            Some(path) if std::path::Path::new(path).exists() => (true, None),
+            Some(_) => (false, Some("Whisper model file not found".to_string())),
+            None => (false, Some("Whisper model path not configured".to_string())),
+        },
+        "remote-whisper" => match remote_whisper_url {
+            Some(_) => (true, None),
+            None => (false, Some("Remote Whisper URL not configured".to_string())),
+        },
+        provider => {
+            if api_keys.get(provider).map_or(true, |k| k.is_empty()) {
+                (
+                    false,
+                    Some(format!("{} API key not configured", capitalize(provider))),
+                )
+            } else {
+                (true, None)
+            }
+        }
+    };
+
+    // Check polishing readiness
+    let (polishing_ready, polishing_error) = match polisher.as_str() {
+        "none" => (true, None),
+        "ollama" => {
+            let url = ollama_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+            let result = tauri::async_runtime::spawn_blocking(move || {
+                whis_core::ollama::is_ollama_running(&url)
+            })
+            .await
+            .ok()
+            .and_then(|r| r.ok());
+
+            match result {
+                Some(true) => (true, None),
+                _ => (false, Some("Ollama not running".to_string())),
+            }
+        }
+        polisher => {
+            if api_keys.get(polisher).map_or(true, |k| k.is_empty()) {
+                (
+                    false,
+                    Some(format!("{} API key not configured", capitalize(polisher))),
+                )
+            } else {
+                (true, None)
+            }
+        }
+    };
+
+    ConfigReadiness {
+        transcription_ready,
+        transcription_error,
+        polishing_ready,
+        polishing_error,
+    }
+}
+
+fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
 }
