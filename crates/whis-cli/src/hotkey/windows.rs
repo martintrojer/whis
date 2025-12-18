@@ -1,6 +1,4 @@
-//! Windows/macOS hotkey support using global-hotkey crate
-//!
-//! IMPORTANT: On macOS, HotkeyManager must be created on the main thread.
+//! Windows hotkey support using global-hotkey crate
 
 use anyhow::Result;
 use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, hotkey::HotKey};

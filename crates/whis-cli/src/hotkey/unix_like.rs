@@ -1,8 +1,14 @@
 use anyhow::{Context, Result};
-use rdev::{Event, EventType, Key, grab};
+use rdev::{Event, EventType, Key};
 use std::collections::HashSet;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
+
+#[cfg(target_os = "linux")]
+use rdev::grab;
+
+#[cfg(target_os = "macos")]
+use rdev::listen;
 
 pub struct HotkeyGuard;
 
@@ -151,44 +157,87 @@ where
     let pressed_keys: Arc<Mutex<HashSet<Key>>> = Arc::new(Mutex::new(HashSet::new()));
     let pressed_keys_clone = pressed_keys.clone();
 
-    let callback = move |event: Event| -> Option<Event> {
-        match event.event_type {
-            EventType::KeyPress(key) => {
-                let mut keys = pressed_keys_clone.lock().unwrap();
-                keys.insert(key);
-
-                // Check if hotkey combination is pressed
-                let ctrl_ok = !hotkey.ctrl
-                    || keys.contains(&Key::ControlLeft)
-                    || keys.contains(&Key::ControlRight);
-                let shift_ok = !hotkey.shift
-                    || keys.contains(&Key::ShiftLeft)
-                    || keys.contains(&Key::ShiftRight);
-                let alt_ok = !hotkey.alt || keys.contains(&Key::Alt) || keys.contains(&Key::AltGr);
-                let super_ok = !hotkey.super_key
-                    || keys.contains(&Key::MetaLeft)
-                    || keys.contains(&Key::MetaRight);
-                let key_ok = keys.contains(&hotkey.key);
-
-                if ctrl_ok && shift_ok && alt_ok && super_ok && key_ok {
-                    on_press();
-                }
-            }
-            EventType::KeyRelease(key) => {
-                let mut keys = pressed_keys_clone.lock().unwrap();
-                keys.remove(&key);
-            }
-            _ => {}
-        }
-        // Return Some(event) to pass the event through, None to consume it
-        Some(event)
-    };
-
     // This blocks and listens for all keyboard events
-    if let Err(e) = grab(callback) {
-        anyhow::bail!(
-            "Failed to grab keyboard: {e:?}\n\nSetup required:\n  sudo usermod -aG input $USER\n  echo 'KERNEL==\"uinput\", GROUP=\"input\", MODE=\"0660\"' | sudo tee /etc/udev/rules.d/99-uinput.rules\n  sudo udevadm control --reload-rules && sudo udevadm trigger\nThen logout and login again."
-        );
+    #[cfg(target_os = "linux")]
+    {
+        let callback = move |event: Event| -> Option<Event> {
+            match event.event_type {
+                EventType::KeyPress(key) => {
+                    let mut keys = pressed_keys_clone.lock().unwrap();
+                    keys.insert(key);
+
+                    // Check if hotkey combination is pressed
+                    let ctrl_ok = !hotkey.ctrl
+                        || keys.contains(&Key::ControlLeft)
+                        || keys.contains(&Key::ControlRight);
+                    let shift_ok = !hotkey.shift
+                        || keys.contains(&Key::ShiftLeft)
+                        || keys.contains(&Key::ShiftRight);
+                    let alt_ok = !hotkey.alt || keys.contains(&Key::Alt) || keys.contains(&Key::AltGr);
+                    let super_ok = !hotkey.super_key
+                        || keys.contains(&Key::MetaLeft)
+                        || keys.contains(&Key::MetaRight);
+                    let key_ok = keys.contains(&hotkey.key);
+
+                    if ctrl_ok && shift_ok && alt_ok && super_ok && key_ok {
+                        on_press();
+                    }
+                }
+                EventType::KeyRelease(key) => {
+                    let mut keys = pressed_keys_clone.lock().unwrap();
+                    keys.remove(&key);
+                }
+                _ => {}
+            }
+            // Return Some(event) to pass the event through, None to consume it
+            Some(event)
+        };
+
+        if let Err(e) = grab(callback) {
+            anyhow::bail!(
+                "Failed to grab keyboard: {e:?}\n\nLinux setup required:\n  sudo usermod -aG input $USER\n  echo 'KERNEL==\"uinput\", GROUP=\"input\", MODE=\"0660\"' | sudo tee /etc/udev/rules.d/99-uinput.rules\n  sudo udevadm control --reload-rules && sudo udevadm trigger\nThen logout and login again."
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let callback = move |event: Event| {
+            match event.event_type {
+                EventType::KeyPress(key) => {
+                    let mut keys = pressed_keys_clone.lock().unwrap();
+                    keys.insert(key);
+
+                    // Check if hotkey combination is pressed
+                    let ctrl_ok = !hotkey.ctrl
+                        || keys.contains(&Key::ControlLeft)
+                        || keys.contains(&Key::ControlRight);
+                    let shift_ok = !hotkey.shift
+                        || keys.contains(&Key::ShiftLeft)
+                        || keys.contains(&Key::ShiftRight);
+                    let alt_ok = !hotkey.alt || keys.contains(&Key::Alt) || keys.contains(&Key::AltGr);
+                    let super_ok = !hotkey.super_key
+                        || keys.contains(&Key::MetaLeft)
+                        || keys.contains(&Key::MetaRight);
+                    let key_ok = keys.contains(&hotkey.key);
+
+                    if ctrl_ok && shift_ok && alt_ok && super_ok && key_ok {
+                        on_press();
+                    }
+                }
+                EventType::KeyRelease(key) => {
+                    let mut keys = pressed_keys_clone.lock().unwrap();
+                    keys.remove(&key);
+                }
+                _ => {}
+            }
+        };
+
+        if let Err(e) = listen(callback) {
+            anyhow::bail!(
+                "Failed to listen for keyboard events: {e:?}\n\nmacOS setup required:\n  1. Open System Settings → Privacy & Security → Accessibility\n  2. Add your terminal app (e.g., Terminal.app, iTerm2, WezTerm)\n  3. Enable the checkbox next to it\n  4. Restart your terminal app completely (Cmd+Q, then reopen)\n  5. Run 'whis listen' again"
+            );
+        }
     }
 
     Ok(())

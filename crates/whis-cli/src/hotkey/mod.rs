@@ -1,20 +1,20 @@
 //! Cross-platform hotkey support
 //!
-//! - Linux: Uses rdev for keyboard grab (supports X11 and Wayland)
-//! - Windows/macOS: Uses global-hotkey crate (Tauri-maintained)
+//! - Linux/macOS: Uses rdev for keyboard grab (supports X11, Wayland, and macOS)
+//! - Windows: Uses global-hotkey crate (Tauri-maintained)
 
 use anyhow::Result;
 use std::sync::mpsc::Receiver;
 
-#[cfg(target_os = "linux")]
-mod linux;
-#[cfg(target_os = "linux")]
-use linux as platform;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+mod unix_like;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use unix_like as platform;
 
-#[cfg(not(target_os = "linux"))]
-mod non_linux;
-#[cfg(not(target_os = "linux"))]
-use non_linux as platform;
+#[cfg(target_os = "windows")]
+mod windows;
+#[cfg(target_os = "windows")]
+use windows as platform;
 
 /// Opaque guard that keeps the hotkey listener alive
 #[allow(dead_code)]
