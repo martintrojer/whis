@@ -300,18 +300,21 @@ services:
       - MODEL=large-v3
 ```
 
-Whis would add a "Remote Whisper" provider that points to user's server:
+A future "Remote Whisper" provider could point to user's server using the same `TranscriptionBackend` trait:
 
 ```rust
-pub struct RemoteWhisperProvider;
+// Example of what a remote whisper provider might look like
+pub struct RemoteWhisperProvider {
+    server_url: String,
+}
 
 impl TranscriptionBackend for RemoteWhisperProvider {
-    fn transcribe_sync(&self, server_url: &str, request: TranscriptionRequest) 
+    fn transcribe_sync(&self, _api_key: &str, request: TranscriptionRequest) 
         -> Result<TranscriptionResult> 
     {
         let client = reqwest::blocking::Client::new();
         let response = client
-            .post(format!("{server_url}/v1/audio/transcriptions"))
+            .post(format!("{}/v1/audio/transcriptions", self.server_url))
             .multipart(/* ... */)
             .send()?;
         

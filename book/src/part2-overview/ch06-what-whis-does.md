@@ -153,14 +153,13 @@ Apple's dictation only works well on macOS. Windows Speech Recognition only work
 
 Most transcription tools lock you into one provider. If OpenAI's API is down, you're stuck.
 
-**Whis supports 7 providers:**
+**Whis supports 6 providers:**
 - OpenAI (Whisper API)
 - Groq (fastest inference)
 - Deepgram (streaming transcription)
 - Mistral
 - ElevenLabs
 - Local Whisper (via `whisper.cpp` - no internet required)
-- Remote Whisper (self-hosted server - Docker deployment)
 
 You can switch providers in settings without changing your workflow.
 
@@ -207,10 +206,10 @@ The entire system is built around making this loop as fast and frictionless as p
 
 **What We Skipped:**
 
-- *How* hotkeys are registered (covered in Chapter 11)
-- *How* audio recording works (covered in Chapter 9)
-- *How* providers are implemented (covered in Chapter 10)
-- *How* error handling works (covered in Chapter 14)
+- *How* hotkeys are registered (covered in Chapter 17)
+- *How* audio recording works (covered in Chapter 11)
+- *How* providers are implemented (covered in Chapter 14)
+- *How* error handling works (covered in Chapter 4)
 
 Those details come later. For now, just remember: **Whis turns your voice into text as quickly and invisibly as possible.**
 

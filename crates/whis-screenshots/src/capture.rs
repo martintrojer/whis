@@ -69,31 +69,49 @@ async fn capture_settings(driver: &TauriDriver, output_dir: &Path) -> Result<Vec
     let _ = driver.click(".mode-card:first-child").await;
 
     // Cloud default
-    driver.screenshot(save("settings-cloud-default.png").to_str().unwrap()).await?;
+    driver
+        .screenshot(save("settings-cloud-default.png").to_str().unwrap())
+        .await?;
     captured.push("settings-cloud-default.png".to_string());
 
     // Cloud + help panel
     if driver.click(".help-btn").await.is_ok() {
-        driver.screenshot(save("settings-cloud-help.png").to_str().unwrap()).await?;
+        driver
+            .screenshot(save("settings-cloud-help.png").to_str().unwrap())
+            .await?;
         captured.push("settings-cloud-help.png".to_string());
         let _ = driver.click(".help-btn").await; // close help
     }
 
     // Cloud + options expanded
     if driver.click(".options-toggle").await.is_ok() {
-        driver.screenshot(save("settings-cloud-options.png").to_str().unwrap()).await?;
+        driver
+            .screenshot(save("settings-cloud-options.png").to_str().unwrap())
+            .await?;
         captured.push("settings-cloud-options.png".to_string());
 
         // Cloud + polishing enabled (scroll to ensure visible)
         let _ = driver.scroll_to(".toggle-switch").await;
         if driver.click(".toggle-switch").await.is_ok() {
-            driver.screenshot(save("settings-cloud-polishing.png").to_str().unwrap()).await?;
+            driver
+                .screenshot(save("settings-cloud-polishing.png").to_str().unwrap())
+                .await?;
             captured.push("settings-cloud-polishing.png".to_string());
 
             // Cloud + polishing + Ollama selected
             let _ = driver.scroll_to(".polishing-section .select-trigger").await;
-            if driver.select_option(".polishing-section .select-trigger", "Ollama").await.is_ok() {
-                driver.screenshot(save("settings-cloud-polishing-ollama.png").to_str().unwrap()).await?;
+            if driver
+                .select_option(".polishing-section .select-trigger", "Ollama")
+                .await
+                .is_ok()
+            {
+                driver
+                    .screenshot(
+                        save("settings-cloud-polishing-ollama.png")
+                            .to_str()
+                            .unwrap(),
+                    )
+                    .await?;
                 captured.push("settings-cloud-polishing-ollama.png".to_string());
             }
 
@@ -107,30 +125,55 @@ async fn capture_settings(driver: &TauriDriver, output_dir: &Path) -> Result<Vec
     // ========== LOCAL MODE ==========
     // Switch to local mode (click second mode card)
     if driver.click(".mode-card:nth-child(2)").await.is_ok() {
-        driver.screenshot(save("settings-local-default.png").to_str().unwrap()).await?;
+        driver
+            .screenshot(save("settings-local-default.png").to_str().unwrap())
+            .await?;
         captured.push("settings-local-default.png".to_string());
 
         // Local + options expanded
         if driver.click(".options-toggle").await.is_ok() {
-            driver.screenshot(save("settings-local-options.png").to_str().unwrap()).await?;
+            driver
+                .screenshot(save("settings-local-options.png").to_str().unwrap())
+                .await?;
             captured.push("settings-local-options.png".to_string());
 
             // Local + remote whisper mode
-            if driver.select_option(".options-section .field-row:first-child .select-trigger", "Remote").await.is_ok() {
-                driver.screenshot(save("settings-local-remote.png").to_str().unwrap()).await?;
+            if driver
+                .select_option(
+                    ".options-section .field-row:first-child .select-trigger",
+                    "Remote",
+                )
+                .await
+                .is_ok()
+            {
+                driver
+                    .screenshot(save("settings-local-remote.png").to_str().unwrap())
+                    .await?;
                 captured.push("settings-local-remote.png".to_string());
             }
 
             // Local + polishing enabled (scroll to ensure visible)
             let _ = driver.scroll_to(".toggle-switch").await;
             if driver.click(".toggle-switch").await.is_ok() {
-                driver.screenshot(save("settings-local-polishing.png").to_str().unwrap()).await?;
+                driver
+                    .screenshot(save("settings-local-polishing.png").to_str().unwrap())
+                    .await?;
                 captured.push("settings-local-polishing.png".to_string());
 
                 // Local + polishing + Ollama
                 let _ = driver.scroll_to(".polishing-section .select-trigger").await;
-                if driver.select_option(".polishing-section .select-trigger", "Ollama").await.is_ok() {
-                    driver.screenshot(save("settings-local-polishing-ollama.png").to_str().unwrap()).await?;
+                if driver
+                    .select_option(".polishing-section .select-trigger", "Ollama")
+                    .await
+                    .is_ok()
+                {
+                    driver
+                        .screenshot(
+                            save("settings-local-polishing-ollama.png")
+                                .to_str()
+                                .unwrap(),
+                        )
+                        .await?;
                     captured.push("settings-local-polishing-ollama.png".to_string());
                 }
             }

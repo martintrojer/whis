@@ -240,9 +240,7 @@ pub fn run(
 
     // No flags - show help
     eprintln!("Usage:");
-    eprintln!(
-        "  whis config --provider <openai|mistral|groq|deepgram|elevenlabs|local-whisper>"
-    );
+    eprintln!("  whis config --provider <openai|mistral|groq|deepgram|elevenlabs|local-whisper>");
     eprintln!("  whis config --language <en|de|fr|...|auto>");
     eprintln!("  whis config --openai-api-key <KEY>");
     eprintln!("  whis config --mistral-api-key <KEY>");

@@ -18,7 +18,7 @@
 - **Built for AI workflows** — speak your prompt, paste to Claude/Copilot
 - **Cheap** — ~$0.006/minute via OpenAI Whisper or Mistral Voxtral (no local GPU)
 - **Simple** — record → transcribe → clipboard
-- **Multi-provider** — choose between OpenAI Whisper or Mistral Voxtral
+- **Multi-provider** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
 
 ## Quick Start
 
@@ -56,6 +56,18 @@ whis config --language en             # Set language hint (ISO-639-1)
 whis config --show                    # View current settings
 ```
 
+**From file or stdin:**
+```bash
+whis -f recording.mp3              # Transcribe audio file
+cat audio.mp3 | whis --stdin       # Read from stdin
+```
+
+**Presets:**
+```bash
+whis presets list     # Show available output presets
+whis --as email       # Apply preset to output
+```
+
 ## Installation
 
 ```bash
@@ -68,7 +80,7 @@ Or download binaries from [GitHub Releases](https://github.com/frankdierolf/whis
 
 - API key from [OpenAI](https://platform.openai.com/api-keys) or [Mistral](https://console.mistral.ai/api-keys)
 - FFmpeg (`sudo apt install ffmpeg` or `brew install ffmpeg`)
-- Linux (X11/Wayland) or macOS
+- Linux (X11/Wayland), macOS, or Windows
 
 **For hotkey mode** (one-time setup on Linux):
 ```bash

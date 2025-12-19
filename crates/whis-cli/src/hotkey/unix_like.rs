@@ -173,7 +173,8 @@ where
                     let shift_ok = !hotkey.shift
                         || keys.contains(&Key::ShiftLeft)
                         || keys.contains(&Key::ShiftRight);
-                    let alt_ok = !hotkey.alt || keys.contains(&Key::Alt) || keys.contains(&Key::AltGr);
+                    let alt_ok =
+                        !hotkey.alt || keys.contains(&Key::Alt) || keys.contains(&Key::AltGr);
                     let super_ok = !hotkey.super_key
                         || keys.contains(&Key::MetaLeft)
                         || keys.contains(&Key::MetaRight);
@@ -215,7 +216,8 @@ where
                     let shift_ok = !hotkey.shift
                         || keys.contains(&Key::ShiftLeft)
                         || keys.contains(&Key::ShiftRight);
-                    let alt_ok = !hotkey.alt || keys.contains(&Key::Alt) || keys.contains(&Key::AltGr);
+                    let alt_ok =
+                        !hotkey.alt || keys.contains(&Key::Alt) || keys.contains(&Key::AltGr);
                     let super_ok = !hotkey.super_key
                         || keys.contains(&Key::MetaLeft)
                         || keys.contains(&Key::MetaRight);

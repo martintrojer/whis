@@ -14,22 +14,20 @@ Cloud transcription is convenient, but some users need privacy, offline capabili
 
 Local transcription gives you control. Your voice data stays on your hardware.
 
-## Two Approaches
+## Architecture
 
-Whis offers two paths to local transcription:
+Whis implements local transcription using embedded Whisper:
 
 ```
                         Your Machine
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
 │   ┌─────────────┐      ┌─────────────────────────────────────┐  │
-│   │   whis CLI  │      │         Transcription Options       │  │
+│   │   whis CLI  │      │         Transcription               │  │
 │   │             │      │                                     │  │
-│   │  Record     │─────▶│  A) local-whisper (embedded)        │  │
-│   │  Audio      │      │     whisper.cpp compiled into binary│  │
+│   │  Record     │─────▶│  local-whisper (embedded)           │  │
+│   │  Audio      │      │  whisper.cpp compiled into binary   │  │
 │   │             │      │                                     │  │
-│   │             │      │  B) remote-whisper (server)         │  │
-│   │             │─────▶│     faster-whisper-server in Docker │  │
 │   └─────────────┘      └─────────────────────────────────────┘  │
 │          │                                                      │
 │          │ (optional polish)                                    │
@@ -42,19 +40,12 @@ Whis offers two paths to local transcription:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Option A: Embedded (`local-whisper`)
+### Embedded Whisper (`local-whisper`)
 
 Whisper.cpp is compiled directly into the whis binary via the `whisper-rs` crate.
 
-**Pros**: Single binary, no server to manage
+**Pros**: Single binary, no server to manage, works offline
 **Cons**: Larger binary (~50MB+), CPU-only (no GPU acceleration)
-
-### Option B: Server (`remote-whisper`)
-
-A whisper server runs in Docker, whis connects via HTTP.
-
-**Pros**: GPU acceleration, shared across machines, smaller client binary
-**Cons**: Docker dependency, server management overhead
 
 ## The `local-whisper` Feature Flag
 
@@ -369,60 +360,6 @@ fn decode_and_resample(mp3_data: &[u8]) -> Result<Vec<f32>> {
 - Streaming decoder (low memory usage)
 - Fast enough for real-time decoding
 
-## The RemoteWhisperProvider
-
-For users who want GPU acceleration or shared infrastructure, the remote provider connects to a self-hosted whisper server.
-
-**From `whis-core/src/provider/remote_whisper.rs`**:
-
-```rust
-pub struct RemoteWhisperProvider;
-
-const MODEL: &str = "Systran/faster-whisper-small";
-
-impl RemoteWhisperProvider {
-    fn build_api_url(server_url: &str) -> Result<String> {
-        // Validate URL format
-        if !server_url.starts_with("http://") && !server_url.starts_with("https://") {
-            return Err(anyhow!(
-                "Invalid server URL: must start with http:// or https://"
-            ));
-        }
-
-        // Append transcription endpoint
-        let base = server_url.trim_end_matches('/');
-        Ok(format!("{}/v1/audio/transcriptions", base))
-    }
-}
-```
-
-### OpenAI-Compatible API
-
-The remote whisper server (faster-whisper-server) uses the same API format as OpenAI:
-
-```rust
-#[async_trait]
-impl TranscriptionBackend for RemoteWhisperProvider {
-    fn transcribe_sync(
-        &self,
-        api_key: &str,  // Actually the server URL!
-        request: TranscriptionRequest,
-    ) -> Result<TranscriptionResult> {
-        let api_url = Self::build_api_url(api_key)?;
-
-        // Reuse the OpenAI-compatible helper
-        openai_compatible_transcribe_sync(
-            &api_url,
-            MODEL,
-            "no-auth",  // Self-hosted servers typically don't need auth
-            request,
-        )
-    }
-}
-```
-
-> **Key Insight**: By using the OpenAI-compatible API, we can reuse the same HTTP/multipart logic for both cloud OpenAI and self-hosted servers.
-
 ## Ollama Integration
 
 For polishing transcripts locally, Whis integrates with Ollama - a popular local LLM server.
@@ -582,20 +519,18 @@ Whis provides an interactive setup command for easy configuration.
 
 **From `whis-cli/src/commands/setup.rs`**:
 
-### Three Setup Modes
+### Two Setup Modes
 
 ```rust
 pub enum SetupMode {
-    Cloud,                           // Configure cloud API provider
-    Local,                           // Embedded whisper + Ollama
-    SelfHosted { url: Option<String> }, // Docker server
+    Cloud,  // Configure cloud API provider
+    Local,  // Embedded whisper + Ollama
 }
 
 pub fn run(mode: SetupMode) -> Result<()> {
     match mode {
         SetupMode::Cloud => setup_cloud(),
         SetupMode::Local => setup_local(),
-        SetupMode::SelfHosted { url } => setup_self_hosted(url),
     }
 }
 ```
@@ -638,96 +573,6 @@ fn setup_local() -> Result<()> {
 }
 ```
 
-### Self-Hosted Setup Flow
-
-```rust
-fn setup_self_hosted(url_arg: Option<String>) -> Result<()> {
-    // Get server URL (prompt if not provided)
-    let whisper_url = url_arg.unwrap_or_else(|| {
-        prompt_string("Whisper server URL", "http://localhost:8765")
-    });
-
-    // Test connectivity
-    let health_url = format!("{}/health", whisper_url.trim_end_matches('/'));
-    let response = reqwest::blocking::get(&health_url)?;
-    if !response.status().is_success() {
-        return Err(anyhow!("Whisper server not reachable"));
-    }
-
-    // Configure
-    let mut settings = Settings::load();
-    settings.provider = TranscriptionProvider::RemoteWhisper;
-    settings.remote_whisper_url = Some(whisper_url);
-    settings.polisher = Polisher::Ollama;
-    settings.save()?;
-
-    Ok(())
-}
-```
-
-## Docker Deployment
-
-For self-hosted setups, Whis includes Docker Compose configurations.
-
-### GPU Stack (`docker/docker-compose.yml`)
-
-```yaml
-services:
-  whisper:
-    image: fedirz/faster-whisper-server:latest-cuda
-    container_name: whis-whisper
-    ports:
-      - "8765:8000"
-    environment:
-      - WHISPER__MODEL=Systran/faster-whisper-small
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: whis-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
-```
-
-### CPU Stack (`docker/docker-compose.cpu.yml`)
-
-```yaml
-services:
-  whisper:
-    image: fedirz/faster-whisper-server:latest
-    environment:
-      - WHISPER__MODEL=Systran/faster-whisper-tiny  # Smaller model for CPU
-    # No GPU reservation
-
-  ollama:
-    image: ollama/ollama:latest
-    # No GPU reservation
-```
-
-### Starting the Server
-
-```bash
-# GPU (requires NVIDIA Container Toolkit)
-cd docker && docker compose up -d
-
-# CPU-only
-cd docker && docker compose -f docker-compose.cpu.yml up -d
-
-# Pull polish model
-docker exec -it whis-ollama ollama pull phi3
-```
-
 ## Configuration Fields
 
 The `Settings` struct includes these local transcription fields:
@@ -739,10 +584,6 @@ pub struct Settings {
     /// Path to whisper model file (for local-whisper)
     #[serde(default)]
     pub whisper_model_path: Option<String>,
-
-    /// URL for self-hosted whisper server (for remote-whisper)
-    #[serde(default)]
-    pub remote_whisper_url: Option<String>,
 
     /// Ollama server URL
     #[serde(default)]
@@ -758,8 +599,7 @@ pub struct Settings {
 
 | Setting | Config Flag | Environment Variable |
 |---------|-------------|---------------------|
-| Model path | `--whisper-model-path` | `WHISPER_MODEL_PATH` |
-| Server URL | `--remote-whisper-url` | `REMOTE_WHISPER_URL` |
+| Model path | `--whisper-model-path` | `LOCAL_WHISPER_MODEL_PATH` |
 | Ollama URL | `--ollama-url` | `OLLAMA_URL` |
 | Ollama model | `--ollama-model` | `OLLAMA_MODEL` |
 
@@ -799,33 +639,24 @@ cargo build --no-default-features --features ffmpeg,clipboard
 cargo build  # local-whisper is in defaults
 ```
 
-### 4. Why faster-whisper-server for Remote?
-
-- **4x faster** than whisper.cpp (uses CTranslate2)
-- **OpenAI-compatible API** (reuse existing code)
-- **Official Docker images** with GPU support
-- **No custom server** code to maintain
-
 ## Summary
 
 **Key Takeaways:**
 
-1. **Two approaches**: Embedded (local-whisper) vs Server (remote-whisper)
+1. **Embedded whisper**: whisper.cpp compiled into the binary via `whisper-rs`
 2. **Model management**: Download from HuggingFace, store in platform-specific location
 3. **Audio pipeline**: MP3 decode (minimp3) → Resample to 16kHz (rubato) → Transcribe (whisper-rs)
 4. **Ollama integration**: Auto-start, model pulling, HTTP API for polish
-5. **Setup wizard**: `whis setup local` or `whis setup self-hosted`
+5. **Setup wizard**: `whis setup local` for fully offline transcription
 
 **Where This Matters in Whis:**
 
 - Provider registration: `whis-core/src/provider/mod.rs`
 - Local whisper: `whis-core/src/provider/local_whisper.rs`
-- Remote whisper: `whis-core/src/provider/remote_whisper.rs`
 - Model download: `whis-core/src/model.rs`
 - Ollama management: `whis-core/src/ollama.rs`
 - Audio resampling: `whis-core/src/resample.rs`
 - Setup wizard: `whis-cli/src/commands/setup.rs`
-- Docker configs: `docker/docker-compose*.yml`
 
 **Patterns Used:**
 

@@ -171,7 +171,6 @@ export type Provider =
   | 'deepgram'
   | 'elevenlabs'
   | 'local-whisper'
-  | 'remote-whisper'
 
 // Text polishing providers
 export type Polisher = 'none' | 'openai' | 'mistral' | 'ollama'
@@ -183,7 +182,6 @@ export interface Settings {
   language: string | null
   api_keys: Record<string, string>
   whisper_model_path: string | null
-  remote_whisper_url: string | null
   polisher: Polisher
   ollama_url: string | null
   ollama_model: string | null
@@ -719,7 +717,6 @@ The `components/settings/` folder has domain-specific components:
 - **ModeCards.vue**: Cloud vs Local toggle cards
 - **CloudProviderConfig.vue**: Provider selection + API key input
 - **LocalWhisperConfig.vue**: Model download and path configuration
-- **RemoteWhisperConfig.vue**: Server URL configuration
 - **OllamaConfig.vue**: Ollama server and model settings
 - **PolishingConfig.vue**: Polisher selection and prompt customization
 

@@ -663,9 +663,7 @@ pub struct AudioDeviceInfo {
 pub fn list_audio_devices() -> Result<Vec<AudioDeviceInfo>> {
     alsa_suppress::init();
     let host = cpal::default_host();
-    let default_device_name = host
-        .default_input_device()
-        .and_then(|d| d.name().ok());
+    let default_device_name = host.default_input_device().and_then(|d| d.name().ok());
 
     let mut devices = Vec::new();
     for device in host.input_devices()? {

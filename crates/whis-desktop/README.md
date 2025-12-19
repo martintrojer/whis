@@ -18,7 +18,7 @@
 - **Built for AI workflows** — speak your prompt, paste to Claude/Copilot
 - **Cheap** — ~$0.006/minute via OpenAI Whisper or Mistral Voxtral (no local GPU)
 - **Simple** — record → transcribe → clipboard
-- **Multi-provider** — choose between OpenAI Whisper or Mistral Voxtral
+- **Multi-provider** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ flatpak install flathub ink.whis.Whis
 
 ## Screenshot
 
-![Whis Desktop](packaging/screenshots/1-about.png)
+![Whis Desktop](screenshots/1-about.png)
 
 ## Features
 
@@ -37,7 +37,7 @@ flatpak install flathub ink.whis.Whis
 - **Settings UI** — configure API key and shortcuts
 - **X11 & Wayland** — works on both
 
-![Settings](packaging/screenshots/4-settings.png)
+![Settings](screenshots/4-settings.png)
 
 ## Installation
 

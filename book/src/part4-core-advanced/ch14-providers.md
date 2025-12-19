@@ -500,7 +500,6 @@ impl ProviderRegistry {
         providers.insert("groq", Arc::new(GroqProvider));
         providers.insert("deepgram", Arc::new(DeepgramProvider));
         providers.insert("elevenlabs", Arc::new(ElevenLabsProvider));
-        providers.insert("remote-whisper", Arc::new(RemoteWhisperProvider));
 
         #[cfg(feature = "local-whisper")]
         providers.insert("local-whisper", Arc::new(LocalWhisperProvider));
@@ -523,7 +522,7 @@ But they're all stored as `Arc<dyn TranscriptionBackend>` (same type).
 
 **Feature flag**: Local Whisper only included if compiled with `local-whisper` feature (enabled by default).
 
-For implementation details of LocalWhisperProvider and RemoteWhisperProvider, see [Chapter 14b: Local Transcription](./ch14b-local-transcription.md).
+For implementation details of LocalWhisperProvider, see [Chapter 14b: Local Transcription](./ch14b-local-transcription.md).
 
 ### Using the Registry
 

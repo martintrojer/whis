@@ -27,8 +27,6 @@ pub struct Settings {
     #[serde(default)]
     pub ollama_model: Option<String>,
     #[serde(default)]
-    pub remote_whisper_url: Option<String>,
-    #[serde(default)]
     pub active_preset: Option<String>,
     #[serde(default)]
     pub clipboard_method: ClipboardMethod,
@@ -62,7 +60,6 @@ Here's what `~/.config/whis/settings.json` looks like:
   "whisper_model_path": null,
   "ollama_url": "http://localhost:11434",
   "ollama_model": "ministral-3:3b",
-  "remote_whisper_url": null,
   "active_preset": "ai-prompt",
   "clipboard_method": "auto"
 }
@@ -97,7 +94,6 @@ impl Default for Settings {
             whisper_model_path: None,
             ollama_url: None,
             ollama_model: None,
-            remote_whisper_url: None,
             active_preset: None,
             clipboard_method: ClipboardMethod::default(), // Auto
         }
@@ -129,8 +125,6 @@ pub enum TranscriptionProvider {
     ElevenLabs,
     #[serde(rename = "local-whisper")]
     LocalWhisper,
-    #[serde(rename = "remote-whisper")]
-    RemoteWhisper,
 }
 ```
 
@@ -269,7 +263,6 @@ pub fn api_key_env_var(&self) -> &'static str {
         TranscriptionProvider::OpenAI => "OPENAI_API_KEY",
         TranscriptionProvider::Groq => "GROQ_API_KEY",
         TranscriptionProvider::LocalWhisper => "LOCAL_WHISPER_MODEL_PATH",
-        TranscriptionProvider::RemoteWhisper => "REMOTE_WHISPER_URL",
         // ... etc
     }
 }
@@ -277,18 +270,15 @@ pub fn api_key_env_var(&self) -> &'static str {
 
 **From `whis-core/src/config.rs:35-45`**
 
-> **Key Insight**: Local and remote providers use different env vars. `LOCAL_WHISPER_MODEL_PATH` is a file path, `REMOTE_WHISPER_URL` is a server URL—not API keys. This same pattern (config → env fallback) applies to all providers.
+> **Key Insight**: The local whisper provider uses `LOCAL_WHISPER_MODEL_PATH` as a file path—not an API key. This same pattern (config → env fallback) applies to all providers.
 
 ### Local Transcription Settings
 
-For local and self-hosted transcription, additional settings control where to find models and servers:
+For local transcription, additional settings control where to find models and servers:
 
 ```rust
 // Local whisper model path
 pub whisper_model_path: Option<String>,
-
-// Self-hosted whisper server URL
-pub remote_whisper_url: Option<String>,
 
 // Ollama server for local polishing
 pub ollama_url: Option<String>,
@@ -300,7 +290,6 @@ pub ollama_model: Option<String>,
 | Setting | Config Flag | Env Var | Default |
 |---------|-------------|---------|---------|
 | Model path | `--whisper-model-path` | `LOCAL_WHISPER_MODEL_PATH` | None |
-| Server URL | `--remote-whisper-url` | `REMOTE_WHISPER_URL` | None |
 | Ollama URL | `--ollama-url` | `OLLAMA_URL` | `http://localhost:11434` |
 | Ollama model | `--ollama-model` | `OLLAMA_MODEL` | `ministral-3:3b` |
 

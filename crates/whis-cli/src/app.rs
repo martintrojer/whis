@@ -116,4 +116,3 @@ pub fn typewriter(text: &str, delay_ms: u64) {
         thread::sleep(Duration::from_millis(delay_ms));
     }
 }
-

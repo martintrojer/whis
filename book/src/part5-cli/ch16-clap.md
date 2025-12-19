@@ -37,7 +37,6 @@ whis config                   # Configure settings
   --openai-api-key <KEY>
   --provider <NAME>
   --whisper-model-path <PATH> # Local whisper model
-  --remote-whisper-url <URL>  # Self-hosted server URL
   --ollama-url <URL>          # Ollama server for polishing
   --ollama-model <NAME>       # Ollama model name
   --show                      # Display current config
@@ -51,7 +50,6 @@ whis presets                  # List presets
 whis setup                    # Interactive setup wizard
   cloud                       # Configure cloud API provider
   local                       # Setup local whisper + Ollama
-  self-hosted [url]           # Configure Docker server
 
 whis models                   # List available models
   whisper                     # Show whisper models with install status
@@ -426,12 +424,6 @@ pub enum SetupMode {
 
     /// Setup fully local transcription (whisper + Ollama)
     Local,
-
-    /// Setup self-hosted server (Docker)
-    SelfHosted {
-        /// Whisper server URL (optional, will prompt if not provided)
-        url: Option<String>,
-    },
 }
 ```
 
@@ -444,16 +436,11 @@ whis setup cloud
 
 # Local setup (downloads whisper model, configures Ollama)
 whis setup local
-
-# Self-hosted setup (configures Docker server connection)
-whis setup self-hosted
-whis setup self-hosted http://my-server:8765
 ```
 
 The setup wizard handles:
 - **Cloud**: Prompts for provider selection, displays API key URLs, validates key format
 - **Local**: Downloads whisper model, starts Ollama, pulls polish model
-- **Self-hosted**: Tests server connectivity, configures URLs
 
 For implementation details, see [Chapter 14b: Local Transcription](../part4-core-advanced/ch14b-local-transcription.md).
 
@@ -662,16 +649,6 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
                 }
             }
         }
-        TranscriptionProvider::RemoteWhisper => {
-            match settings.get_remote_whisper_url() {
-                Some(url) => url,
-                None => {
-                    eprintln!("Error: No remote whisper server URL configured.");
-                    eprintln!("  whis config --remote-whisper-url http://localhost:8765\n");
-                    std::process::exit(1);
-                }
-            }
-        }
         _ => {
             match settings.get_api_key_for(&provider) {
                 Some(key) => key,
@@ -696,7 +673,6 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
 
 **Pattern matching on provider type**:
 - **LocalWhisper**: Needs model path, not API key
-- **RemoteWhisper**: Needs server URL
 - **Others**: Need API key
 
 **Helpful errors**: If config is missing, tell user exactly how to fix it.

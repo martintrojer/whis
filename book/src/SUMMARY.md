@@ -86,10 +86,4 @@
 - [Chapter 27: Build System](./part9-operations/ch27-build.md)
 - [Chapter 28: CI/CD Pipeline](./part9-operations/ch28-cicd.md)
 
----
 
-# Appendices
-
-- [Appendix A: Quick Reference](./appendices/appendix-a-reference.md)
-- [Appendix B: Glossary](./appendices/appendix-b-glossary.md)
-- [Appendix C: Exercise Solutions](./appendices/appendix-c-solutions.md)
