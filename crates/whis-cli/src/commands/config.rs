@@ -230,7 +230,7 @@ pub fn run(
         if let Some(model) = &settings.ollama_model {
             println!("Ollama model: {}", model);
         } else {
-            println!("Ollama model: (default: ministral-3:3b)");
+            println!("Ollama model: (default: qwen2.5:1.5b)");
         }
 
         println!("Available --as presets: {}", Preset::all_names().join(", "));
@@ -253,7 +253,7 @@ pub fn run(
         "  whis config --ollama-url <URL>                # For ollama polisher (default: http://localhost:11434)"
     );
     eprintln!(
-        "  whis config --ollama-model <MODEL>            # For ollama polisher (default: ministral-3:3b)"
+        "  whis config --ollama-model <MODEL>            # For ollama polisher (default: qwen2.5:1.5b)"
     );
     eprintln!("  whis config --polish-prompt <PROMPT>");
     eprintln!("  whis config --show");

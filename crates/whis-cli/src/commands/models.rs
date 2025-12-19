@@ -111,7 +111,7 @@ fn list_ollama_models(url: Option<String>) -> Result<()> {
     if tags.models.is_empty() {
         println!("No models installed in Ollama at {}\n", url);
         println!("Pull a model with: ollama pull <model>");
-        println!("Example: ollama pull ministral-3:3b");
+        println!("Example: ollama pull qwen2.5:1.5b");
         return Ok(());
     }
 

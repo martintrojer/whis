@@ -34,7 +34,7 @@ interface OllamaStatusResponse {
 }
 
 // Pull state
-const pullModelName = ref('ministral-3:3b')
+const pullModelName = ref('qwen2.5:1.5b')
 const pullingModel = ref(false)
 const pullStatus = ref('')
 const pullProgress = ref<{ downloaded: number; total: number } | null>(null)
@@ -308,7 +308,7 @@ function handleOllamaModelChange(value: string | null) {
       <input
         type="text"
         v-model="pullModelName"
-        placeholder="ministral-3:3b"
+        placeholder="qwen2.5:1.5b"
         spellcheck="false"
         :disabled="pullingModel"
         aria-label="Model name to pull"

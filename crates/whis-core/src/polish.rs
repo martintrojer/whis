@@ -6,10 +6,10 @@ const OPENAI_CHAT_URL: &str = "https://api.openai.com/v1/chat/completions";
 const MISTRAL_CHAT_URL: &str = "https://api.mistral.ai/v1/chat/completions";
 const DEFAULT_TIMEOUT_SECS: u64 = 60;
 
-pub const DEFAULT_POLISH_PROMPT: &str = "Clean up this voice transcript. Fix grammar and punctuation. \
+pub const DEFAULT_POLISH_PROMPT: &str = "Clean up this voice transcript. \
 Remove filler words (um, uh, like, you know). \
-If the speaker corrects themselves, keep only the correction. \
-Preserve technical terms and proper nouns. Output only the cleaned text.";
+Fix grammar and punctuation. Keep technical terms intact. \
+Output only the cleaned text, no explanations.";
 
 /// Available polishing providers (LLM for transcript cleanup)
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]

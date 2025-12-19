@@ -85,7 +85,7 @@ pub enum Commands {
         #[arg(long)]
         ollama_url: Option<String>,
 
-        /// Ollama model name for local polishing (default: ministral-3:3b)
+        /// Ollama model name for local polishing (default: qwen2.5:1.5b)
         #[arg(long)]
         ollama_model: Option<String>,
 

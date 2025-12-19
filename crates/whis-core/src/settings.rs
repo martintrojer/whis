@@ -34,7 +34,7 @@ pub struct Settings {
     /// Ollama server URL for local LLM polishing (default: http://localhost:11434)
     #[serde(default)]
     pub ollama_url: Option<String>,
-    /// Ollama model name for polishing (default: ministral-3:3b)
+    /// Ollama model name for polishing (default: qwen2.5:1.5b)
     #[serde(default)]
     pub ollama_model: Option<String>,
     /// Currently active preset name (if any)

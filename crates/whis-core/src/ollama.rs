@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 pub const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
 
 /// Default model for polishing
-pub const DEFAULT_OLLAMA_MODEL: &str = "ministral-3:3b";
+pub const DEFAULT_OLLAMA_MODEL: &str = "qwen2.5:1.5b";
 
 /// Timeout for Ollama to start
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
@@ -168,7 +168,7 @@ pub fn has_model(url: &str, model: &str) -> Result<bool> {
 
     let tags: TagsResponse = response.json().context("Failed to parse Ollama response")?;
 
-    // Model names can have tags like "ministral-3:3b:latest", check for prefix match
+    // Model names can have tags like "qwen2.5:1.5b:latest", check for prefix match
     let model_base = model.split(':').next().unwrap_or(model);
     Ok(tags
         .models
