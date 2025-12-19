@@ -1,14 +1,7 @@
-use crate::settings::Settings;
 use std::sync::Mutex;
 use tauri::menu::MenuItem;
-use whis_core::{AudioRecorder, TranscriptionProvider};
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum RecordingState {
-    Idle,
-    Recording,
-    Transcribing,
-}
+use whis_core::{AudioRecorder, Settings, TranscriptionProvider};
+pub use whis_core::RecordingState;
 
 /// Cached transcription configuration (provider + API key + language)
 pub struct TranscriptionConfig {

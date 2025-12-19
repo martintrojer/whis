@@ -1,18 +1,18 @@
 mod commands;
-pub mod settings;
 pub mod shortcuts;
 mod state;
 pub mod tray;
 mod window;
 
 use tauri::Manager;
+use whis_core::Settings;
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             // Load settings from disk
-            let loaded_settings = settings::Settings::load();
+            let loaded_settings = Settings::load();
 
             // Initialize system tray (optional - may fail on tray-less environments)
             let tray_available = match tray::setup_tray(app) {

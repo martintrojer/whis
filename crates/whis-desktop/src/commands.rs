@@ -1,6 +1,6 @@
-use crate::settings::Settings;
 use crate::shortcuts::ShortcutBackendInfo;
-use crate::state::{AppState, RecordingState};
+use crate::state::AppState;
+use whis_core::{RecordingState, Settings};
 use tauri::{AppHandle, State};
 
 #[derive(serde::Serialize)]
@@ -537,11 +537,9 @@ pub async fn test_ollama_connection(url: String) -> Result<bool, String> {
         url
     };
 
-    tauri::async_runtime::spawn_blocking(move || {
-        whis_core::ollama::is_ollama_running(&url)
-    })
-    .await
-    .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || whis_core::ollama::is_ollama_running(&url))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// List available models from Ollama

@@ -387,10 +387,16 @@ fn update_tray(app: &AppHandle, new_state: RecordingState) {
 
             // Rebuild menu with updated state
             if let Ok(record) = MenuItem::with_id(app, "record", text, enabled, None::<&str>) {
-                if let Ok(settings) = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>) {
+                if let Ok(settings) =
+                    MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)
+                {
                     if let Ok(sep) = PredefinedMenuItem::separator(app) {
-                        if let Ok(quit) = MenuItem::with_id(app, "quit", "Quit Whis", true, None::<&str>) {
-                            if let Ok(menu) = Menu::with_items(app, &[&record, &sep, &settings, &sep, &quit]) {
+                        if let Ok(quit) =
+                            MenuItem::with_id(app, "quit", "Quit Whis", true, None::<&str>)
+                        {
+                            if let Ok(menu) =
+                                Menu::with_items(app, &[&record, &sep, &settings, &sep, &quit])
+                            {
                                 let _ = tray.set_menu(Some(menu));
                                 println!("Rebuilt tray menu to: {}", text);
                             }

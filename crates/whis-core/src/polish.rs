@@ -91,7 +91,7 @@ pub async fn polish(
     }
 }
 
-const DEFAULT_OPENAI_MODEL: &str = "gpt-5-nano-2025-08-07";
+const DEFAULT_OPENAI_MODEL: &str = "gpt-5-nano";
 
 async fn polish_openai(
     text: &str,
@@ -165,8 +165,7 @@ async fn polish_mistral(
         .ok_or_else(|| anyhow!("No response from Mistral"))
 }
 
-const DEFAULT_OLLAMA_MODEL: &str = "ministral-3:3b";
-const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
+use crate::ollama::{DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL};
 
 /// Ollama API response structure
 #[derive(Debug, Deserialize)]

@@ -9,10 +9,14 @@ pub mod preset;
 pub mod provider;
 pub mod resample;
 pub mod settings;
+pub mod state;
 pub mod transcribe;
 pub mod verbose;
 
-pub use audio::{AudioChunk, AudioDeviceInfo, AudioRecorder, RecordingData, RecordingOutput, list_audio_devices, load_audio_file, load_audio_stdin};
+pub use audio::{
+    AudioChunk, AudioDeviceInfo, AudioRecorder, RecordingData, RecordingOutput, list_audio_devices,
+    load_audio_file, load_audio_stdin,
+};
 #[cfg(feature = "clipboard")]
 pub use clipboard::{ClipboardMethod, copy_to_clipboard};
 pub use config::TranscriptionProvider;
@@ -22,5 +26,6 @@ pub use provider::{
     DEFAULT_TIMEOUT_SECS, TranscriptionBackend, TranscriptionRequest, TranscriptionResult, registry,
 };
 pub use settings::Settings;
+pub use state::RecordingState;
 pub use transcribe::{ChunkTranscription, parallel_transcribe, transcribe_audio};
 pub use verbose::set_verbose;
