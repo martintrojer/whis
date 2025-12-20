@@ -32,11 +32,11 @@ const deleting = ref(false);
 
 // Post-processor options for select
 const postProcessorOptions: SelectOption[] = [
-  { value: null, label: 'Use default' },
-  { value: 'none', label: 'None (raw transcript)' },
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'mistral', label: 'Mistral' },
-  { value: 'ollama', label: 'Ollama' },
+  { value: null, label: 'Automatic (use settings)' },
+  { value: 'none', label: 'Disabled (raw transcript)' },
+  { value: 'openai', label: 'OpenAI (cloud)' },
+  { value: 'mistral', label: 'Mistral (cloud)' },
+  { value: 'ollama', label: 'Ollama (local)' },
 ]
 
 // Computed

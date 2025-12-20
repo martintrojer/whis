@@ -21,7 +21,7 @@ pub struct Settings {
     /// API keys stored by provider name (e.g., "openai" -> "sk-...")
     #[serde(default)]
     pub api_keys: HashMap<String, String>,
-    /// LLM provider for post-processing (cleaning up) transcripts
+    /// LLM provider for post-processing (grammar, punctuation, filler word removal)
     #[serde(default)]
     pub post_processor: PostProcessor,
     /// Custom prompt for post-processing (uses default if None)

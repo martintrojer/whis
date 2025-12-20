@@ -180,7 +180,7 @@ function handleMicrophoneChange(value: string | null) {
 
         <!-- Provider (only in cloud mode) -->
         <div v-if="transcriptionMode === 'cloud'" class="field-row">
-          <label>Provider</label>
+          <label>Service</label>
           <AppSelect
             :model-value="provider"
             :options="cloudProviderOptions"
@@ -229,8 +229,8 @@ function handleMicrophoneChange(value: string | null) {
         </div>
 
         <div class="help-section">
-          <h3>provider</h3>
-          <p>Select your cloud transcription service. Each provider has different pricing, speed, and language support. All require a separate API account.</p>
+          <h3>transcription service</h3>
+          <p>Choose which cloud service performs speech-to-text. Each has different pricing, speed, and language support. Requires a separate API account.</p>
         </div>
 
         <div class="help-section">
@@ -264,7 +264,7 @@ function handleMicrophoneChange(value: string | null) {
           <div class="help-steps">
             <p><strong>Setup:</strong></p>
             <ol>
-              <li>Install from <a href="https://ollama.ai" target="_blank">ollama.ai</a></li>
+              <li>Install from <a href="https://ollama.com/download" target="_blank">ollama.com</a></li>
               <li>Download a model: <code>ollama pull llama3.2:3b</code></li>
               <li>Click "ping" below to test connection</li>
             </ol>

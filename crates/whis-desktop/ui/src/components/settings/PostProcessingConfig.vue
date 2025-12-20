@@ -21,8 +21,8 @@ const postProcessingEnabled = computed(() => postProcessor.value !== 'none')
 
 // Options for dropdowns
 const postProcessorOptions: SelectOption[] = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'mistral', label: 'Mistral' },
+  { value: 'openai', label: 'OpenAI (cloud)' },
+  { value: 'mistral', label: 'Mistral (cloud)' },
   { value: 'ollama', label: 'Ollama (local)' },
 ]
 
@@ -102,7 +102,7 @@ function goToPresets() {
     <!-- Config (shown when post-processing ON) -->
     <div v-if="postProcessingEnabled" class="post-process-config">
       <div class="field-row">
-        <label>Provider</label>
+        <label>LLM</label>
         <AppSelect
           :model-value="postProcessor"
           :options="postProcessorOptions"
@@ -125,7 +125,7 @@ function goToPresets() {
 
       <!-- Cloud post-processor hint -->
       <p v-if="postProcessor === 'openai' || postProcessor === 'mistral'" class="cloud-hint">
-        Uses your {{ postProcessor === 'openai' ? 'OpenAI' : 'Mistral' }} API key from transcription settings.
+        Uses the same {{ postProcessor === 'openai' ? 'OpenAI' : 'Mistral' }} API key as transcription.
       </p>
     </div>
 
