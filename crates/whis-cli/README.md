@@ -44,7 +44,7 @@ yt-dlp -x ... | whis --stdin   # Pipe from other tools
 
 **Hotkey mode (background service):**
 ```bash
-whis listen                    # Global Ctrl+Shift+R anywhere
+whis listen                    # Global Ctrl+Alt+W anywhere
 whis listen -k "super+space"   # Custom hotkey
 whis status                    # Check if running
 whis stop                      # Stop service

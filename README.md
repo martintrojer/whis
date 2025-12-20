@@ -47,11 +47,23 @@ whis    # Recording starts, press Enter to stop
 
 **Hotkey mode (background service):**
 ```bash
-whis listen                    # Global Ctrl+Shift+R anywhere
+whis listen                    # Global hotkey (Ctrl+Alt+W / Cmd+Option+W)
 whis listen -k "super+space"   # Custom hotkey
 whis status                    # Check if running
 whis stop                      # Stop service
 ```
+
+**Cross-platform hotkeys:**
+
+| Platform | Default | Example Custom |
+|----------|---------|----------------|
+| Linux/Windows | `Ctrl+Alt+W` | `super+space`, `ctrl+shift+r` |
+| macOS | `Cmd+Option+W` | `cmd+space`, `ctrl+shift+r` |
+
+The shortcut format is consistent across platforms. On macOS:
+- `ctrl` = Control (⌃)
+- `alt` = Option (⌥)
+- `super` or `cmd` = Command (⌘)
 
 **Configuration:**
 ```bash

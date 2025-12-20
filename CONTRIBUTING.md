@@ -38,6 +38,14 @@ sudo apt-get install -y \
 brew install ffmpeg
 ```
 
+### Windows Dependencies
+
+Windows requires:
+- [Visual Studio 2019+](https://visualstudio.microsoft.com/) with "Desktop development with C++" workload, or [Build Tools for Visual Studio](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
+- FFmpeg: `choco install ffmpeg` or download from [ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH
+
+Rust will automatically link Windows system libraries (WASAPI for audio, Windows API for hotkeys).
+
 ## Development Workflow
 
 We use [just](https://github.com/casey/just) for task automation. Run `just` to see all available commands.

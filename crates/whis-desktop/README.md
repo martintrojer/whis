@@ -33,7 +33,7 @@ flatpak install flathub ink.whis.Whis
 ## Features
 
 - **System tray** — lives in your taskbar, out of the way
-- **Global shortcut** — Ctrl+Shift+R by default (configurable)
+- **Global shortcut** — Ctrl+Alt+W by default (configurable)
 - **Settings UI** — configure API key and shortcuts
 - **X11 & Wayland** — works on both
 
@@ -62,7 +62,8 @@ sudo dpkg -i Whis_amd64.deb
 ## Requirements
 
 - API key from [OpenAI](https://platform.openai.com/api-keys), [Mistral](https://console.mistral.ai/api-keys), [Groq](https://console.groq.com/keys), [Deepgram](https://deepgram.com), or [ElevenLabs](https://elevenlabs.io) — or use local Whisper (no API key needed)
-- Linux (X11/Wayland)
+- **Linux** (X11/Wayland) — primary platform with AppImage/deb/rpm builds
+- **macOS/Windows** — can be built from source (see [CONTRIBUTING.md](../../CONTRIBUTING.md))
 
 ## Prefer the terminal?
 
