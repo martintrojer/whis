@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [vue()],
   clearScreen: false,
   server: {
-    host: host || false,
+    host: host || '0.0.0.0',
     port: 5173,
     strictPort: true,
     hmr: host

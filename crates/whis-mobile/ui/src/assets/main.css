@@ -1,0 +1,351 @@
+/* Design tokens - matching whis.ink website */
+:root {
+  /* Background */
+  --bg: hsl(0, 0%, 7%);
+  --bg-weak: hsl(0, 0%, 11%);
+  --bg-hover: hsl(0, 0%, 16%);
+  --bg-strong: hsl(0, 0%, 100%);
+  --bg-strong-hover: hsl(0, 0%, 90%);
+  --bg-interactive: hsl(48, 100%, 65%);
+
+  /* Text */
+  --text: hsl(0, 0%, 80%);
+  --text-weak: hsl(0, 0%, 62%);
+  --text-strong: hsl(0, 0%, 100%);
+  --text-inverted: hsl(0, 0%, 7%);
+
+  /* Accent - gold */
+  --accent: hsl(48, 100%, 60%);
+
+  /* Border */
+  --border: hsl(0, 0%, 24%);
+  --border-weak: hsl(0, 0%, 20%);
+
+  /* Icon */
+  --icon: hsl(0, 0%, 55%);
+
+  /* Functional */
+  --recording: #ff4444;
+
+  /* Typography */
+  --font: "JetBrains Mono", "Fira Code", "SF Mono", ui-monospace, monospace;
+  --line-height: 1.6;
+
+  /* Mobile-specific */
+  --touch-target-min: 44px;
+  --radius: 8px;
+}
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: var(--line-height);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  height: 100%;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--text-strong);
+}
+
+/* Field */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field label {
+  font-size: 12px;
+  text-transform: lowercase;
+  color: var(--text-weak);
+}
+
+/* Button - primary (white bg, dark text) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: 12px 24px;
+  background: var(--bg-strong);
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-inverted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Button - secondary (transparent with border) */
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:active:not(:disabled) {
+  background: var(--bg-weak);
+}
+
+/* Button - link style */
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  min-height: auto;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text-strong);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.btn-link:active {
+  color: var(--accent);
+}
+
+/* Button - primary accent (gold) */
+.btn-primary {
+  background: var(--accent);
+  color: var(--text-inverted);
+}
+
+.btn-primary:active:not(:disabled) {
+  background: hsl(48, 100%, 50%);
+}
+
+/* Notice card */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-weak);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.notice-marker {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.notice-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notice p {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.notice.warning {
+  border-color: var(--recording);
+}
+
+.notice.warning .notice-marker {
+  color: var(--recording);
+}
+
+/* Hint text */
+.hint {
+  font-size: 12px;
+  color: var(--text-weak);
+}
+
+.hint a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Input styles */
+.input {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: 12px 16px;
+  background: var(--bg-weak);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 16px; /* Prevents iOS zoom */
+  color: var(--text);
+  transition: border-color 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.input::placeholder {
+  color: var(--text-weak);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Select dropdown */
+.select {
+  position: relative;
+  width: 100%;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: 12px 16px;
+  background: var(--bg-weak);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 16px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.select-trigger:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.select.open .select-trigger {
+  border-color: var(--accent);
+}
+
+.select-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--icon);
+  transition: transform 0.15s ease;
+}
+
+.select.open .select-chevron {
+  transform: rotate(180deg);
+}
+
+.select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-weak);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.select-option {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.select-option:active {
+  background: var(--bg-hover);
+}
+
+.select-option.selected {
+  color: var(--accent);
+}
+
+.select-option:disabled {
+  color: var(--text-weak);
+  cursor: not-allowed;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
