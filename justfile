@@ -1,5 +1,22 @@
 # Whis - Voice-to-Text Application
-# Run `just --list` to see all available commands
+#
+# ┌─────────────────────────────────────────────────────────┐
+# │ Quick Start for Contributors                            │
+# │                                                         │
+# │   just build          Build CLI                         │
+# │   just install        Install CLI                       │
+# │   just check          Type-check all crates             │
+# │   just fmt && lint    Format and lint code              │
+# │                                                         │
+# │ Desktop app:                                            │
+# │   just desktop-dev    Dev mode with hot reload          │
+# │   just desktop-build  Build release                     │
+# │   just install-desktop Install to system                │
+# │                                                         │
+# │ Mobile (Android):                                       │
+# │   just android-init   First-time setup                  │
+# │   just android-dev    Dev mode                          │
+# └─────────────────────────────────────────────────────────┘
 
 set shell := ["bash", "-cu"]
 
@@ -14,7 +31,7 @@ export CMAKE_OSX_DEPLOYMENT_TARGET := "10.15"
 
 # Default recipe - show help
 default:
-    @just --list
+    @just --list --unsorted
 
 # ============================================================================
 # PRIVATE HELPERS (tool availability checks)
@@ -49,18 +66,22 @@ _ensure-outdated:
 # ============================================================================
 
 # Build CLI in debug mode
+[group('cli')]
 build:
     cargo build -p whis
 
 # Build CLI in release mode
+[group('cli')]
 build-release:
     cargo build --release -p whis
 
 # Build all crates
+[group('cli')]
 build-all:
     cargo build --workspace
 
 # Build core library with specific features
+[private]
 build-core features="":
     cargo build -p whis-core {{ if features != "" { "--features " + features } else { "" } }}
 
@@ -69,18 +90,22 @@ build-core features="":
 # ============================================================================
 
 # Install desktop frontend dependencies
+[private]
 desktop-deps: _require-npm
     cd crates/whis-desktop/ui && npm ci --legacy-peer-deps
 
 # Build desktop frontend
+[private]
 desktop-ui: _require-npm
     cd crates/whis-desktop/ui && npm run build
 
 # Run desktop app in development mode
+[group('desktop')]
 desktop-dev: desktop-deps _ensure-tauri
     cd crates/whis-desktop && cargo tauri dev
 
 # Build desktop app for release (AppImage, deb, rpm)
+[group('desktop')]
 desktop-build: desktop-deps desktop-ui _ensure-tauri
     cd crates/whis-desktop && cargo tauri build
 
@@ -89,26 +114,32 @@ desktop-build: desktop-deps desktop-ui _ensure-tauri
 # ============================================================================
 
 # Initialize Android project (first time setup)
+[group('android')]
 android-init: _ensure-tauri
     cd crates/whis-mobile && cargo tauri android init
 
 # Install mobile frontend dependencies
+[private]
 mobile-deps: _require-npm
     cd crates/whis-mobile/ui && npm ci
 
 # Build mobile frontend
+[private]
 mobile-ui: _require-npm
     cd crates/whis-mobile/ui && npm run build
 
 # Run mobile app on Android emulator/device
+[group('android')]
 android-dev: mobile-deps _ensure-tauri
     cd crates/whis-mobile && cargo tauri android dev
 
 # Build Android APK (debug)
+[group('android')]
 android-build: mobile-deps mobile-ui _ensure-tauri
     cd crates/whis-mobile && cargo tauri android build
 
 # Build Android APK (release)
+[private]
 android-release: mobile-deps mobile-ui _ensure-tauri
     cd crates/whis-mobile && cargo tauri android build --release
 
@@ -117,18 +148,22 @@ android-release: mobile-deps mobile-ui _ensure-tauri
 # ============================================================================
 
 # Run CLI in debug mode
+[group('cli')]
 run *args:
     cargo run -p whis -- {{ args }}
 
 # Run CLI in release mode
+[group('cli')]
 run-release *args:
     cargo run --release -p whis -- {{ args }}
 
 # Show CLI configuration
+[group('cli')]
 config:
     cargo run -p whis -- config --show
 
 # Start listening for voice input
+[group('cli')]
 listen:
     cargo run -p whis -- listen
 
@@ -136,46 +171,41 @@ listen:
 # TESTING & QUALITY
 # ============================================================================
 
-# Run all tests
-test:
-    cargo test
-
-# Run tests for specific crate
-test-crate crate:
-    cargo test -p {{ crate }}
-
 # Run clippy linter
+[group('quality')]
 lint:
     cargo clippy --all-targets --all-features
 
 # Run clippy with warnings as errors
+[private]
 lint-strict:
     cargo clippy --all-targets --all-features -- -D warnings
 
 # Format all code
+[group('quality')]
 fmt:
     cargo fmt --all
 
 # Check formatting without modifying
+[group('quality')]
 fmt-check:
     cargo fmt --all -- --check
 
 # Check all crates for errors (fast, no build)
+[group('quality')]
 check:
     cargo check --workspace
 
 # Local pre-commit check (format, lint)
+[group('quality')]
 ci: fmt-check lint
 
 # ============================================================================
 # CLEANING
 # ============================================================================
 
-# Clean all Rust build artifacts
-clean:
-    cargo clean
-
 # Clean frontend builds
+[private]
 clean-frontend:
     rm -rf crates/whis-desktop/ui/dist
     rm -rf crates/whis-desktop/ui/node_modules
@@ -183,29 +213,36 @@ clean-frontend:
     rm -rf crates/whis-mobile/ui/node_modules
 
 # Clean Android build artifacts
+[private]
 clean-android:
     rm -rf crates/whis-mobile/gen/android/app/build
 
-# Clean everything
-clean-all: clean clean-frontend clean-android
+# Clean everything (Rust artifacts, frontend, Android)
+[group('misc')]
+clean-all: clean-frontend clean-android
+    cargo clean
 
 # ============================================================================
 # DOCUMENTATION
 # ============================================================================
 
 # Build Rust documentation
+[group('docs')]
 docs:
     cargo doc --all --no-deps
 
 # Build and open Rust documentation
+[private]
 docs-open:
     cargo doc --all --no-deps --open
 
 # Build mdBook documentation
+[group('docs')]
 book: _ensure-mdbook
     cd book && mdbook build
 
 # Serve mdBook documentation with live reload
+[private]
 book-serve: _ensure-mdbook
     cd book && mdbook serve --open
 
@@ -214,10 +251,12 @@ book-serve: _ensure-mdbook
 # ============================================================================
 
 # Install CLI locally from source
+[group('cli')]
 install:
     cargo install --path crates/whis-cli
 
 # Install desktop app (Linux: AppImage to ~/.local/bin)
+[group('desktop')]
 [linux]
 install-desktop: desktop-build
     #!/usr/bin/env bash
@@ -239,6 +278,7 @@ install-desktop: desktop-build
     ~/.local/bin/Whis.AppImage --install
 
 # Install desktop app (macOS: copy .app to /Applications)
+[group('desktop')]
 [macos]
 install-desktop: desktop-build
     #!/usr/bin/env bash
@@ -267,6 +307,7 @@ install-desktop: desktop-build
     echo "Find 'Whis' in your Applications folder or Spotlight"
 
 # Install desktop app (Windows: run the MSI installer)
+[group('desktop')]
 [windows]
 install-desktop: desktop-build
     #!/usr/bin/env bash
@@ -293,6 +334,7 @@ install-desktop: desktop-build
     echo "✓ Whis desktop app installed"
 
 # Uninstall desktop app (Linux)
+[group('desktop')]
 [linux]
 uninstall-desktop:
     #!/usr/bin/env bash
@@ -304,12 +346,14 @@ uninstall-desktop:
     echo "✓ Whis desktop app uninstalled"
 
 # Uninstall desktop app (macOS)
+[group('desktop')]
 [macos]
 uninstall-desktop:
     rm -rf "/Applications/Whis.app"
     echo "✓ Whis desktop app uninstalled"
 
 # Install development tools (skips already-installed)
+[private]
 install-tools:
     @command -v cargo-tauri >/dev/null 2>&1 || cargo install tauri-cli
     @command -v cross >/dev/null 2>&1 || cargo install cross --git https://github.com/cross-rs/cross
@@ -322,18 +366,22 @@ install-tools:
 # ============================================================================
 
 # Publish whis-core to crates.io (dry run)
+[private]
 publish-core-dry:
     cargo publish -p whis-core --dry-run
 
 # Publish whis CLI to crates.io (dry run)
+[private]
 publish-cli-dry:
     cargo publish -p whis --dry-run
 
 # Publish whis-core to crates.io
+[private]
 publish-core:
     cargo publish -p whis-core
 
 # Publish whis CLI to crates.io
+[private]
 publish-cli:
     cargo publish -p whis
 
@@ -342,18 +390,22 @@ publish-cli:
 # ============================================================================
 
 # Update Cargo dependencies
+[group('misc')]
 update:
     cargo update
 
 # Check for outdated dependencies
+[private]
 outdated: _ensure-outdated
     cargo outdated
 
 # Audit dependencies for security issues
+[private]
 audit: _ensure-audit
     cargo audit
 
 # Update npm dependencies
+[private]
 update-npm: _require-npm
     cd crates/whis-desktop/ui && npm update
     cd crates/whis-mobile/ui && npm update
@@ -363,14 +415,17 @@ update-npm: _require-npm
 # ============================================================================
 
 # Build CLI for Linux ARM64
+[private]
 build-arm64: _ensure-cross
     cross build --release --target aarch64-unknown-linux-gnu -p whis
 
 # Build CLI for macOS Intel
+[private]
 build-macos-intel:
     cargo build --release --target x86_64-apple-darwin -p whis
 
 # Build CLI for macOS Apple Silicon
+[private]
 build-macos-arm:
     cargo build --release --target aarch64-apple-darwin -p whis
 
@@ -379,6 +434,7 @@ build-macos-arm:
 # ============================================================================
 
 # Show Linux system dependencies
+[group('misc')]
 [linux]
 setup-info:
     @echo "Install these packages:"
@@ -394,12 +450,14 @@ setup-info:
     @echo "  # Then logout and login"
 
 # Show macOS setup info
+[group('misc')]
 [macos]
 setup-info:
     @echo "Install FFmpeg:"
     @echo "  brew install ffmpeg"
 
 # Add Rust compilation targets
+[private]
 setup-targets:
     rustup target add x86_64-unknown-linux-gnu
     rustup target add aarch64-unknown-linux-gnu
