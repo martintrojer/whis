@@ -1,98 +1,103 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 interface StatusResponse {
-  state: 'Idle' | 'Recording' | 'Transcribing';
-  config_valid: boolean;
+  state: 'Idle' | 'Recording' | 'Transcribing'
+  config_valid: boolean
 }
 
 interface Settings {
-  shortcut: string;
-  provider: 'openai' | 'mistral';
-  language: string | null;
-  openai_api_key: string | null;
-  mistral_api_key: string | null;
+  shortcut: string
+  provider: 'openai' | 'mistral'
+  language: string | null
+  openai_api_key: string | null
+  mistral_api_key: string | null
 }
 
 // State
-const status = ref<StatusResponse>({ state: 'Idle', config_valid: false });
-const error = ref<string | null>(null);
-const lastTranscription = ref<string | null>(null);
-const showSettings = ref(false);
-const showCopied = ref(false);
+const status = ref<StatusResponse>({ state: 'Idle', config_valid: false })
+const error = ref<string | null>(null)
+const lastTranscription = ref<string | null>(null)
+const showSettings = ref(false)
+const showCopied = ref(false)
 
 // Settings
-const provider = ref<'openai' | 'mistral'>('openai');
-const language = ref<string>('');
-const openaiApiKey = ref('');
-const mistralApiKey = ref('');
-const saving = ref(false);
+const provider = ref<'openai' | 'mistral'>('openai')
+const language = ref<string>('')
+const openaiApiKey = ref('')
+const mistralApiKey = ref('')
+const saving = ref(false)
 
-let pollInterval: number | null = null;
+let pollInterval: number | null = null
 
 const buttonText = computed(() => {
   switch (status.value.state) {
-    case 'Idle': return 'Tap to Record';
-    case 'Recording': return 'Tap to Stop';
-    case 'Transcribing': return 'Transcribing...';
+    case 'Idle': return 'Tap to Record'
+    case 'Recording': return 'Tap to Stop'
+    case 'Transcribing': return 'Transcribing...'
+    default: return 'Tap to Record'
   }
-});
+})
 
 const canRecord = computed(() => {
-  return status.value.config_valid && status.value.state !== 'Transcribing';
-});
+  return status.value.config_valid && status.value.state !== 'Transcribing'
+})
 
 async function fetchStatus() {
   try {
-    status.value = await invoke<StatusResponse>('get_status');
-    error.value = null;
-  } catch (e) {
-    console.error('Failed to get status:', e);
+    status.value = await invoke<StatusResponse>('get_status')
+    error.value = null
+  }
+  catch (e) {
+    console.error('Failed to get status:', e)
   }
 }
 
 async function toggleRecording() {
   if (!canRecord.value) {
     if (!status.value.config_valid) {
-      showSettings.value = true;
+      showSettings.value = true
     }
-    return;
+    return
   }
 
   try {
-    error.value = null;
+    error.value = null
 
     if (status.value.state === 'Idle') {
-      await invoke('start_recording');
-    } else if (status.value.state === 'Recording') {
-      const text = await invoke<string>('stop_recording');
-      lastTranscription.value = text;
-      showCopied.value = true;
-      setTimeout(() => showCopied.value = false, 2000);
+      await invoke('start_recording')
+    }
+    else if (status.value.state === 'Recording') {
+      const text = await invoke<string>('stop_recording')
+      lastTranscription.value = text
+      showCopied.value = true
+      setTimeout(() => showCopied.value = false, 2000)
     }
 
-    await fetchStatus();
-  } catch (e) {
-    error.value = String(e);
-    await fetchStatus();
+    await fetchStatus()
+  }
+  catch (e) {
+    error.value = String(e)
+    await fetchStatus()
   }
 }
 
 async function loadSettings() {
   try {
-    const settings = await invoke<Settings>('get_settings');
-    provider.value = settings.provider || 'openai';
-    language.value = settings.language || '';
-    openaiApiKey.value = settings.openai_api_key || '';
-    mistralApiKey.value = settings.mistral_api_key || '';
-  } catch (e) {
-    console.error('Failed to load settings:', e);
+    const settings = await invoke<Settings>('get_settings')
+    provider.value = settings.provider || 'openai'
+    language.value = settings.language || ''
+    openaiApiKey.value = settings.openai_api_key || ''
+    mistralApiKey.value = settings.mistral_api_key || ''
+  }
+  catch (e) {
+    console.error('Failed to load settings:', e)
   }
 }
 
 async function saveSettings() {
-  saving.value = true;
+  saving.value = true
   try {
     await invoke('save_settings', {
       settings: {
@@ -101,28 +106,30 @@ async function saveSettings() {
         language: language.value || null,
         openai_api_key: openaiApiKey.value || null,
         mistral_api_key: mistralApiKey.value || null,
-      }
-    });
-    await fetchStatus();
-    showSettings.value = false;
-  } catch (e) {
-    error.value = String(e);
-  } finally {
-    saving.value = false;
+      },
+    })
+    await fetchStatus()
+    showSettings.value = false
+  }
+  catch (e) {
+    error.value = String(e)
+  }
+  finally {
+    saving.value = false
   }
 }
 
 onMounted(() => {
-  fetchStatus();
-  loadSettings();
-  pollInterval = window.setInterval(fetchStatus, 500);
-});
+  fetchStatus()
+  loadSettings()
+  pollInterval = window.setInterval(fetchStatus, 500)
+})
 
 onUnmounted(() => {
   if (pollInterval) {
-    clearInterval(pollInterval);
+    clearInterval(pollInterval)
   }
-});
+})
 </script>
 
 <template>
@@ -130,11 +137,13 @@ onUnmounted(() => {
     <!-- Main View -->
     <div v-if="!showSettings" class="main-view">
       <header class="header">
-        <h1 class="logo">whis</h1>
+        <h1 class="logo">
+          whis
+        </h1>
         <button class="settings-btn" @click="showSettings = true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </button>
       </header>
@@ -146,30 +155,36 @@ onUnmounted(() => {
           :class="{
             recording: status.state === 'Recording',
             transcribing: status.state === 'Transcribing',
-            disabled: !canRecord && status.config_valid
+            disabled: !canRecord && status.config_valid,
           }"
           @click="toggleRecording"
         >
           <div class="record-circle">
-            <div v-if="status.state === 'Recording'" class="pulse-ring"></div>
+            <div v-if="status.state === 'Recording'" class="pulse-ring" />
             <svg v-if="status.state === 'Idle'" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
             </svg>
             <svg v-else-if="status.state === 'Recording'" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2"/>
+              <rect x="6" y="6" width="12" height="12" rx="2" />
             </svg>
-            <div v-else class="spinner"></div>
+            <div v-else class="spinner" />
           </div>
         </button>
 
-        <p class="status-text">{{ buttonText }}</p>
+        <p class="status-text">
+          {{ buttonText }}
+        </p>
 
         <!-- Copied Toast -->
-        <div v-if="showCopied" class="toast">Copied to clipboard!</div>
+        <div v-if="showCopied" class="toast">
+          Copied to clipboard!
+        </div>
 
         <!-- Error -->
-        <p v-if="error" class="error">{{ error }}</p>
+        <p v-if="error" class="error">
+          {{ error }}
+        </p>
 
         <!-- Setup Hint -->
         <p v-if="!status.config_valid" class="hint" @click="showSettings = true">
@@ -188,7 +203,7 @@ onUnmounted(() => {
       <header class="header">
         <button class="back-btn" @click="showSettings = false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
         <h1>Settings</h1>
@@ -198,42 +213,46 @@ onUnmounted(() => {
         <div class="field">
           <label>Provider</label>
           <select v-model="provider">
-            <option value="openai">OpenAI Whisper</option>
-            <option value="mistral">Mistral Voxtral</option>
+            <option value="openai">
+              OpenAI Whisper
+            </option>
+            <option value="mistral">
+              Mistral Voxtral
+            </option>
           </select>
         </div>
 
-        <div class="field" v-if="provider === 'openai'">
+        <div v-if="provider === 'openai'" class="field">
           <label>OpenAI API Key</label>
           <input
-            type="password"
             v-model="openaiApiKey"
+            type="password"
             placeholder="sk-..."
             autocomplete="off"
-          />
+          >
         </div>
 
-        <div class="field" v-if="provider === 'mistral'">
+        <div v-if="provider === 'mistral'" class="field">
           <label>Mistral API Key</label>
           <input
-            type="password"
             v-model="mistralApiKey"
+            type="password"
             placeholder="Enter API key"
             autocomplete="off"
-          />
+          >
         </div>
 
         <div class="field">
           <label>Language (optional)</label>
           <input
-            type="text"
             v-model="language"
+            type="text"
             placeholder="auto-detect"
-          />
+          >
           <span class="hint-text">ISO code like "en", "de", "fr"</span>
         </div>
 
-        <button class="save-btn" @click="saveSettings" :disabled="saving">
+        <button class="save-btn" :disabled="saving" @click="saveSettings">
           {{ saving ? 'Saving...' : 'Save Settings' }}
         </button>
       </main>

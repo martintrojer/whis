@@ -16,7 +16,9 @@ function goHome() {
     </header>
 
     <div class="section-content">
-      <div class="not-found-icon" aria-hidden="true">[?]</div>
+      <div class="not-found-icon" aria-hidden="true">
+        [?]
+      </div>
 
       <p class="not-found-message">
         The page you're looking for couldn't be found.

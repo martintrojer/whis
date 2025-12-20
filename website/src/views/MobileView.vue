@@ -11,7 +11,9 @@
 
     <!-- Teaser -->
     <section class="teaser">
-      <div class="status-badge">[experimental]</div>
+      <div class="status-badge">
+        [experimental]
+      </div>
 
       <p class="teaser-text">
         Mobile app in early development. Same whis experience, from your phone.

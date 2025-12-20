@@ -1,7 +1,8 @@
-import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
+import process from 'node:process'
+import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
 
-const host = process.env.TAURI_DEV_HOST;
+const host = process.env.TAURI_DEV_HOST
 
 export default defineConfig({
   plugins: [vue()],
@@ -12,16 +13,16 @@ export default defineConfig({
     strictPort: true,
     hmr: host
       ? {
-          protocol: "ws",
+          protocol: 'ws',
           host,
           port: 5174,
         }
       : undefined,
   },
-  envPrefix: ["VITE_", "TAURI_"],
+  envPrefix: ['VITE_', 'TAURI_'],
   build: {
-    target: "es2021",
-    minify: !process.env.TAURI_DEBUG ? "esbuild" : false,
+    target: 'es2021',
+    minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_DEBUG,
   },
-});
+})

@@ -1,5 +1,5 @@
-import { ref, computed } from 'vue'
-import type { Ref, ComputedRef } from 'vue'
+import type { ComputedRef, Ref } from 'vue'
+import { computed, ref } from 'vue'
 
 export interface AsyncOperationState<T> {
   data: Ref<T | null>
@@ -20,6 +20,10 @@ export interface AsyncOperationReturn<T, Args extends unknown[] = unknown[]> ext
  *
  * @param operation - Async function to execute
  * @param options - Configuration options
+ * @param options.errorTimeout - Clear error after this many ms (0 = never)
+ * @param options.successTimeout - Clear success message after this many ms (0 = never)
+ * @param options.onSuccess - Called on successful completion
+ * @param options.onError - Called on error
  * @returns State and control functions
  *
  * @example
@@ -43,7 +47,7 @@ export function useAsyncOperation<T, Args extends unknown[] = unknown[]>(
     onSuccess?: (data: T) => void
     /** Called on error */
     onError?: (error: string) => void
-  } = {}
+  } = {},
 ): AsyncOperationReturn<T, Args> {
   const data = ref<T | null>(null) as Ref<T | null>
   const error = ref<string | null>(null)
@@ -83,7 +87,8 @@ export function useAsyncOperation<T, Args extends unknown[] = unknown[]>(
       }
 
       return result
-    } catch (e) {
+    }
+    catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e)
       error.value = errorMessage
       options.onError?.(errorMessage)
@@ -95,7 +100,8 @@ export function useAsyncOperation<T, Args extends unknown[] = unknown[]>(
       }
 
       return null
-    } finally {
+    }
+    finally {
       isLoading.value = false
     }
   }
@@ -138,7 +144,7 @@ export function useStatusOperation(
   options: {
     successTimeout?: number
     errorTimeout?: number
-  } = {}
+  } = {},
 ) {
   const status = ref('')
   const isLoading = ref(false)
@@ -164,7 +170,8 @@ export function useStatusOperation(
       }
 
       return true
-    } catch (e) {
+    }
+    catch (e) {
       status.value = e instanceof Error ? e.message : String(e)
 
       if (options.errorTimeout && options.errorTimeout > 0) {
@@ -174,7 +181,8 @@ export function useStatusOperation(
       }
 
       return false
-    } finally {
+    }
+    finally {
       isLoading.value = false
     }
   }

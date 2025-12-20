@@ -1,8 +1,9 @@
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { settingsStore } from '../stores/settings'
+import type { UnlistenFn } from '@tauri-apps/api/event'
 import type { WhisperModelInfo } from '../types'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { settingsStore } from '../stores/settings'
 
 // Model sizes for display
 const MODEL_SIZES: Record<string, string> = {
@@ -22,7 +23,7 @@ export function useWhisperModel() {
   const selectedModel = ref('small')
   const downloadingModel = ref(false)
   const downloadStatus = ref('')
-  const downloadProgress = ref<{ downloaded: number; total: number } | null>(null)
+  const downloadProgress = ref<{ downloaded: number, total: number } | null>(null)
 
   let downloadUnlisten: UnlistenFn | null = null
 
@@ -35,7 +36,8 @@ export function useWhisperModel() {
     if (provider.value === 'local-whisper') {
       try {
         whisperModelValid.value = await invoke<boolean>('is_whisper_model_valid')
-      } catch {
+      }
+      catch {
         whisperModelValid.value = false
       }
     }
@@ -50,7 +52,8 @@ export function useWhisperModel() {
       if (installed) {
         selectedModel.value = installed.name
       }
-    } catch (e) {
+    }
+    catch (e) {
       console.error('Failed to load whisper models:', e)
     }
   }
@@ -63,7 +66,7 @@ export function useWhisperModel() {
 
     try {
       // Listen for progress events
-      downloadUnlisten = await listen<{ downloaded: number; total: number }>('download-progress', (event) => {
+      downloadUnlisten = await listen<{ downloaded: number, total: number }>('download-progress', (event) => {
         downloadProgress.value = event.payload
       })
 
@@ -74,9 +77,11 @@ export function useWhisperModel() {
       // Refresh model list to update installed status
       await loadWhisperModels()
       setTimeout(() => downloadStatus.value = '', 3000)
-    } catch (e) {
-      downloadStatus.value = 'Download failed: ' + e
-    } finally {
+    }
+    catch (e) {
+      downloadStatus.value = `Download failed: ${e}`
+    }
+    finally {
       downloadingModel.value = false
       downloadProgress.value = null
       if (downloadUnlisten) {
@@ -88,12 +93,14 @@ export function useWhisperModel() {
 
   // Format download progress for display
   const downloadProgressPercent = computed(() => {
-    if (!downloadProgress.value || downloadProgress.value.total === 0) return 0
+    if (!downloadProgress.value || downloadProgress.value.total === 0)
+      return 0
     return Math.round((downloadProgress.value.downloaded / downloadProgress.value.total) * 100)
   })
 
   const downloadProgressText = computed(() => {
-    if (!downloadProgress.value) return ''
+    if (!downloadProgress.value)
+      return ''
     const { downloaded, total } = downloadProgress.value
     const downloadedMB = (downloaded / 1_000_000).toFixed(0)
     const totalMB = (total / 1_000_000).toFixed(0)

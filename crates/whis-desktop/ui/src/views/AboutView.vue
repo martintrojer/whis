@@ -1,9 +1,9 @@
 <script setup lang="ts">
 defineProps<{
-  appVersion: string;
-  appSite: string;
-  appRepo: string;
-}>();
+  appVersion: string
+  appSite: string
+  appRepo: string
+}>()
 </script>
 
 <template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  tabs: { value: string; label: string }[]
+  tabs: { value: string, label: string }[]
 }>()
 
 const selected = defineModel<string>('selected', { required: true })
@@ -21,7 +21,7 @@ const selected = defineModel<string>('selected', { required: true })
       </button>
     </div>
     <div class="panels">
-      <slot></slot>
+      <slot />
     </div>
   </div>
 </template>

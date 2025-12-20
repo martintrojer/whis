@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import TabPanel from '@/components/TabPanel.vue'
-import ImageCarousel from '@/components/ImageCarousel.vue'
-import TheLightbox from '@/components/TheLightbox.vue'
 import CommandCopy from '@/components/CommandCopy.vue'
+import ImageCarousel from '@/components/ImageCarousel.vue'
+import TabPanel from '@/components/TabPanel.vue'
+import TheLightbox from '@/components/TheLightbox.vue'
 
 const installTab = ref('appimage')
 const lightboxOpen = ref(false)
@@ -34,7 +34,7 @@ function openLightbox(index: number) {
     </header>
 
     <!-- Install -->
-    <section class="install" id="install-desktop">
+    <section id="install-desktop" class="install">
       <TabPanel
         v-model:selected="installTab"
         :tabs="[
@@ -48,67 +48,89 @@ function openLightbox(index: number) {
         ]"
       >
         <div v-if="installTab === 'flatpak'" class="panel">
-          <CommandCopy :segments="[
-            { text: 'flatpak install flathub ' },
-            { text: 'ink.whis.Whis', highlight: true },
-          ]" />
-          <p class="install-note">Available on Flathub. Includes automatic updates.</p>
+          <CommandCopy
+            :segments="[
+              { text: 'flatpak install flathub ' },
+              { text: 'ink.whis.Whis', highlight: true },
+            ]"
+          />
+          <p class="install-note">
+            Available on Flathub. Includes automatic updates.
+          </p>
         </div>
         <div v-else-if="installTab === 'appimage'" class="panel">
-          <CommandCopy :segments="[
-            { text: 'chmod +x ' },
-            { text: 'Whis_*_amd64.AppImage', highlight: true },
-            { text: ' && ./' },
-            { text: 'Whis_*_amd64.AppImage', highlight: true },
-            { text: ' --install' },
-          ]" />
-          <p class="install-note">Download from GitHub Releases. Then launch "Whis" from your app menu.</p>
+          <CommandCopy
+            :segments="[
+              { text: 'chmod +x ' },
+              { text: 'Whis_*_amd64.AppImage', highlight: true },
+              { text: ' && ./' },
+              { text: 'Whis_*_amd64.AppImage', highlight: true },
+              { text: ' --install' },
+            ]"
+          />
+          <p class="install-note">
+            Download from GitHub Releases. Then launch "Whis" from your app menu.
+          </p>
         </div>
         <div v-else-if="installTab === 'deb'" class="panel">
-          <CommandCopy :segments="[
-            { text: 'sudo apt install ' },
-            { text: './Whis_*_amd64.deb', highlight: true },
-          ]" />
-          <p class="install-note">Download from GitHub Releases first.</p>
+          <CommandCopy
+            :segments="[
+              { text: 'sudo apt install ' },
+              { text: './Whis_*_amd64.deb', highlight: true },
+            ]"
+          />
+          <p class="install-note">
+            Download from GitHub Releases first.
+          </p>
         </div>
         <div v-else-if="installTab === 'rpm'" class="panel">
-          <CommandCopy :segments="[
-            { text: 'sudo dnf install ' },
-            { text: './Whis-*.x86_64.rpm', highlight: true },
-          ]" />
-          <p class="install-note">Download from GitHub Releases first.</p>
+          <CommandCopy
+            :segments="[
+              { text: 'sudo dnf install ' },
+              { text: './Whis-*.x86_64.rpm', highlight: true },
+            ]"
+          />
+          <p class="install-note">
+            Download from GitHub Releases first.
+          </p>
         </div>
         <div v-else-if="installTab === 'source'" class="panel">
-          <CommandCopy :segments="[
-            { text: 'git clone ' },
-            { text: 'https://github.com/frankdierolf/whis', highlight: true },
-            { text: ' && cd whis && ' },
-            { text: 'just install-desktop', highlight: true },
-          ]" />
+          <CommandCopy
+            :segments="[
+              { text: 'git clone ' },
+              { text: 'https://github.com/frankdierolf/whis', highlight: true },
+              { text: ' && cd whis && ' },
+              { text: 'just install-desktop', highlight: true },
+            ]"
+          />
           <p class="install-note">
             Requires <a href="https://github.com/casey/just" target="_blank" rel="noopener">just</a>.
             Builds and installs the AppImage to ~/.local/bin.
           </p>
         </div>
         <div v-else-if="installTab === 'macos'" class="panel">
-          <CommandCopy :segments="[
-            { text: 'git clone ' },
-            { text: 'https://github.com/frankdierolf/whis', highlight: true },
-            { text: ' && cd whis && ' },
-            { text: 'just install-desktop', highlight: true },
-          ]" />
+          <CommandCopy
+            :segments="[
+              { text: 'git clone ' },
+              { text: 'https://github.com/frankdierolf/whis', highlight: true },
+              { text: ' && cd whis && ' },
+              { text: 'just install-desktop', highlight: true },
+            ]"
+          />
           <p class="install-note">
             Requires <a href="https://github.com/casey/just" target="_blank" rel="noopener">just</a>.
             Builds and installs the .app to /Applications/.
           </p>
         </div>
         <div v-else class="panel">
-          <CommandCopy :segments="[
-            { text: 'git clone ' },
-            { text: 'https://github.com/frankdierolf/whis', highlight: true },
-            { text: ' && cd whis && ' },
-            { text: 'just install-desktop', highlight: true },
-          ]" />
+          <CommandCopy
+            :segments="[
+              { text: 'git clone ' },
+              { text: 'https://github.com/frankdierolf/whis', highlight: true },
+              { text: ' && cd whis && ' },
+              { text: 'just install-desktop', highlight: true },
+            ]"
+          />
           <p class="install-note">
             Experimental. Requires <a href="https://github.com/casey/just" target="_blank" rel="noopener">just</a>.
             Builds and runs the installer.

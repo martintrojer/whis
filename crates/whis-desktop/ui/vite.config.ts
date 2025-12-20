@@ -1,5 +1,6 @@
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
+import process from 'node:process'
+import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [vue()],
@@ -14,4 +15,4 @@ export default defineConfig({
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_DEBUG,
   },
-});
+})

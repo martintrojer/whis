@@ -1,12 +1,13 @@
-import { reactive, readonly, watch } from 'vue'
+import type { BackendInfo, PostProcessor, Provider, Settings } from '../types'
 import { invoke } from '@tauri-apps/api/core'
-import type { Settings, BackendInfo, Provider, PostProcessor } from '../types'
+import { reactive, readonly, watch } from 'vue'
 
 // Simple debounce utility
 function debounce<T extends (...args: unknown[]) => unknown>(fn: T, ms: number) {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
   return (...args: Parameters<T>) => {
-    if (timeoutId) clearTimeout(timeoutId)
+    if (timeoutId)
+      clearTimeout(timeoutId)
     timeoutId = setTimeout(() => fn(...args), ms)
   }
 }
@@ -58,7 +59,8 @@ const debouncedSave = debounce(async () => {
         microphone_device: state.microphone_device,
       },
     })
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Auto-save failed:', e)
   }
 }, 500)
@@ -78,9 +80,10 @@ watch(
     state.microphone_device,
   ],
   () => {
-    if (state.loaded) debouncedSave()
+    if (state.loaded)
+      debouncedSave()
   },
-  { deep: true }
+  { deep: true },
 )
 
 // Actions
@@ -98,7 +101,8 @@ async function load() {
     state.post_processing_prompt = settings.post_processing_prompt
     state.active_preset = settings.active_preset
     state.microphone_device = settings.microphone_device
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to load settings:', e)
   }
 }
@@ -121,7 +125,8 @@ async function save(): Promise<boolean> {
       },
     })
     return result.needs_restart
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to save settings:', e)
     throw e
   }
@@ -136,7 +141,8 @@ async function loadBackendInfo() {
       state.portalShortcut = await invoke<string | null>('portal_shortcut')
       state.portalBindError = await invoke<string | null>('portal_bind_error')
     }
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to get backend info:', e)
   }
 }

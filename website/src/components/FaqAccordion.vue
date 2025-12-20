@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import FaqItem from './FaqItem.vue'
 
 defineProps<{
-  items: { question: string; answer: string }[]
+  items: { question: string, answer: string }[]
 }>()
 
 const expandedIndex = ref<number | null>(null)
@@ -26,7 +26,7 @@ function setExpanded(index: number, value: boolean) {
       :expanded="isExpanded(index)"
       @update:expanded="setExpanded(index, $event)"
     >
-      <p v-html="item.answer"></p>
+      <p v-html="item.answer" />
     </FaqItem>
   </ul>
 </template>

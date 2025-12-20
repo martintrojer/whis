@@ -1,34 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import type { PresetDetails, PresetInfo, SelectOption } from '../types'
 import { invoke } from '@tauri-apps/api/core'
-import { settingsStore } from '../stores/settings'
+import { computed, onMounted, ref } from 'vue'
 import AppSelect from '../components/AppSelect.vue'
-import type { PresetInfo, PresetDetails, SelectOption } from '../types'
+import { settingsStore } from '../stores/settings'
 
 // List state
-const presets = ref<PresetInfo[]>([]);
-const activePreset = ref<string | null>(null);
-const loading = ref(true);
-const applyingPreset = ref<string | null>(null);
+const presets = ref<PresetInfo[]>([])
+const activePreset = ref<string | null>(null)
+const loading = ref(true)
+const applyingPreset = ref<string | null>(null)
 
 // Panel state
-const panelOpen = ref(false);
-const panelMode = ref<'view' | 'edit' | 'create'>('view');
-const selectedPreset = ref<PresetDetails | null>(null);
-const loadingDetails = ref(false);
+const panelOpen = ref(false)
+const panelMode = ref<'view' | 'edit' | 'create'>('view')
+const selectedPreset = ref<PresetDetails | null>(null)
+const loadingDetails = ref(false)
 
 // Edit form state
-const editName = ref('');
-const editDescription = ref('');
-const editPrompt = ref('');
-const editPostProcessor = ref<string | null>(null);
-const editModel = ref<string | null>(null);
-const saving = ref(false);
-const error = ref<string | null>(null);
+const editName = ref('')
+const editDescription = ref('')
+const editPrompt = ref('')
+const editPostProcessor = ref<string | null>(null)
+const editModel = ref<string | null>(null)
+const saving = ref(false)
+const error = ref<string | null>(null)
 
 // Delete confirmation
-const confirmingDelete = ref(false);
-const deleting = ref(false);
+const confirmingDelete = ref(false)
+const deleting = ref(false)
 
 // Post-processor options for select
 const postProcessorOptions: SelectOption[] = [
@@ -40,97 +40,104 @@ const postProcessorOptions: SelectOption[] = [
 ]
 
 // Computed
-const isEditing = computed(() => panelMode.value === 'edit' || panelMode.value === 'create');
-const canEdit = computed(() => selectedPreset.value && !selectedPreset.value.is_builtin);
+const isEditing = computed(() => panelMode.value === 'edit' || panelMode.value === 'create')
+const canEdit = computed(() => selectedPreset.value && !selectedPreset.value.is_builtin)
 
 // Load presets list
 async function loadPresets() {
   try {
-    presets.value = await invoke<PresetInfo[]>('list_presets');
-    activePreset.value = await invoke<string | null>('get_active_preset');
-  } catch (e) {
-    console.error('Failed to load presets:', e);
-  } finally {
-    loading.value = false;
+    presets.value = await invoke<PresetInfo[]>('list_presets')
+    activePreset.value = await invoke<string | null>('get_active_preset')
+  }
+  catch (e) {
+    console.error('Failed to load presets:', e)
+  }
+  finally {
+    loading.value = false
   }
 }
 
 // Open panel with preset details
 async function openPreset(name: string) {
-  loadingDetails.value = true;
-  panelOpen.value = true;
-  panelMode.value = 'view';
-  error.value = null;
-  confirmingDelete.value = false;
+  loadingDetails.value = true
+  panelOpen.value = true
+  panelMode.value = 'view'
+  error.value = null
+  confirmingDelete.value = false
 
   try {
-    selectedPreset.value = await invoke<PresetDetails>('get_preset_details', { name });
-  } catch (e) {
-    console.error('Failed to load preset details:', e);
-    error.value = String(e);
-  } finally {
-    loadingDetails.value = false;
+    selectedPreset.value = await invoke<PresetDetails>('get_preset_details', { name })
+  }
+  catch (e) {
+    console.error('Failed to load preset details:', e)
+    error.value = String(e)
+  }
+  finally {
+    loadingDetails.value = false
   }
 }
 
 // Open panel for creating new preset
 function openCreate() {
-  selectedPreset.value = null;
-  panelOpen.value = true;
-  panelMode.value = 'create';
-  error.value = null;
-  confirmingDelete.value = false;
+  selectedPreset.value = null
+  panelOpen.value = true
+  panelMode.value = 'create'
+  error.value = null
+  confirmingDelete.value = false
 
   // Reset form
-  editName.value = '';
-  editDescription.value = '';
-  editPrompt.value = '';
-  editPostProcessor.value = null;
-  editModel.value = null;
+  editName.value = ''
+  editDescription.value = ''
+  editPrompt.value = ''
+  editPostProcessor.value = null
+  editModel.value = null
 }
 
 // Close panel
 function closePanel() {
-  panelOpen.value = false;
-  confirmingDelete.value = false;
+  panelOpen.value = false
+  confirmingDelete.value = false
 }
 
 // Toggle panel (for header button)
 function togglePanel() {
   if (panelOpen.value) {
-    closePanel();
-  } else {
-    openCreate();
+    closePanel()
+  }
+  else {
+    openCreate()
   }
 }
 
 // Start editing
 function startEdit() {
-  if (!selectedPreset.value) return;
+  if (!selectedPreset.value)
+    return
 
-  panelMode.value = 'edit';
-  editName.value = selectedPreset.value.name;
-  editDescription.value = selectedPreset.value.description;
-  editPrompt.value = selectedPreset.value.prompt;
-  editPostProcessor.value = selectedPreset.value.post_processor;
-  editModel.value = selectedPreset.value.model;
-  error.value = null;
+  panelMode.value = 'edit'
+  editName.value = selectedPreset.value.name
+  editDescription.value = selectedPreset.value.description
+  editPrompt.value = selectedPreset.value.prompt
+  editPostProcessor.value = selectedPreset.value.post_processor
+  editModel.value = selectedPreset.value.model
+  error.value = null
 }
 
 // Cancel editing
 function cancelEdit() {
   if (panelMode.value === 'create') {
-    closePanel();
-  } else {
-    panelMode.value = 'view';
-    error.value = null;
+    closePanel()
+  }
+  else {
+    panelMode.value = 'view'
+    error.value = null
   }
 }
 
 // Save preset (create or update)
 async function savePreset() {
-  saving.value = true;
-  error.value = null;
+  saving.value = true
+  error.value = null
 
   try {
     if (panelMode.value === 'create') {
@@ -141,13 +148,14 @@ async function savePreset() {
           prompt: editPrompt.value,
           post_processor: editPostProcessor.value || null,
           model: editModel.value?.trim() || null,
-        }
-      });
+        },
+      })
 
       // Reload list and open the new preset
-      await loadPresets();
-      await openPreset(editName.value.trim());
-    } else {
+      await loadPresets()
+      await openPreset(editName.value.trim())
+    }
+    else {
       await invoke('update_preset', {
         name: selectedPreset.value!.name,
         input: {
@@ -155,19 +163,21 @@ async function savePreset() {
           prompt: editPrompt.value,
           post_processor: editPostProcessor.value || null,
           model: editModel.value?.trim() || null,
-        }
-      });
+        },
+      })
 
       // Reload list and refresh details
-      await loadPresets();
-      await openPreset(selectedPreset.value!.name);
+      await loadPresets()
+      await openPreset(selectedPreset.value!.name)
     }
 
     await settingsStore.load()
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to save preset:', e)
     error.value = String(e)
-  } finally {
+  }
+  finally {
     saving.value = false
   }
 }
@@ -179,10 +189,12 @@ async function applyPreset(name: string) {
     await invoke('apply_preset', { name })
     activePreset.value = name
     await settingsStore.load()
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to apply preset:', e)
     error.value = String(e)
-  } finally {
+  }
+  finally {
     applyingPreset.value = null
   }
 }
@@ -193,14 +205,16 @@ async function clearPreset() {
     await invoke('set_active_preset', { name: null })
     activePreset.value = null
     await settingsStore.load()
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to clear preset:', e)
   }
 }
 
 // Delete preset
 async function deletePreset() {
-  if (!selectedPreset.value) return
+  if (!selectedPreset.value)
+    return
 
   deleting.value = true
   error.value = null
@@ -210,16 +224,18 @@ async function deletePreset() {
     await loadPresets()
     closePanel()
     await settingsStore.load()
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to delete preset:', e)
     error.value = String(e)
-  } finally {
+  }
+  finally {
     deleting.value = false
     confirmingDelete.value = false
   }
 }
 
-onMounted(loadPresets);
+onMounted(loadPresets)
 </script>
 
 <template>
@@ -229,7 +245,7 @@ onMounted(loadPresets);
         <h1>Presets</h1>
         <p>One-click configurations for different use cases</p>
       </div>
-      <button class="panel-toggle-btn" @click="togglePanel" :aria-label="panelOpen ? 'Close panel' : 'New preset'">
+      <button class="panel-toggle-btn" :aria-label="panelOpen ? 'Close panel' : 'New preset'" @click="togglePanel">
         {{ panelOpen ? '[x]' : '[+]' }}
       </button>
     </header>
@@ -250,7 +266,7 @@ onMounted(loadPresets);
             class="preset-card"
             :class="{
               active: activePreset === preset.name,
-              selected: selectedPreset?.name === preset.name && panelOpen
+              selected: selectedPreset?.name === preset.name && panelOpen,
             }"
             @click="openPreset(preset.name)"
           >
@@ -280,9 +296,15 @@ onMounted(loadPresets);
         <div class="panel-content">
           <!-- Panel header -->
           <div class="panel-header">
-            <h2 v-if="panelMode === 'create'">New Preset</h2>
-            <h2 v-else-if="isEditing">Edit Preset</h2>
-            <h2 v-else>{{ selectedPreset?.name }}</h2>
+            <h2 v-if="panelMode === 'create'">
+              New Preset
+            </h2>
+            <h2 v-else-if="isEditing">
+              Edit Preset
+            </h2>
+            <h2 v-else>
+              {{ selectedPreset?.name }}
+            </h2>
           </div>
 
           <!-- Loading state -->
@@ -304,7 +326,9 @@ onMounted(loadPresets);
 
             <div class="detail-field">
               <label>Prompt</label>
-              <p class="prompt-text">{{ selectedPreset.prompt || '(empty)' }}</p>
+              <p class="prompt-text">
+                {{ selectedPreset.prompt || '(empty)' }}
+              </p>
             </div>
 
             <div v-if="selectedPreset.post_processor" class="detail-field">
@@ -321,8 +345,8 @@ onMounted(loadPresets);
             <div class="panel-actions">
               <button
                 class="btn-primary"
-                @click="applyPreset(selectedPreset.name)"
                 :disabled="applyingPreset !== null"
+                @click="applyPreset(selectedPreset.name)"
               >
                 {{ applyingPreset === selectedPreset.name ? 'Applying...' : 'Apply' }}
               </button>
@@ -345,7 +369,7 @@ onMounted(loadPresets);
                 </button>
                 <div v-else class="delete-confirm">
                   <span>Delete?</span>
-                  <button class="btn-danger-sm" @click="deletePreset" :disabled="deleting">
+                  <button class="btn-danger-sm" :disabled="deleting" @click="deletePreset">
                     {{ deleting ? '...' : 'Yes' }}
                   </button>
                   <button class="btn-secondary-sm" @click="confirmingDelete = false">
@@ -366,7 +390,7 @@ onMounted(loadPresets);
                 :disabled="panelMode === 'edit'"
                 :class="{ disabled: panelMode === 'edit' }"
                 placeholder="my-preset"
-              />
+              >
             </div>
 
             <div class="edit-field">
@@ -375,7 +399,7 @@ onMounted(loadPresets);
                 id="edit-description"
                 v-model="editDescription"
                 placeholder="Brief description of this preset"
-              />
+              >
             </div>
 
             <div class="edit-field">
@@ -385,7 +409,7 @@ onMounted(loadPresets);
                 v-model="editPrompt"
                 placeholder="System prompt for post-processing transcripts..."
                 rows="6"
-              ></textarea>
+              />
             </div>
 
             <details class="advanced-section">
@@ -407,7 +431,7 @@ onMounted(loadPresets);
                   id="edit-model"
                   v-model="editModel"
                   placeholder="e.g., gpt-4o-mini"
-                />
+                >
               </div>
             </details>
 
@@ -415,15 +439,15 @@ onMounted(loadPresets);
             <div class="panel-actions">
               <button
                 class="btn-primary"
-                @click="savePreset"
                 :disabled="saving || !editName.trim() || !editDescription.trim()"
+                @click="savePreset"
               >
                 {{ saving ? 'Saving...' : 'Save' }}
               </button>
               <button
                 class="btn-secondary"
-                @click="cancelEdit"
                 :disabled="saving"
+                @click="cancelEdit"
               >
                 Cancel
               </button>

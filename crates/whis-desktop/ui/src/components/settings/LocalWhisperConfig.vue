@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import type { SelectOption } from '../../types'
+import { computed, ref } from 'vue'
 import { useWhisperModel } from '../../composables/useWhisperModel'
 import { settingsStore } from '../../stores/settings'
 import AppSelect from '../AppSelect.vue'
-import type { SelectOption } from '../../types'
 
 defineProps<{
   showConfigCard?: boolean
@@ -31,12 +31,13 @@ const whisperModelPath = settingsStore.state.whisper_model_path
 const modelOptions = computed<SelectOption[]>(() =>
   availableModels.value.map(model => ({
     value: model.name,
-    label: `${model.name}${model.installed ? ' [installed]' : ''} - ${MODEL_SIZES[model.name]}`
-  }))
+    label: `${model.name}${model.installed ? ' [installed]' : ''} - ${MODEL_SIZES[model.name]}`,
+  })),
 )
 
 function handleModelChange(value: string | null) {
-  if (value) selectedModel.value = value
+  if (value)
+    selectedModel.value = value
 }
 </script>
 
@@ -53,8 +54,8 @@ function handleModelChange(value: string | null) {
       />
       <button
         class="btn-primary"
-        @click="downloadModel"
         :disabled="downloadingModel || isSelectedModelInstalled"
+        @click="downloadModel"
       >
         {{ downloadingModel ? `${downloadProgressPercent}%` : isSelectedModelInstalled ? 'Installed' : 'Download' }}
       </button>
@@ -65,8 +66,10 @@ function handleModelChange(value: string | null) {
     <p v-else-if="downloadStatus" class="hint" :class="{ error: downloadStatus.includes('failed'), success: downloadStatus.includes('successfully') }">
       {{ downloadStatus }}
     </p>
-    <p v-else class="hint">{{ selectedModel === 'small' ? 'Recommended for most users' : selectedModelSize }}</p>
-    <button class="path-toggle" @click="showPathInput = !showPathInput" type="button">
+    <p v-else class="hint">
+      {{ selectedModel === 'small' ? 'Recommended for most users' : selectedModelSize }}
+    </p>
+    <button class="path-toggle" type="button" @click="showPathInput = !showPathInput">
       <span class="toggle-indicator">{{ showPathInput ? 'v' : '>' }}</span>
       <span>or specify path</span>
     </button>
@@ -75,11 +78,11 @@ function handleModelChange(value: string | null) {
       type="text"
       class="text-input"
       :value="whisperModelPath || ''"
-      @input="settingsStore.setWhisperModelPath(($event.target as HTMLInputElement).value || null)"
       placeholder="/path/to/model.bin"
       spellcheck="false"
       aria-label="Custom Whisper model path"
-    />
+      @input="settingsStore.setWhisperModelPath(($event.target as HTMLInputElement).value || null)"
+    >
   </div>
 </template>
 

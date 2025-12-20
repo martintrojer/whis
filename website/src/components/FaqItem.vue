@@ -18,7 +18,7 @@ function toggle() {
       <span>{{ question }}</span>
     </button>
     <div class="faq-answer">
-      <slot></slot>
+      <slot />
     </div>
   </li>
 </template>

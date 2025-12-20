@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { settingsStore } from '../stores/settings'
+import type { UnlistenFn } from '@tauri-apps/api/event'
 import type { StatusResponse } from '../types'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { settingsStore } from '../stores/settings'
 
 const status = ref<StatusResponse>({ state: 'Idle', config_valid: false })
 const error = ref<string | null>(null)
@@ -26,7 +27,7 @@ const configReadiness = ref<{
   transcriptionError: null,
   postProcessingReady: true,
   postProcessingError: null,
-  checking: false
+  checking: false,
 })
 
 const buttonText = computed(() => {
@@ -34,6 +35,7 @@ const buttonText = computed(() => {
     case 'Idle': return 'Start Recording'
     case 'Recording': return 'Stop Recording'
     case 'Transcribing': return 'Transcribing...'
+    default: return 'Start Recording'
   }
 })
 
@@ -47,7 +49,8 @@ const configSummary = computed(() => {
   if (provider === 'local-whisper') {
     mode = 'Local'
     providerName = 'Whisper'
-  } else {
+  }
+  else {
     // Capitalize cloud provider names
     providerName = provider.charAt(0).toUpperCase() + provider.slice(1)
   }
@@ -65,9 +68,9 @@ const configSummary = computed(() => {
 })
 
 const canRecord = computed(() => {
-  return status.value.config_valid &&
-         status.value.state !== 'Transcribing' &&
-         configReadiness.value.transcriptionReady
+  return status.value.config_valid
+    && status.value.state !== 'Transcribing'
+    && configReadiness.value.transcriptionReady
 })
 
 // Check configuration readiness (proactive check for better UX)
@@ -86,16 +89,17 @@ async function checkConfigReadiness() {
       postProcessor: post_processor,
       apiKeys: api_keys,
       whisperModelPath: whisper_model_path,
-      ollamaUrl: ollama_url
+      ollamaUrl: ollama_url,
     })
     configReadiness.value = {
       transcriptionReady: result.transcription_ready,
       transcriptionError: result.transcription_error,
       postProcessingReady: result.post_processing_ready,
       postProcessingError: result.post_processing_error,
-      checking: false
+      checking: false,
     }
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to check config readiness:', e)
     configReadiness.value.checking = false
   }
@@ -108,17 +112,18 @@ watch(
     settingsStore.state.post_processor,
     settingsStore.state.api_keys,
     settingsStore.state.whisper_model_path,
-    settingsStore.state.ollama_url
+    settingsStore.state.ollama_url,
   ],
   () => checkConfigReadiness(),
-  { deep: true }
+  { deep: true },
 )
 
 // Platform detection for macOS-friendly key display
-const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+const isMac = navigator.platform.toUpperCase().includes('MAC')
 
 function displayKey(key: string): string {
-  if (!isMac) return key
+  if (!isMac)
+    return key
   switch (key.toLowerCase()) {
     case 'ctrl': return 'Control'
     case 'alt': return 'Option'
@@ -135,10 +140,10 @@ const displayShortcut = computed(() => {
     let shortcut = portalShortcut
     // Use platform-aware key names
     shortcut = shortcut
-      .replace(/<Control>/gi, displayKey('Ctrl') + '+')
+      .replace(/<Control>/gi, `${displayKey('Ctrl')}+`)
       .replace(/<Shift>/gi, 'Shift+')
-      .replace(/<Alt>/gi, displayKey('Alt') + '+')
-      .replace(/<Super>/gi, displayKey('Super') + '+')
+      .replace(/<Alt>/gi, `${displayKey('Alt')}+`)
+      .replace(/<Super>/gi, `${displayKey('Super')}+`)
     shortcut = shortcut.replace(/\+$/, '')
     const parts = shortcut.split('+')
     if (parts.length > 0 && parts[parts.length - 1]) {
@@ -155,56 +160,59 @@ const displayShortcut = computed(() => {
 
 async function fetchStatus() {
   try {
-    status.value = await invoke<StatusResponse>('get_status');
-    error.value = null;
-  } catch (e) {
-    console.error('Failed to get status:', e);
+    status.value = await invoke<StatusResponse>('get_status')
+    error.value = null
+  }
+  catch (e) {
+    console.error('Failed to get status:', e)
   }
 }
 
 async function toggleRecording() {
-  if (!canRecord.value) return;
+  if (!canRecord.value)
+    return
 
   try {
-    error.value = null;
-    await invoke('toggle_recording');
-    await fetchStatus();
-  } catch (e) {
-    error.value = String(e);
+    error.value = null
+    await invoke('toggle_recording')
+    await fetchStatus()
+  }
+  catch (e) {
+    error.value = String(e)
   }
 }
 
 onMounted(async () => {
-  fetchStatus();
-  checkConfigReadiness();
-  pollInterval = window.setInterval(fetchStatus, 500);
+  fetchStatus()
+  checkConfigReadiness()
+  pollInterval = window.setInterval(fetchStatus, 500)
 
   // Listen for post-processing events
   unlistenPostProcessWarning = await listen<string>('post-process-warning', (event) => {
-    postProcessWarning.value = event.payload;
+    postProcessWarning.value = event.payload
     // Auto-dismiss after 8 seconds
     setTimeout(() => {
-      postProcessWarning.value = null;
-    }, 8000);
-  });
+      postProcessWarning.value = null
+    }, 8000)
+  })
 
   unlistenPostProcessStarted = await listen('post-process-started', () => {
-    isPostProcessing.value = true;
-  });
+    isPostProcessing.value = true
+  })
 
   unlistenTranscriptionComplete = await listen('transcription-complete', () => {
-    isPostProcessing.value = false;
-  });
-});
+    isPostProcessing.value = false
+  })
+})
 
 onUnmounted(() => {
   if (pollInterval) {
-    clearInterval(pollInterval);
+    clearInterval(pollInterval)
   }
-  unlistenPostProcessWarning?.();
-  unlistenPostProcessStarted?.();
-  unlistenTranscriptionComplete?.();
-});
+  unlistenPostProcessWarning?.()
+  unlistenPostProcessStarted?.()
+  unlistenTranscriptionComplete?.()
+})
 </script>
 
 <template>
@@ -223,7 +231,7 @@ onUnmounted(() => {
           :disabled="!canRecord"
           @click="toggleRecording"
         >
-          <span class="record-indicator"></span>
+          <span class="record-indicator" />
           <span>{{ buttonText }}</span>
         </button>
 
@@ -252,7 +260,9 @@ onUnmounted(() => {
       </div>
 
       <!-- Error message -->
-      <p v-if="error" class="error-msg">{{ error }}</p>
+      <p v-if="error" class="error-msg">
+        {{ error }}
+      </p>
 
       <!-- Post-processing warning (runtime) -->
       <div v-if="postProcessWarning" class="warning-msg">
@@ -264,7 +274,9 @@ onUnmounted(() => {
         <span class="notice-marker">[!]</span>
         <div>
           <p>{{ configReadiness.transcriptionError }}</p>
-          <router-link to="/settings">Configure →</router-link>
+          <router-link to="/settings">
+            Configure →
+          </router-link>
         </div>
       </div>
 
@@ -273,7 +285,9 @@ onUnmounted(() => {
         <span class="notice-marker">[!]</span>
         <div>
           <p>Post-processing unavailable: {{ configReadiness.postProcessingError }}</p>
-          <router-link to="/settings">Configure →</router-link>
+          <router-link to="/settings">
+            Configure →
+          </router-link>
         </div>
       </div>
 

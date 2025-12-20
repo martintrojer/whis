@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { settingsStore } from '../stores/settings'
-import type { Provider, PostProcessor, SelectOption } from '../types'
-import ModeCards from '../components/settings/ModeCards.vue'
+import type { TranscriptionMode } from '../components/settings/ModeCards.vue'
+import type { PostProcessor, Provider, SelectOption } from '../types'
+import { invoke } from '@tauri-apps/api/core'
+import { computed, onMounted, ref, watch } from 'vue'
+import AppSelect from '../components/AppSelect.vue'
 import CloudProviderConfig from '../components/settings/CloudProviderConfig.vue'
 import LocalWhisperConfig from '../components/settings/LocalWhisperConfig.vue'
+import ModeCards from '../components/settings/ModeCards.vue'
 import PostProcessingConfig from '../components/settings/PostProcessingConfig.vue'
-import AppSelect from '../components/AppSelect.vue'
-import type { TranscriptionMode } from '../components/settings/ModeCards.vue'
-import { invoke } from '@tauri-apps/api/core'
+import { settingsStore } from '../stores/settings'
 
 const helpOpen = ref(false)
 
@@ -20,7 +20,7 @@ const postProcessor = computed(() => settingsStore.state.post_processor)
 
 // Transcription mode: cloud vs local
 const transcriptionMode = ref<TranscriptionMode>(
-  provider.value === 'local-whisper' ? 'local' : 'cloud'
+  provider.value === 'local-whisper' ? 'local' : 'cloud',
 )
 
 // Whisper model validation (for local provider)
@@ -32,7 +32,8 @@ watch(provider, async () => {
     try {
       const { invoke } = await import('@tauri-apps/api/core')
       whisperModelValid.value = await invoke<boolean>('is_whisper_model_valid')
-    } catch {
+    }
+    catch {
       whisperModelValid.value = false
     }
   }
@@ -75,7 +76,8 @@ function handleModeChange(mode: TranscriptionMode) {
         settingsStore.setPostProcessor('openai')
       }
     }
-  } else {
+  }
+  else {
     // Switch to local-whisper if currently on cloud
     if (provider.value !== 'local-whisper') {
       settingsStore.setProvider('local-whisper')
@@ -84,12 +86,13 @@ function handleModeChange(mode: TranscriptionMode) {
 }
 
 function handleProviderUpdate(value: string | null) {
-  if (!value) return
+  if (!value)
+    return
   const newProvider = value as Provider
   settingsStore.setProvider(newProvider)
   // Auto-sync post-processor to match provider (if user has cloud post-processor enabled)
-  if ((newProvider === 'openai' || newProvider === 'mistral') &&
-      postProcessor.value !== 'none' && postProcessor.value !== 'ollama') {
+  if ((newProvider === 'openai' || newProvider === 'mistral')
+    && postProcessor.value !== 'none' && postProcessor.value !== 'ollama') {
     settingsStore.setPostProcessor(newProvider as PostProcessor)
   }
 }
@@ -115,7 +118,8 @@ const microphoneDevice = computed(() => settingsStore.state.microphone_device)
 onMounted(async () => {
   try {
     audioDevices.value = await invoke<AudioDevice[]>('list_audio_devices')
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Failed to load audio devices:', error)
   }
 })
@@ -123,13 +127,13 @@ onMounted(async () => {
 // Convert audio devices to select options
 const microphoneOptions = computed<SelectOption[]>(() => {
   const options: SelectOption[] = [
-    { value: null, label: 'System Default' }
+    { value: null, label: 'System Default' },
   ]
 
   for (const device of audioDevices.value) {
     options.push({
       value: device.name,
-      label: device.is_default ? `${device.name} (default)` : device.name
+      label: device.is_default ? `${device.name} (default)` : device.name,
     })
   }
 
@@ -148,130 +152,136 @@ function handleMicrophoneChange(value: string | null) {
         <h1>Settings</h1>
         <p>Configure transcription</p>
       </div>
-      <button class="help-btn" @click="helpOpen = !helpOpen" :aria-label="helpOpen ? 'Close help' : 'Open help'">{{ helpOpen ? 'Close' : 'Help' }}</button>
+      <button class="help-btn" :aria-label="helpOpen ? 'Close help' : 'Open help'" @click="helpOpen = !helpOpen">
+        {{ helpOpen ? 'Close' : 'Help' }}
+      </button>
     </header>
 
     <div class="settings-layout">
-    <div class="section-content">
-      <!-- Mode Cards (Cloud/Local) -->
-      <ModeCards
-        :model-value="transcriptionMode"
-        @update:model-value="handleModeChange"
-      />
+      <div class="section-content">
+        <!-- Mode Cards (Cloud/Local) -->
+        <ModeCards
+          :model-value="transcriptionMode"
+          @update:model-value="handleModeChange"
+        />
 
-      <!-- Cloud Provider Config (API key only) -->
-      <CloudProviderConfig
-        v-if="transcriptionMode === 'cloud'"
-        :provider="provider"
-        :api-keys="apiKeys"
-        :show-config-card="true"
-        @update:api-key="handleApiKeyUpdate"
-      />
+        <!-- Cloud Provider Config (API key only) -->
+        <CloudProviderConfig
+          v-if="transcriptionMode === 'cloud'"
+          :provider="provider"
+          :api-keys="apiKeys"
+          :show-config-card="true"
+          @update:api-key="handleApiKeyUpdate"
+        />
 
-      <!-- Local Whisper Config -->
-      <LocalWhisperConfig
-        v-if="transcriptionMode === 'local'"
-        :show-config-card="true"
-      />
+        <!-- Local Whisper Config -->
+        <LocalWhisperConfig
+          v-if="transcriptionMode === 'local'"
+          :show-config-card="true"
+        />
 
-      <!-- Transcription Section -->
-      <div class="settings-section">
-        <p class="section-label">transcription</p>
+        <!-- Transcription Section -->
+        <div class="settings-section">
+          <p class="section-label">
+            transcription
+          </p>
 
-        <!-- Provider (only in cloud mode) -->
-        <div v-if="transcriptionMode === 'cloud'" class="field-row">
-          <label>Service</label>
-          <AppSelect
-            :model-value="provider"
-            :options="cloudProviderOptions"
-            @update:model-value="handleProviderUpdate"
-          />
+          <!-- Provider (only in cloud mode) -->
+          <div v-if="transcriptionMode === 'cloud'" class="field-row">
+            <label>Service</label>
+            <AppSelect
+              :model-value="provider"
+              :options="cloudProviderOptions"
+              @update:model-value="handleProviderUpdate"
+            />
+          </div>
+
+          <!-- Language -->
+          <div class="field-row">
+            <label>Language</label>
+            <AppSelect
+              :model-value="language"
+              :options="languageOptions"
+              @update:model-value="handleLanguageChange"
+            />
+          </div>
+
+          <!-- Microphone Device -->
+          <div class="field-row">
+            <label>Microphone</label>
+            <AppSelect
+              :model-value="microphoneDevice"
+              :options="microphoneOptions"
+              @update:model-value="handleMicrophoneChange"
+            />
+          </div>
         </div>
 
-        <!-- Language -->
-        <div class="field-row">
-          <label>Language</label>
-          <AppSelect
-            :model-value="language"
-            :options="languageOptions"
-            @update:model-value="handleLanguageChange"
-          />
-        </div>
-
-        <!-- Microphone Device -->
-        <div class="field-row">
-          <label>Microphone</label>
-          <AppSelect
-            :model-value="microphoneDevice"
-            :options="microphoneOptions"
-            @update:model-value="handleMicrophoneChange"
-          />
+        <!-- Post-Processing Section -->
+        <div class="settings-section">
+          <p class="section-label">
+            post-processing
+          </p>
+          <PostProcessingConfig />
         </div>
       </div>
 
-      <!-- Post-Processing Section -->
-      <div class="settings-section">
-        <p class="section-label">post-processing</p>
-        <PostProcessingConfig />
-      </div>
-    </div>
+      <!-- Help Panel -->
+      <div class="help-panel" :class="{ open: helpOpen }">
+        <div class="panel-content">
+          <div class="panel-header">
+            <h2>Help</h2>
+          </div>
 
-    <!-- Help Panel -->
-    <div class="help-panel" :class="{ open: helpOpen }">
-      <div class="panel-content">
-        <div class="panel-header">
-          <h2>Help</h2>
-        </div>
+          <div class="help-section">
+            <h3>transcription mode</h3>
+            <p>Choose how to transcribe audio. Cloud is fast and easy (requires API key and internet). Local is private and free (requires model download, slower on older hardware).</p>
+          </div>
 
-        <div class="help-section">
-          <h3>transcription mode</h3>
-          <p>Choose how to transcribe audio. Cloud is fast and easy (requires API key and internet). Local is private and free (requires model download, slower on older hardware).</p>
-        </div>
+          <div class="help-section">
+            <h3>transcription service</h3>
+            <p>Choose which cloud service performs speech-to-text. Each has different pricing, speed, and language support. Requires a separate API account.</p>
+          </div>
 
-        <div class="help-section">
-          <h3>transcription service</h3>
-          <p>Choose which cloud service performs speech-to-text. Each has different pricing, speed, and language support. Requires a separate API account.</p>
-        </div>
+          <div class="help-section">
+            <h3>api key</h3>
+            <p>Your API key authenticates with the provider. Get it from your provider's website. Keys are stored locally on your device.</p>
+          </div>
 
-        <div class="help-section">
-          <h3>api key</h3>
-          <p>Your API key authenticates with the provider. Get it from your provider's website. Keys are stored locally on your device.</p>
-        </div>
+          <div class="help-section">
+            <h3>local transcription</h3>
+            <p><strong>Local Whisper:</strong> Run models on your device (75MB-3GB). Fully offline. Larger models = better accuracy, slower processing.</p>
+          </div>
 
-        <div class="help-section">
-          <h3>local transcription</h3>
-          <p><strong>Local Whisper:</strong> Run models on your device (75MB-3GB). Fully offline. Larger models = better accuracy, slower processing.</p>
-        </div>
+          <div class="help-section">
+            <h3>language</h3>
+            <p>Auto-detect works for most recordings. Set a specific language if you're getting poor results with accents, technical terms, or mixed languages.</p>
+          </div>
 
-        <div class="help-section">
-          <h3>language</h3>
-          <p>Auto-detect works for most recordings. Set a specific language if you're getting poor results with accents, technical terms, or mixed languages.</p>
-        </div>
+          <div class="help-section">
+            <h3>post-processing</h3>
+            <p>Clean up transcripts with AI. Fixes grammar, punctuation, and can add structure. Works with cloud providers or local Ollama. Optional—leave off for verbatim transcripts.</p>
+          </div>
 
-        <div class="help-section">
-          <h3>post-processing</h3>
-          <p>Clean up transcripts with AI. Fixes grammar, punctuation, and can add structure. Works with cloud providers or local Ollama. Optional—leave off for verbatim transcripts.</p>
-        </div>
+          <div class="help-section">
+            <h3>presets</h3>
+            <p>Pre-configured post-processing instructions. Choose a style that matches your use case, or create custom presets in the Presets page.</p>
+          </div>
 
-        <div class="help-section">
-          <h3>presets</h3>
-          <p>Pre-configured post-processing instructions. Choose a style that matches your use case, or create custom presets in the Presets page.</p>
-        </div>
-
-        <div class="help-section">
-          <h3>ollama</h3>
-          <p>Use local AI models for post-processing without cloud APIs or costs. Requires Ollama running on your machine.</p>
-          <div class="help-steps">
-            <p><strong>Setup:</strong></p>
-            <ol>
-              <li>Install from <a href="https://ollama.com/download" target="_blank">ollama.com</a></li>
-              <li>Download a model: <code>ollama pull llama3.2:3b</code></li>
-              <li>Click "ping" below to test connection</li>
-            </ol>
+          <div class="help-section">
+            <h3>ollama</h3>
+            <p>Use local AI models for post-processing without cloud APIs or costs. Requires Ollama running on your machine.</p>
+            <div class="help-steps">
+              <p><strong>Setup:</strong></p>
+              <ol>
+                <li>Install from <a href="https://ollama.com/download" target="_blank">ollama.com</a></li>
+                <li>Download a model: <code>ollama pull llama3.2:3b</code></li>
+                <li>Click "ping" below to test connection</li>
+              </ol>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </div>
   </section>
 </template>

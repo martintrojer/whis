@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { onMounted, ref } from 'vue'
 
 // Terminal state
 const lines = ref<string[]>([''])
@@ -8,7 +8,7 @@ const showCursor = ref(false)
 // Current line index (where we're typing)
 const currentLineIndex = ref(0)
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 // Helper to get/set current line
 function getCurrentLine(): string {
@@ -91,17 +91,17 @@ async function runDemo2() {
   await sleep(600)
 
   // Backspace all, type codex
-  await backspace(16, 30)  // 'claude "$(whis)"' = 16 chars
+  await backspace(16, 30) // 'claude "$(whis)"' = 16 chars
   await typeText('codex "$(whis)"', 60)
   await sleep(500)
 
   // Backspace all, type opencode
-  await backspace(15, 30)  // 'codex "$(whis)"' = 15 chars
+  await backspace(15, 30) // 'codex "$(whis)"' = 15 chars
   await typeText('opencode -p "$(whis)"', 60)
   await sleep(500)
 
   // Backspace all, type gemini
-  await backspace(21, 30)  // 'opencode -p "$(whis)"' = 21 chars
+  await backspace(21, 30) // 'opencode -p "$(whis)"' = 21 chars
   await typeText('gemini "$(whis)"', 60)
   await sleep(500)
 

@@ -4,7 +4,7 @@ import IconChevronLeft from './icons/IconChevronLeft.vue'
 import IconChevronRight from './icons/IconChevronRight.vue'
 
 defineProps<{
-  images: { src: string; alt: string; caption?: string }[]
+  images: { src: string, alt: string, caption?: string }[]
 }>()
 
 const emit = defineEmits<{
@@ -33,8 +33,10 @@ function scrollNext() {
     </button>
     <div ref="carousel" class="carousel">
       <figure v-for="(image, index) in images" :key="index" @click="emit('select', index)">
-        <img :src="image.src" :alt="image.alt" loading="lazy" />
-        <figcaption v-if="image.caption">{{ image.caption }}</figcaption>
+        <img :src="image.src" :alt="image.alt" loading="lazy">
+        <figcaption v-if="image.caption">
+          {{ image.caption }}
+        </figcaption>
       </figure>
     </div>
     <button class="carousel-btn next" aria-label="Next screenshot" @click="scrollNext">

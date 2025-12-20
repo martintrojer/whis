@@ -28,7 +28,7 @@ function handleInput(event: Event) {
     spellcheck="false"
     autocomplete="off"
     @input="handleInput"
-  />
+  >
 </template>
 
 <style scoped>

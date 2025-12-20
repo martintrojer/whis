@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { Provider, CloudProviderInfo } from '../../types'
+import type { CloudProviderInfo, Provider } from '../../types'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   provider: Provider
@@ -49,18 +49,18 @@ function handleApiKeyChange(event: Event) {
       <input
         :type="keyMasked[provider] ? 'password' : 'text'"
         :value="currentApiKey"
-        @input="handleApiKeyChange"
         :placeholder="currentProvider.placeholder"
         spellcheck="false"
         autocomplete="off"
         aria-label="API Key"
-      />
+        @input="handleApiKeyChange"
+      >
       <button
-        @click="keyMasked[provider] = !keyMasked[provider]"
         class="toggle-btn"
         type="button"
         :aria-pressed="!keyMasked[provider]"
         aria-label="Toggle API key visibility"
+        @click="keyMasked[provider] = !keyMasked[provider]"
       >
         {{ keyMasked[provider] ? 'show' : 'hide' }}
       </button>

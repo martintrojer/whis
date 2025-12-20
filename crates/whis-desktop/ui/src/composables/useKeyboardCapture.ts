@@ -1,10 +1,11 @@
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 // Platform detection for macOS-friendly key display
-const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+const isMac = navigator.platform.toUpperCase().includes('MAC')
 
 function displayKey(key: string): string {
-  if (!isMac) return key
+  if (!isMac)
+    return key
   switch (key.toLowerCase()) {
     case 'ctrl': return 'Control'
     case 'alt': return 'Option'
@@ -30,15 +31,20 @@ export function useKeyboardCapture(initialValue: string = '') {
   })
 
   function handleKeyDown(e: KeyboardEvent) {
-    if (!isRecording.value) return
+    if (!isRecording.value)
+      return
     e.preventDefault()
 
     // Use platform-aware key names for display
     const keys: string[] = []
-    if (e.ctrlKey) keys.push(isMac ? 'Control' : 'Ctrl')
-    if (e.shiftKey) keys.push('Shift')
-    if (e.altKey) keys.push(isMac ? 'Option' : 'Alt')
-    if (e.metaKey) keys.push(isMac ? 'Cmd' : 'Super')
+    if (e.ctrlKey)
+      keys.push(isMac ? 'Control' : 'Ctrl')
+    if (e.shiftKey)
+      keys.push('Shift')
+    if (e.altKey)
+      keys.push(isMac ? 'Option' : 'Alt')
+    if (e.metaKey)
+      keys.push(isMac ? 'Cmd' : 'Super')
 
     const key = e.key.toUpperCase()
     if (!['CONTROL', 'SHIFT', 'ALT', 'META'].includes(key)) {

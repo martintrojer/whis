@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  marker?: string  // [!], [*], [i]
+  marker?: string // [!], [*], [i]
   variant?: 'default' | 'warning'
 }>()
 </script>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import IconCopy from './icons/IconCopy.vue'
+import { computed, ref } from 'vue'
 import IconCheck from './icons/IconCheck.vue'
+import IconCopy from './icons/IconCopy.vue'
 
 interface Segment {
   text: string

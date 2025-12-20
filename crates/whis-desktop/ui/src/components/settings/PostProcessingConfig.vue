@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import type { PostProcessor, SelectOption } from '../../types'
 import { invoke } from '@tauri-apps/api/core'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { settingsStore } from '../../stores/settings'
 import AppSelect from '../AppSelect.vue'
 import OllamaConfig from './OllamaConfig.vue'
-import type { PostProcessor, SelectOption } from '../../types'
 
 const router = useRouter()
 
@@ -28,7 +28,7 @@ const postProcessorOptions: SelectOption[] = [
 
 const presetOptions = computed<SelectOption[]>(() => [
   { value: null, label: 'Default' },
-  ...presets.value.map(name => ({ value: name, label: name }))
+  ...presets.value.map(name => ({ value: name, label: name })),
 ])
 
 // Load presets on mount
@@ -41,10 +41,12 @@ async function loadPresets() {
   try {
     const result = await invoke<{ name: string }[]>('list_presets')
     presets.value = result.map(p => p.name)
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to load presets:', e)
     presets.value = []
-  } finally {
+  }
+  finally {
     loadingPresets.value = false
   }
 }
@@ -52,9 +54,12 @@ async function loadPresets() {
 // Get default post-processor based on transcription provider
 function getDefaultPostProcessor(): PostProcessor {
   const provider = settingsStore.state.provider
-  if (provider === 'openai') return 'openai'
-  if (provider === 'mistral') return 'mistral'
-  if (provider === 'local-whisper') return 'ollama'
+  if (provider === 'openai')
+    return 'openai'
+  if (provider === 'mistral')
+    return 'mistral'
+  if (provider === 'local-whisper')
+    return 'ollama'
   // Default fallback
   return 'openai'
 }
@@ -62,13 +67,15 @@ function getDefaultPostProcessor(): PostProcessor {
 function togglePostProcessing(enable: boolean) {
   if (enable) {
     settingsStore.setPostProcessor(getDefaultPostProcessor())
-  } else {
+  }
+  else {
     settingsStore.setPostProcessor('none')
   }
 }
 
 function handlePostProcessorChange(value: string | null) {
-  if (value) settingsStore.setPostProcessor(value as PostProcessor)
+  if (value)
+    settingsStore.setPostProcessor(value as PostProcessor)
 }
 
 function handlePresetChange(value: string | null) {
@@ -92,10 +99,10 @@ function goToPresets() {
         class="toggle-switch"
         :class="{ active: postProcessingEnabled }"
         :aria-pressed="postProcessingEnabled"
-        @click="togglePostProcessing(!postProcessingEnabled)"
         type="button"
+        @click="togglePostProcessing(!postProcessingEnabled)"
       >
-        <span class="toggle-knob"></span>
+        <span class="toggle-knob" />
       </button>
     </div>
 
@@ -119,7 +126,9 @@ function goToPresets() {
             :disabled="loadingPresets"
             @update:model-value="handlePresetChange"
           />
-          <button class="btn-link" @click="goToPresets">manage</button>
+          <button class="btn-link" @click="goToPresets">
+            manage
+          </button>
         </div>
       </div>
 
@@ -131,7 +140,9 @@ function goToPresets() {
 
     <!-- Ollama Config (shown when Ollama selected) -->
     <div v-if="postProcessingEnabled && postProcessor === 'ollama'" class="ollama-section">
-      <p class="section-label">ollama</p>
+      <p class="section-label">
+        ollama
+      </p>
       <OllamaConfig />
     </div>
   </div>

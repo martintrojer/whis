@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import type { UnlistenFn } from '@tauri-apps/api/event'
+import type { SelectOption } from '../../types'
 import { invoke } from '@tauri-apps/api/core'
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { listen } from '@tauri-apps/api/event'
+import { computed, onUnmounted, ref } from 'vue'
 import { settingsStore } from '../../stores/settings'
 import AppSelect from '../AppSelect.vue'
-import type { SelectOption } from '../../types'
 
 const ollamaUrl = computed(() => settingsStore.state.ollama_url)
 const ollamaModel = computed(() => settingsStore.state.ollama_model)
@@ -12,9 +13,12 @@ const ollamaModel = computed(() => settingsStore.state.ollama_model)
 // Platform detection using navigator
 function detectPlatform(): 'linux' | 'macos' | 'windows' | 'unknown' {
   const ua = navigator.userAgent.toLowerCase()
-  if (ua.includes('linux')) return 'linux'
-  if (ua.includes('mac')) return 'macos'
-  if (ua.includes('win')) return 'windows'
+  if (ua.includes('linux'))
+    return 'linux'
+  if (ua.includes('mac'))
+    return 'macos'
+  if (ua.includes('win'))
+    return 'windows'
   return 'unknown'
 }
 
@@ -37,7 +41,7 @@ interface OllamaStatusResponse {
 const pullModelName = ref('qwen2.5:1.5b')
 const pullingModel = ref(false)
 const pullStatus = ref('')
-const pullProgress = ref<{ downloaded: number; total: number } | null>(null)
+const pullProgress = ref<{ downloaded: number, total: number } | null>(null)
 let unlistenPull: UnlistenFn | null = null
 
 // Cleanup on unmount
@@ -50,12 +54,14 @@ onUnmounted(() => {
 
 // Format pull progress
 const pullProgressPercent = computed(() => {
-  if (!pullProgress.value || pullProgress.value.total === 0) return 0
+  if (!pullProgress.value || pullProgress.value.total === 0)
+    return 0
   return Math.round((pullProgress.value.downloaded / pullProgress.value.total) * 100)
 })
 
 const pullProgressText = computed(() => {
-  if (!pullProgress.value) return ''
+  if (!pullProgress.value)
+    return ''
   const { downloaded, total } = pullProgress.value
   const downloadedMB = (downloaded / 1_000_000).toFixed(0)
   const totalMB = (total / 1_000_000).toFixed(0)
@@ -91,19 +97,23 @@ async function testOllamaConnection() {
       ollamaStatus.value = 'connected'
       ollamaStatusMessage.value = result === 'started' ? 'Started & connected' : 'Connected'
       await loadOllamaModels()
-    } else {
+    }
+    else {
       ollamaStatus.value = 'not-running'
       ollamaStatusMessage.value = 'Could not start Ollama'
     }
-  } catch (e) {
+  }
+  catch (e) {
     const error = String(e)
     if (error.toLowerCase().includes('not installed')) {
       ollamaStatus.value = 'not-installed'
       ollamaStatusMessage.value = 'Ollama not installed'
-    } else if (error.toLowerCase().includes('not running') || error.toLowerCase().includes('connection refused')) {
+    }
+    else if (error.toLowerCase().includes('not running') || error.toLowerCase().includes('connection refused')) {
       ollamaStatus.value = 'not-running'
       ollamaStatusMessage.value = 'Ollama not running'
-    } else {
+    }
+    else {
       ollamaStatus.value = 'error'
       ollamaStatusMessage.value = error
     }
@@ -116,7 +126,8 @@ async function copyToClipboard(text: string) {
     await navigator.clipboard.writeText(text)
     copied.value = true
     setTimeout(() => copied.value = false, 2000)
-  } catch {
+  }
+  catch {
     // Fallback
     const el = document.createElement('textarea')
     el.value = text
@@ -141,7 +152,8 @@ async function loadOllamaModels() {
     if (!ollamaModel.value && firstModel) {
       settingsStore.setOllamaModel(firstModel)
     }
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to load Ollama models:', e)
     ollamaModels.value = []
   }
@@ -159,7 +171,7 @@ async function pullOllamaModel() {
   pullStatus.value = ''
 
   // Listen for progress events
-  unlistenPull = await listen<{ downloaded: number; total: number }>('ollama-pull-progress', (event) => {
+  unlistenPull = await listen<{ downloaded: number, total: number }>('ollama-pull-progress', (event) => {
     pullProgress.value = event.payload
   })
 
@@ -170,9 +182,11 @@ async function pullOllamaModel() {
     settingsStore.setOllamaModel(pullModelName.value.trim())
     pullStatus.value = 'Model ready!'
     setTimeout(() => pullStatus.value = '', 3000)
-  } catch (e) {
+  }
+  catch (e) {
     pullStatus.value = String(e)
-  } finally {
+  }
+  finally {
     pullingModel.value = false
     pullProgress.value = null
     if (unlistenPull) {
@@ -185,7 +199,7 @@ async function pullOllamaModel() {
 // Convert models to SelectOption format
 const modelOptions = computed<SelectOption[]>(() => [
   { value: null, label: 'Select a model...' },
-  ...ollamaModels.value.map(model => ({ value: model, label: model }))
+  ...ollamaModels.value.map(model => ({ value: model, label: model })),
 ])
 
 function handleOllamaModelChange(value: string | null) {
@@ -201,25 +215,27 @@ function handleOllamaModelChange(value: string | null) {
       <input
         type="text"
         :value="ollamaUrl || 'http://localhost:11434'"
-        @input="settingsStore.setOllamaUrl(($event.target as HTMLInputElement).value || null)"
         spellcheck="false"
         aria-label="Ollama server URL"
-      />
+        @input="settingsStore.setOllamaUrl(($event.target as HTMLInputElement).value || null)"
+      >
       <button
         class="ollama-ping-btn"
-        @click="testOllamaConnection"
         :disabled="ollamaStatus === 'connecting'"
+        @click="testOllamaConnection"
       >
         {{ ollamaStatus === 'connecting' ? '...' : 'ping' }}
       </button>
     </div>
   </div>
   <!-- Simple status message for connected/connecting/error -->
-  <p v-if="ollamaStatusMessage && ollamaStatus !== 'not-installed' && ollamaStatus !== 'not-running'"
-     class="hint ollama-hint"
-     :class="{ success: ollamaStatus === 'connected', error: ollamaStatus === 'error' }"
-     role="status"
-     aria-live="polite">
+  <p
+    v-if="ollamaStatusMessage && ollamaStatus !== 'not-installed' && ollamaStatus !== 'not-running'"
+    class="hint ollama-hint"
+    :class="{ success: ollamaStatus === 'connected', error: ollamaStatus === 'error' }"
+    role="status"
+    aria-live="polite"
+  >
     {{ ollamaStatusMessage }}
   </p>
 
@@ -229,14 +245,18 @@ function handleOllamaModelChange(value: string | null) {
       <span class="install-icon">[!]</span>
       <span class="install-title">Ollama not installed</span>
     </div>
-    <p class="install-desc">Ollama is required for local AI text post-processing.</p>
+    <p class="install-desc">
+      Ollama is required for local AI text post-processing.
+    </p>
 
     <!-- Linux instructions -->
     <div v-if="currentPlatform === 'linux'" class="install-section">
-      <p class="install-label">Install on Linux:</p>
+      <p class="install-label">
+        Install on Linux:
+      </p>
       <div class="code-block">
         <code>{{ linuxInstallCommand }}</code>
-        <button class="copy-btn" @click="copyToClipboard(linuxInstallCommand)" :title="copied ? 'Copied!' : 'Copy'">
+        <button class="copy-btn" :title="copied ? 'Copied!' : 'Copy'" @click="copyToClipboard(linuxInstallCommand)">
           {{ copied ? 'ok' : 'copy' }}
         </button>
       </div>
@@ -251,20 +271,26 @@ function handleOllamaModelChange(value: string | null) {
 
     <!-- Unknown platform - show both -->
     <div v-if="currentPlatform === 'unknown'" class="install-section">
-      <p class="install-label">Linux:</p>
+      <p class="install-label">
+        Linux:
+      </p>
       <div class="code-block">
         <code>{{ linuxInstallCommand }}</code>
-        <button class="copy-btn" @click="copyToClipboard(linuxInstallCommand)" :title="copied ? 'Copied!' : 'Copy'">
+        <button class="copy-btn" :title="copied ? 'Copied!' : 'Copy'" @click="copyToClipboard(linuxInstallCommand)">
           {{ copied ? 'ok' : 'copy' }}
         </button>
       </div>
-      <p class="install-label" style="margin-top: 8px;">macOS / Windows:</p>
+      <p class="install-label" style="margin-top: 8px;">
+        macOS / Windows:
+      </p>
       <a href="https://ollama.com/download" target="_blank" class="install-link">
         Download from ollama.com
       </a>
     </div>
 
-    <p class="install-footer">After installing, click "ping" to connect.</p>
+    <p class="install-footer">
+      After installing, click "ping" to connect.
+    </p>
   </div>
 
   <!-- Not Running Panel -->
@@ -306,17 +332,17 @@ function handleOllamaModelChange(value: string | null) {
     <label>Pull model</label>
     <div class="pull-model-input">
       <input
-        type="text"
         v-model="pullModelName"
+        type="text"
         placeholder="qwen2.5:1.5b"
         spellcheck="false"
         :disabled="pullingModel"
         aria-label="Model name to pull"
-      />
+      >
       <button
         class="btn-primary"
-        @click="pullOllamaModel"
         :disabled="pullingModel || !pullModelName.trim()"
+        @click="pullOllamaModel"
       >
         {{ pullingModel ? `${pullProgressPercent}%` : 'Pull' }}
       </button>

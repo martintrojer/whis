@@ -7,6 +7,6 @@
     stroke="currentColor"
     stroke-width="2"
   >
-    <polyline points="15 18 9 12 15 6"></polyline>
+    <polyline points="15 18 9 12 15 6" />
   </svg>
 </template>

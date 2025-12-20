@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { settingsStore } from './stores/settings'
 
 const route = useRoute()
@@ -45,10 +45,12 @@ async function closeWindow() {
     const canReopen = await invoke<boolean>('can_reopen_window')
     if (canReopen) {
       await getCurrentWindow().hide()
-    } else {
+    }
+    else {
       await getCurrentWindow().close()
     }
-  } catch {
+  }
+  catch {
     await getCurrentWindow().close()
   }
 }
@@ -87,11 +89,11 @@ onMounted(async () => {
         <!-- Title bar for dragging -->
         <div v-if="showCustomControls" class="titlebar" data-tauri-drag-region>
           <div class="window-controls">
-            <button class="control-btn" @click="minimizeWindow" title="Minimize">
-              <svg viewBox="0 0 10 10"><rect x="1" y="4.5" width="8" height="1" fill="currentColor"/></svg>
+            <button class="control-btn" title="Minimize" @click="minimizeWindow">
+              <svg viewBox="0 0 10 10"><rect x="1" y="4.5" width="8" height="1" fill="currentColor" /></svg>
             </button>
-            <button class="control-btn close" @click="closeWindow" title="Close">
-              <svg viewBox="0 0 10 10"><path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor" stroke-width="1.2"/></svg>
+            <button class="control-btn close" title="Close" @click="closeWindow">
+              <svg viewBox="0 0 10 10"><path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor" stroke-width="1.2" /></svg>
             </button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import TabPanel from '@/components/TabPanel.vue'
 import CommandCopy from '@/components/CommandCopy.vue'
+import TabPanel from '@/components/TabPanel.vue'
 import TheLightbox from '@/components/TheLightbox.vue'
 
 const installTab = ref('cargo')
@@ -21,7 +21,7 @@ const demoImage = [
     </header>
 
     <!-- Install -->
-    <section class="install" id="install">
+    <section id="install" class="install">
       <TabPanel
         v-model:selected="installTab"
         :tabs="[
@@ -31,26 +31,34 @@ const demoImage = [
         ]"
       >
         <div v-if="installTab === 'cargo'" class="panel">
-          <CommandCopy :segments="[
-            { text: 'cargo install ' },
-            { text: 'whis', highlight: true },
-          ]" />
+          <CommandCopy
+            :segments="[
+              { text: 'cargo install ' },
+              { text: 'whis', highlight: true },
+            ]"
+          />
         </div>
         <div v-else-if="installTab === 'source'" class="panel">
-          <CommandCopy :segments="[
-            { text: 'git clone ' },
-            { text: 'https://github.com/frankdierolf/whis', highlight: true },
-            { text: ' && cd whis && ' },
-            { text: 'cargo build --release', highlight: true },
-          ]" />
+          <CommandCopy
+            :segments="[
+              { text: 'git clone ' },
+              { text: 'https://github.com/frankdierolf/whis', highlight: true },
+              { text: ' && cd whis && ' },
+              { text: 'cargo build --release', highlight: true },
+            ]"
+          />
         </div>
         <div v-else class="panel">
-          <CommandCopy :segments="[
-            { text: 'tar -xzf ' },
-            { text: 'whis-*.tar.gz', highlight: true },
-            { text: ' && sudo mv whis /usr/local/bin/' },
-          ]" />
-          <p class="install-note">Download your platform's binary from GitHub Releases first.</p>
+          <CommandCopy
+            :segments="[
+              { text: 'tar -xzf ' },
+              { text: 'whis-*.tar.gz', highlight: true },
+              { text: ' && sudo mv whis /usr/local/bin/' },
+            ]"
+          />
+          <p class="install-note">
+            Download your platform's binary from GitHub Releases first.
+          </p>
         </div>
       </TabPanel>
     </section>
@@ -98,7 +106,7 @@ const demoImage = [
           loading="lazy"
           class="clickable"
           @click="lightboxOpen = true"
-        />
+        >
         <figcaption>Record &rarr; Transcribe &rarr; Paste</figcaption>
       </figure>
     </section>

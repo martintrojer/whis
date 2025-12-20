@@ -35,7 +35,7 @@ const faqItems = [
   {
     question: 'What about my data?',
     answer:
-      "With cloud providers, audio goes to their API. With local mode, everything stays on your machine. whis doesn't store anything.",
+      'With cloud providers, audio goes to their API. With local mode, everything stays on your machine. whis doesn\'t store anything.',
   },
   {
     question: 'macOS? Windows?',

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import TerminalDemo from '@/components/TerminalDemo.vue'
 
 const stars = ref<number | null>(null)
 const downloads = ref<number | null>(null)
-const contributors = ref<{ login: string; avatar_url: string }[]>([])
+const contributors = ref<{ login: string, avatar_url: string }[]>([])
 
 onMounted(async () => {
   // Fetch GitHub stars
@@ -14,7 +14,8 @@ onMounted(async () => {
       const data = await gh.json()
       stars.value = data.stargazers_count
     }
-  } catch {
+  }
+  catch {
     /* silent fail */
   }
 
@@ -25,7 +26,8 @@ onMounted(async () => {
       const data = await cargo.json()
       downloads.value = data.crate.downloads
     }
-  } catch {
+  }
+  catch {
     /* silent fail */
   }
 
@@ -35,13 +37,15 @@ onMounted(async () => {
     if (contribs.ok) {
       contributors.value = await contribs.json()
     }
-  } catch {
+  }
+  catch {
     /* silent fail */
   }
 })
 
 function formatNumber(n: number): string {
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
+  if (n >= 1000)
+    return `${(n / 1000).toFixed(1)}k`
   return n.toString()
 }
 </script>
@@ -54,8 +58,12 @@ function formatNumber(n: number): string {
         <span>Paste.</span>
         <span>Ship.</span>
       </h1>
-      <p class="subtitle">Voice → clipboard. Zero friction.</p>
-      <p class="description">Record anywhere. Transcribe fast. Paste instantly.</p>
+      <p class="subtitle">
+        Voice → clipboard. Zero friction.
+      </p>
+      <p class="description">
+        Record anywhere. Transcribe fast. Paste instantly.
+      </p>
     </div>
 
     <div class="cta-group">
@@ -85,7 +93,7 @@ function formatNumber(n: number): string {
             :key="c.login"
             :src="c.avatar_url"
             :alt="c.login"
-          />
+          >
         </span>
         {{ contributors.length }} contributors
       </span>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { relaunch } from '@tauri-apps/plugin-process'
+import { computed, onMounted, ref } from 'vue'
 import { settingsStore } from '../stores/settings'
 
 const isRecording = ref(false)
@@ -17,10 +17,11 @@ const portalBindError = computed(() => settingsStore.state.portalBindError)
 const currentShortcut = computed(() => localShortcut.value)
 
 // Platform detection for macOS-friendly key display
-const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+const isMac = navigator.platform.toUpperCase().includes('MAC')
 
 function displayKey(key: string): string {
-  if (!isMac) return key
+  if (!isMac)
+    return key
   switch (key.toLowerCase()) {
     case 'ctrl': return 'Control'
     case 'alt': return 'Option'
@@ -33,7 +34,8 @@ onMounted(async () => {
   localShortcut.value = settingsStore.state.shortcut
   try {
     toggleCommand.value = await invoke<string>('get_toggle_command')
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to get toggle command:', e)
   }
 })
@@ -45,11 +47,16 @@ function parsePortalShortcut(portalStr: string): string[] {
   const matches = cleaned.matchAll(/<(\w+)>/g)
   for (const match of matches) {
     const mod = (match[1] ?? '').toLowerCase()
-    if (mod === 'control') keys.push(displayKey('Ctrl'))
-    else if (mod === 'shift') keys.push('Shift')
-    else if (mod === 'alt') keys.push(displayKey('Alt'))
-    else if (mod === 'super') keys.push(displayKey('Super'))
-    else if (mod) keys.push(mod.charAt(0).toUpperCase() + mod.slice(1))
+    if (mod === 'control')
+      keys.push(displayKey('Ctrl'))
+    else if (mod === 'shift')
+      keys.push('Shift')
+    else if (mod === 'alt')
+      keys.push(displayKey('Alt'))
+    else if (mod === 'super')
+      keys.push(displayKey('Super'))
+    else if (mod)
+      keys.push(mod.charAt(0).toUpperCase() + mod.slice(1))
   }
   const finalKey = cleaned.replace(/<\w+>/g, '').trim()
   if (finalKey) {
@@ -75,8 +82,9 @@ async function resetAndRestart() {
     status.value = 'Resetting...'
     await invoke('reset_shortcut')
     await relaunch()
-  } catch (e) {
-    status.value = 'Failed: ' + e
+  }
+  catch (e) {
+    status.value = `Failed: ${e}`
   }
 }
 
@@ -87,12 +95,14 @@ async function saveShortcut() {
     if (restartNeeded) {
       needsRestart.value = true
       status.value = ''
-    } else {
+    }
+    else {
       status.value = 'Saved'
       setTimeout(() => status.value = '', 2000)
     }
-  } catch (e) {
-    status.value = 'Failed to save: ' + e
+  }
+  catch (e) {
+    status.value = `Failed to save: ${e}`
   }
 }
 
@@ -105,17 +115,19 @@ async function configureWithCapturedKey() {
   try {
     status.value = 'Configuring...'
     const newBinding = await invoke<string | null>('configure_shortcut_with_trigger', {
-      trigger: localShortcut.value
+      trigger: localShortcut.value,
     })
     if (newBinding) {
       settingsStore.setPortalShortcut(newBinding)
       status.value = 'Configured!'
-    } else {
+    }
+    else {
       status.value = 'Cancelled'
     }
     setTimeout(() => status.value = '', 2000)
-  } catch (e) {
-    status.value = 'Failed: ' + e
+  }
+  catch (e) {
+    status.value = `Failed: ${e}`
   }
 }
 
@@ -124,15 +136,20 @@ async function restartApp() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  if (!isRecording.value) return
+  if (!isRecording.value)
+    return
   e.preventDefault()
 
   const keys = []
   // Use platform-aware key names for display
-  if (e.ctrlKey) keys.push(isMac ? 'Control' : 'Ctrl')
-  if (e.shiftKey) keys.push('Shift')
-  if (e.altKey) keys.push(isMac ? 'Option' : 'Alt')
-  if (e.metaKey) keys.push(isMac ? 'Cmd' : 'Super')
+  if (e.ctrlKey)
+    keys.push(isMac ? 'Control' : 'Ctrl')
+  if (e.shiftKey)
+    keys.push('Shift')
+  if (e.altKey)
+    keys.push(isMac ? 'Option' : 'Alt')
+  if (e.metaKey)
+    keys.push(isMac ? 'Cmd' : 'Super')
 
   const key = e.key.toUpperCase()
   if (!['CONTROL', 'SHIFT', 'ALT', 'META'].includes(key)) {
@@ -178,17 +195,19 @@ function stopRecording() {
 
         <!-- Not yet bound: allow configuration -->
         <template v-if="!portalShortcut && !portalBindError">
-          <p class="hint">Press keys below, then click Apply to bind the shortcut.</p>
+          <p class="hint">
+            Press keys below, then click Apply to bind the shortcut.
+          </p>
 
           <div class="field">
             <label>press to record</label>
             <div
               class="shortcut-input"
               :class="{ recording: isRecording }"
+              tabindex="0"
               @click="startRecording"
               @blur="stopRecording"
               @keydown="handleKeyDown"
-              tabindex="0"
             >
               <div class="keys">
                 <span
@@ -198,11 +217,11 @@ function stopRecording() {
                   :class="{ placeholder: key === '...' }"
                 >{{ key }}</span>
               </div>
-              <span v-show="isRecording" class="recording-dot" aria-hidden="true"></span>
+              <span v-show="isRecording" class="recording-dot" aria-hidden="true" />
             </div>
           </div>
 
-          <button @click="configureWithCapturedKey" class="btn btn-secondary" :disabled="isRecording || currentShortcut === 'Press keys...'">
+          <button class="btn btn-secondary" :disabled="isRecording || currentShortcut === 'Press keys...'" @click="configureWithCapturedKey">
             Apply
           </button>
         </template>
@@ -219,8 +238,10 @@ function stopRecording() {
             </div>
           </div>
 
-          <p class="hint">To change, reset the binding first.</p>
-          <button @click="resetAndRestart" class="btn btn-secondary">
+          <p class="hint">
+            To change, reset the binding first.
+          </p>
+          <button class="btn btn-secondary" @click="resetAndRestart">
             Reset & Restart
           </button>
         </template>
@@ -274,7 +295,9 @@ function stopRecording() {
 
           <!-- Sway -->
           <template v-else-if="backendInfo.compositor.toLowerCase().includes('sway')">
-            <p class="hint">Add to <code>~/.config/sway/config</code>:</p>
+            <p class="hint">
+              Add to <code>~/.config/sway/config</code>:
+            </p>
             <div class="command">
               <code>bindsym {{ currentShortcut.toLowerCase() }} exec {{ toggleCommand }}</code>
             </div>
@@ -282,7 +305,9 @@ function stopRecording() {
 
           <!-- Hyprland -->
           <template v-else-if="backendInfo.compositor.toLowerCase().includes('hyprland')">
-            <p class="hint">Add to <code>~/.config/hypr/hyprland.conf</code>:</p>
+            <p class="hint">
+              Add to <code>~/.config/hypr/hyprland.conf</code>:
+            </p>
             <div class="command">
               <code>bind = {{ currentShortcut.replace(/\+/g, ', ') }}, exec, {{ toggleCommand }}</code>
             </div>
@@ -290,7 +315,9 @@ function stopRecording() {
 
           <!-- Generic -->
           <template v-else>
-            <p class="hint">Configure your compositor to run:</p>
+            <p class="hint">
+              Configure your compositor to run:
+            </p>
             <div class="command">
               <code>{{ toggleCommand }}</code>
             </div>
@@ -305,10 +332,10 @@ function stopRecording() {
           <div
             class="shortcut-input"
             :class="{ recording: isRecording }"
+            tabindex="0"
             @click="startRecording"
             @blur="stopRecording"
             @keydown="handleKeyDown"
-            tabindex="0"
           >
             <div class="keys">
               <span
@@ -318,23 +345,27 @@ function stopRecording() {
                 :class="{ placeholder: key === '...' }"
               >{{ key }}</span>
             </div>
-            <span v-show="isRecording" class="recording-dot" aria-hidden="true"></span>
+            <span v-show="isRecording" class="recording-dot" aria-hidden="true" />
           </div>
         </div>
 
-        <button @click="saveShortcut" class="btn btn-secondary" :disabled="isRecording">
+        <button class="btn btn-secondary" :disabled="isRecording" @click="saveShortcut">
           Save
         </button>
 
         <!-- Restart banner -->
         <div v-if="needsRestart" class="restart-banner">
           <span>[*] Restart required</span>
-          <button @click="restartApp" class="btn-link">Restart now</button>
+          <button class="btn-link" @click="restartApp">
+            Restart now
+          </button>
         </div>
       </template>
 
       <!-- Status -->
-      <div class="status" :class="{ visible: status }">{{ status }}</div>
+      <div class="status" :class="{ visible: status }">
+        {{ status }}
+      </div>
     </div>
   </section>
 </template>

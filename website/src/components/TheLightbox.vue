@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import IconChevronLeft from './icons/IconChevronLeft.vue'
 import IconChevronRight from './icons/IconChevronRight.vue'
 import IconClose from './icons/IconClose.vue'
 
 const props = defineProps<{
-  images: { src: string; alt: string }[]
+  images: { src: string, alt: string }[]
   initialIndex?: number
 }>()
 
@@ -33,16 +33,21 @@ function handleBackdropClick(e: MouseEvent) {
 }
 
 function handleKeydown(e: KeyboardEvent) {
-  if (!isOpen.value) return
-  if (e.key === 'Escape') close()
-  if (e.key === 'ArrowLeft') prev()
-  if (e.key === 'ArrowRight') next()
+  if (!isOpen.value)
+    return
+  if (e.key === 'Escape')
+    close()
+  if (e.key === 'ArrowLeft')
+    prev()
+  if (e.key === 'ArrowRight')
+    next()
 }
 
 watch(
   () => props.initialIndex,
   (val) => {
-    if (val !== undefined) currentIndex.value = val
+    if (val !== undefined)
+      currentIndex.value = val
   },
 )
 
@@ -58,7 +63,9 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <div v-if="isOpen" class="lightbox" @click="handleBackdropClick">
-      <button class="close-btn" aria-label="Close" @click="close"><IconClose /></button>
+      <button class="close-btn" aria-label="Close" @click="close">
+        <IconClose />
+      </button>
       <button class="nav-btn prev" aria-label="Previous" @click="prev">
         <IconChevronLeft />
       </button>
@@ -67,7 +74,7 @@ onUnmounted(() => {
         :src="currentImage.src"
         :alt="currentImage.alt"
         class="lightbox-img"
-      />
+      >
       <button class="nav-btn next" aria-label="Next" @click="next">
         <IconChevronRight />
       </button>

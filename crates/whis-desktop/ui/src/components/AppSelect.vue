@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { SelectOption } from '../types'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps<{
   modelValue: string | null
@@ -22,7 +22,8 @@ const selectedLabel = computed(() => {
 })
 
 function toggle() {
-  if (!props.disabled) isOpen.value = !isOpen.value
+  if (!props.disabled)
+    isOpen.value = !isOpen.value
 }
 
 function select(value: string | null) {

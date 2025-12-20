@@ -6,13 +6,13 @@ export interface SelectOption<T = string | null> {
 }
 
 // Transcription providers
-export type Provider =
-  | 'openai'
-  | 'mistral'
-  | 'groq'
-  | 'deepgram'
-  | 'elevenlabs'
-  | 'local-whisper'
+export type Provider
+  = | 'openai'
+    | 'mistral'
+    | 'groq'
+    | 'deepgram'
+    | 'elevenlabs'
+    | 'local-whisper'
 
 // Text post-processing providers
 export type PostProcessor = 'none' | 'openai' | 'mistral' | 'ollama'

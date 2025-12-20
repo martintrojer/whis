@@ -18,8 +18,12 @@ const emit = defineEmits<{
       :aria-pressed="modelValue === 'cloud'"
       @click="emit('update:modelValue', 'cloud')"
     >
-      <div class="card-title">Cloud</div>
-      <div class="card-desc">Fast & accurate</div>
+      <div class="card-title">
+        Cloud
+      </div>
+      <div class="card-desc">
+        Fast & accurate
+      </div>
     </button>
     <button
       class="mode-card"
@@ -27,8 +31,12 @@ const emit = defineEmits<{
       :aria-pressed="modelValue === 'local'"
       @click="emit('update:modelValue', 'local')"
     >
-      <div class="card-title">Local</div>
-      <div class="card-desc">Private & free</div>
+      <div class="card-title">
+        Local
+      </div>
+      <div class="card-desc">
+        Private & free
+      </div>
     </button>
   </div>
 </template>
