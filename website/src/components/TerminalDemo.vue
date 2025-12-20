@@ -87,11 +87,11 @@ async function runDemo2() {
   appendText('$ ')
 
   // Claude
-  await typeText('claude -p "$(whis)"', 50)
+  await typeText('claude "$(whis)"', 50)
   await sleep(600)
 
   // Backspace all, type codex
-  await backspace(19, 30)  // 'claude -p "$(whis)"' = 19 chars
+  await backspace(16, 30)  // 'claude "$(whis)"' = 16 chars
   await typeText('codex "$(whis)"', 60)
   await sleep(500)
 
