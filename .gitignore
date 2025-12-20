@@ -47,3 +47,5 @@ TEST_TRANSCRIPTS.md
 # Draft documents not ready for commit
 rfcs/
 crates/whis-desktop/EXTENSIONS.md
+
+full-cycle.sh
