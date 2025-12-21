@@ -226,11 +226,6 @@ deps-cli: _check-cargo
 build-cli: _check-cargo
     cargo build -p whis
 
-# Install CLI to ~/.cargo/bin
-[group('cli')]
-install-cli: build-cli
-    cargo install --path crates/whis-cli --force
-
 # Lint CLI code
 [group('cli')]
 lint-cli: _check-cargo
@@ -240,6 +235,16 @@ lint-cli: _check-cargo
 [group('cli')]
 fmt-cli: _check-cargo
     cargo fmt -p whis
+
+# Install CLI to ~/.cargo/bin
+[group('cli')]
+install-cli: build-cli
+    cargo install --path crates/whis-cli --force
+
+# Uninstall CLI from ~/.cargo/bin
+[group('cli')]
+uninstall-cli:
+    cargo uninstall whis || echo "CLI not installed"
 
 # ============================================================================
 # DESKTOP
@@ -448,6 +453,16 @@ build-desktop: deps-desktop
     cd crates/whis-desktop/ui && npm run build
     cd crates/whis-desktop && cargo tauri build
 
+# Lint desktop code
+[group('desktop')]
+lint-desktop: _check-npm
+    cd crates/whis-desktop/ui && npm run lint
+
+# Format desktop code
+[group('desktop')]
+fmt-desktop: _check-npm
+    cd crates/whis-desktop/ui && npm run lint:fix
+
 # Install desktop app to user directory
 [group('desktop')]
 [linux]
@@ -500,15 +515,46 @@ install-desktop: build-desktop
     echo "✓ Installed to $DEST/Whis.exe"
     echo "  You can add this to your Start Menu manually"
 
-# Lint desktop code
+# Uninstall desktop app from user directory
 [group('desktop')]
-lint-desktop: _check-npm
-    cd crates/whis-desktop/ui && npm run lint
+[linux]
+uninstall-desktop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    APPIMAGE=~/.local/bin/Whis.AppImage
+    if [ -f "$APPIMAGE" ]; then
+        "$APPIMAGE" --remove-appimage-desktop-integration 2>/dev/null || true
+        rm -f "$APPIMAGE"
+        echo "✓ Removed $APPIMAGE"
+    else
+        echo "Desktop app not installed"
+    fi
 
-# Format desktop code
 [group('desktop')]
-fmt-desktop: _check-npm
-    cd crates/whis-desktop/ui && npm run lint:fix
+[macos]
+uninstall-desktop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    APP=~/Applications/Whis.app
+    if [ -d "$APP" ]; then
+        rm -rf "$APP"
+        echo "✓ Removed $APP"
+    else
+        echo "Desktop app not installed"
+    fi
+
+[group('desktop')]
+[windows]
+uninstall-desktop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    DEST="${LOCALAPPDATA}/Programs/Whis"
+    if [ -d "$DEST" ]; then
+        rm -rf "$DEST"
+        echo "✓ Removed $DEST"
+    else
+        echo "Desktop app not installed"
+    fi
 
 # ============================================================================
 # MOBILE
@@ -770,7 +816,11 @@ deps-mobile: _check-npm _check-tauri _check-android
 # Run mobile app on connected Android device
 [group('mobile')]
 dev-mobile: deps-mobile _check-android-device
-    cd crates/whis-mobile && cargo tauri android dev
+    cd crates/whis-mobile/ui && npm run build
+    # Forward port 5173 from device to host for stable dev server connection
+    adb reverse tcp:5173 tcp:5173
+    # Use --host 127.0.0.1 to force localhost (works via adb reverse tunnel)
+    cd crates/whis-mobile && cargo tauri android dev --host 127.0.0.1
 
 # Build mobile APK
 [group('mobile')]
@@ -787,6 +837,27 @@ lint-mobile: _check-npm
 [group('mobile')]
 fmt-mobile: _check-npm
     cd crates/whis-mobile/ui && npm run lint:fix
+
+# Install mobile app to connected device (uses debug build for signing)
+[group('mobile')]
+install-mobile: deps-mobile _check-android-device
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd crates/whis-mobile/ui && npm run build)
+    (cd crates/whis-mobile && cargo tauri android build --debug)
+    APK=$(find crates/whis-mobile/gen/android/app/build -name "*.apk" -path "*debug*" | head -1)
+    if [ -z "$APK" ]; then
+        echo "❌ No APK found."
+        exit 1
+    fi
+    echo "Installing $APK..."
+    adb install -r "$APK"
+    echo "✓ Installed to device"
+
+# Uninstall mobile app from connected device
+[group('mobile')]
+uninstall-mobile: _check-android-device
+    adb uninstall ink.whis.mobile || echo "App not installed"
 
 # ============================================================================
 # WEBSITE
@@ -848,15 +919,11 @@ deps-all: deps-cli deps-desktop deps-mobile deps-website
 
 # Build all (frontend + Rust)
 [group('all')]
-build-all:
+build-all: deps-all
     cd crates/whis-desktop/ui && npm run build
     cd crates/whis-mobile/ui && npm run build
     cd website && npm run build
     cargo build -p whis -p whis-desktop -p whis-mobile
-
-# Install CLI and desktop app
-[group('all')]
-install-all: install-cli install-desktop
 
 # Lint all code
 [group('all')]
@@ -873,6 +940,14 @@ fmt-all:
     cd crates/whis-desktop/ui && npm run lint:fix
     cd crates/whis-mobile/ui && npm run lint:fix
     cd website && npm run lint:fix
+
+# Install CLI and desktop app
+[group('all')]
+install-all: install-cli install-desktop
+
+# Uninstall CLI and desktop app
+[group('all')]
+uninstall-all: uninstall-cli uninstall-desktop
 
 # Verify all code (format check + lint)
 [group('all')]
@@ -921,15 +996,21 @@ build-release-desktop: deps-desktop
     cd crates/whis-desktop/ui && npm run build
     cd crates/whis-desktop && cargo tauri build
 
+# Build mobile release APK
+[group('release')]
+build-release-mobile: deps-mobile
+    cd crates/whis-mobile/ui && npm run build
+    cd crates/whis-mobile && cargo tauri android build
+
 # Publish whis-core to crates.io
 [group('release')]
 publish-crates-core: _check-cargo
-    cargo publish -p whis-core --no-verify || true
+    cargo publish -p whis-core --no-verify
 
 # Publish whis CLI to crates.io
 [group('release')]
 publish-crates-cli: _check-cargo
-    cargo publish -p whis --no-verify || true
+    cargo publish -p whis --no-verify
 
 # Publish all crates (core first, then CLI)
 [group('release')]
