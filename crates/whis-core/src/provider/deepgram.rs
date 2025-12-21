@@ -75,7 +75,7 @@ impl TranscriptionBackend for DeepgramProvider {
         let response = client
             .post(url)
             .header("Authorization", format!("Token {api_key}"))
-            .header("Content-Type", "audio/mpeg")
+            .header("Content-Type", &request.mime_type)
             .body(request.audio_data)
             .send()
             .context("Failed to send request to Deepgram API")?;
@@ -125,7 +125,7 @@ impl TranscriptionBackend for DeepgramProvider {
         let response = client
             .post(url)
             .header("Authorization", format!("Token {api_key}"))
-            .header("Content-Type", "audio/mpeg")
+            .header("Content-Type", &request.mime_type)
             .body(request.audio_data)
             .send()
             .await

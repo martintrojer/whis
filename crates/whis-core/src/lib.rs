@@ -27,5 +27,7 @@ pub use provider::{
 };
 pub use settings::Settings;
 pub use state::RecordingState;
-pub use transcribe::{ChunkTranscription, parallel_transcribe, transcribe_audio};
+pub use transcribe::{
+    ChunkTranscription, parallel_transcribe, transcribe_audio, transcribe_audio_with_format,
+};
 pub use verbose::set_verbose;

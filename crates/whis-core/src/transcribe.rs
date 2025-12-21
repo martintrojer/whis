@@ -30,18 +30,33 @@ pub struct ChunkTranscription {
 /// * `provider` - The transcription provider to use
 /// * `api_key` - API key for the provider
 /// * `language` - Optional language hint (ISO-639-1 code, e.g., "en", "de")
-/// * `audio_data` - MP3 audio data to transcribe
+/// * `audio_data` - Audio data to transcribe
+/// * `mime_type` - Optional MIME type (defaults to "audio/mpeg" for MP3)
+/// * `filename` - Optional filename (defaults to "audio.mp3")
 pub fn transcribe_audio(
     provider: &TranscriptionProvider,
     api_key: &str,
     language: Option<&str>,
     audio_data: Vec<u8>,
 ) -> Result<String> {
+    transcribe_audio_with_format(provider, api_key, language, audio_data, None, None)
+}
+
+/// Transcribe a single audio file with explicit format (blocking)
+pub fn transcribe_audio_with_format(
+    provider: &TranscriptionProvider,
+    api_key: &str,
+    language: Option<&str>,
+    audio_data: Vec<u8>,
+    mime_type: Option<&str>,
+    filename: Option<&str>,
+) -> Result<String> {
     let provider_impl = registry().get_by_kind(provider)?;
     let request = TranscriptionRequest {
         audio_data,
         language: language.map(String::from),
-        filename: "audio.mp3".to_string(),
+        filename: filename.unwrap_or("audio.mp3").to_string(),
+        mime_type: mime_type.unwrap_or("audio/mpeg").to_string(),
     };
 
     let result = provider_impl.transcribe_sync(api_key, request)?;
@@ -96,6 +111,7 @@ pub async fn parallel_transcribe(
                 audio_data: chunk.data,
                 language: language.as_ref().map(|s| s.to_string()),
                 filename: format!("audio_chunk_{chunk_index}.mp3"),
+                mime_type: "audio/mpeg".to_string(),
             };
 
             let result = provider_impl

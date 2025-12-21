@@ -36,6 +36,7 @@ pub struct TranscriptionRequest {
     pub audio_data: Vec<u8>,
     pub language: Option<String>,
     pub filename: String,
+    pub mime_type: String,
 }
 
 /// Result of a transcription
@@ -69,7 +70,7 @@ pub(crate) fn openai_compatible_transcribe_sync(
             "file",
             reqwest::blocking::multipart::Part::bytes(request.audio_data)
                 .file_name(request.filename)
-                .mime_str("audio/mpeg")?,
+                .mime_str(&request.mime_type)?,
         );
 
     if let Some(lang) = request.language {
@@ -114,7 +115,7 @@ pub(crate) async fn openai_compatible_transcribe_async(
             "file",
             reqwest::multipart::Part::bytes(request.audio_data)
                 .file_name(request.filename)
-                .mime_str("audio/mpeg")?,
+                .mime_str(&request.mime_type)?,
         );
 
     if let Some(lang) = request.language {

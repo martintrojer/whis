@@ -16,9 +16,11 @@ pub const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
 pub const DEFAULT_OLLAMA_MODEL: &str = "qwen2.5:1.5b";
 
 /// Timeout for Ollama to start
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Poll interval when waiting for Ollama to start
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 #[derive(Debug, Deserialize)]

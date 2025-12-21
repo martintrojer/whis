@@ -53,7 +53,7 @@ impl TranscriptionBackend for ElevenLabsProvider {
                 "file",
                 reqwest::blocking::multipart::Part::bytes(request.audio_data)
                     .file_name(request.filename)
-                    .mime_str("audio/mpeg")?,
+                    .mime_str(&request.mime_type)?,
             );
 
         if let Some(lang) = request.language {
@@ -94,7 +94,7 @@ impl TranscriptionBackend for ElevenLabsProvider {
                 "file",
                 reqwest::multipart::Part::bytes(request.audio_data)
                     .file_name(request.filename)
-                    .mime_str("audio/mpeg")?,
+                    .mime_str(&request.mime_type)?,
             );
 
         if let Some(lang) = request.language {
