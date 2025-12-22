@@ -9,8 +9,8 @@ Thanks for your interest in contributing! This guide will help you get started.
 git clone https://github.com/frankdierolf/whis.git
 cd whis
 
-# Show required system dependencies
-just setup-info
+# Install dependencies for all components
+just setup-all
 
 # Build everything
 just build-all
@@ -54,12 +54,12 @@ We use [just](https://github.com/casey/just) for task automation. Run `just` to 
 
 | Command | Description |
 |---------|-------------|
-| `just build` | Build CLI (debug) |
-| `just build-release` | Build CLI (release) |
-| `just desktop-dev` | Run desktop app with hot reload |
-| `just lint` | Run clippy |
-| `just fmt` | Format code |
-| `just ci` | Pre-commit check (format + lint) |
+| `just build-cli` | Build CLI (debug) |
+| `just build-release-cli` | Build CLI (release) |
+| `just dev-desktop` | Run desktop app with hot reload |
+| `just lint-all` | Run clippy on all crates |
+| `just fmt-all` | Format all code |
+| `just check-all` | Pre-commit check (format + lint) |
 | `just clean-all` | Clean all build artifacts |
 
 ### Project Structure
@@ -71,18 +71,15 @@ whis/
 │   ├── whis-cli/       # CLI application (package: whis)
 │   ├── whis-desktop/   # Tauri desktop app + Vue frontend
 │   └── whis-mobile/    # Tauri mobile app (Android)
-├── book/               # mdBook documentation (experimental)
 └── justfile            # Task automation
 ```
-
-For deeper architecture details, see the [book](./book/).
 
 ## Making Changes
 
 1. **Fork and clone** the repository
 2. **Create a branch** for your changes: `git checkout -b feature/my-feature`
 3. **Make your changes**
-4. **Run checks**: `just ci`
+4. **Run checks**: `just check-all`
 5. **Commit** with a clear message
 6. **Open a Pull Request** with a description of your changes
 

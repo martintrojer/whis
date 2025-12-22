@@ -74,7 +74,7 @@ onMounted(() => {
       </nav>
 
       <div class="sidebar-footer">
-        <span class="version-badge">v0.5.9</span>
+        <span class="version-badge">v0.6.0</span>
       </div>
     </aside>
 

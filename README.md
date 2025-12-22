@@ -7,9 +7,9 @@
   <br />
   <a href="https://whis.ink">Website</a>
   ·
-  <a href="./crates/whis-desktop/">Desktop</a>
+  <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-desktop">Desktop</a>
   ·
-  <a href="./crates/whis-mobile/">Mobile</a>
+  <a href="https://github.com/frankdierolf/whis/tree/main/crates/whis-mobile">Mobile</a>
   ·
   <a href="https://github.com/frankdierolf/whis/releases">Releases</a>
 </p>
@@ -18,7 +18,7 @@
 ## Why?
 
 - **Built for AI workflows** — speak your prompt, paste to OpenCode, Claude, Codex, ...
-- **Cloud or local** — OpenAI (~$0.006/min), Groq, Deepgram, or free with local Whisper
+- **Cloud or local** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or free with local Whisper
 - **Simple** — record → transcribe → clipboard
 
 ## Quick Start
@@ -92,8 +92,8 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ## Desktop & Mobile
 
-- **[Desktop](./crates/whis-desktop/)** — GUI with system tray
-- **[Mobile](./crates/whis-mobile/)** — Android app (Alpha)
+- **[Desktop](https://github.com/frankdierolf/whis/tree/main/crates/whis-desktop)** — GUI with system tray
+- **[Mobile](https://github.com/frankdierolf/whis/tree/main/crates/whis-mobile)** — Android app (Alpha)
 
 ## Development
 
@@ -104,7 +104,7 @@ just                # List all commands
 just install-cli    # Build and install CLI
 ```
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for full setup instructions.
+See [CONTRIBUTING.md](https://github.com/frankdierolf/whis/blob/main/CONTRIBUTING.md) for full setup instructions.
 
 ## License
 

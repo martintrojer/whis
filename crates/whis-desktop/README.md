@@ -27,14 +27,17 @@ flatpak install flathub ink.whis.Whis
 
 ## Screenshot
 
-![Presets](https://raw.githubusercontent.com/frankdierolf/whis/main/crates/whis-desktop/screenshots/5-presets.png)
+![Presets](https://raw.githubusercontent.com/frankdierolf/whis/main/crates/whis-desktop/screenshots/7-presets.png)
 
 ## Features
 
 - **System tray** — lives in your taskbar, out of the way
-- **Global shortcut** — Ctrl+Alt+W by default (configurable)
-- **Settings UI** — configure provider, API key, and shortcuts
-- **X11 & Wayland** — works on both
+- **Global shortcut** — Ctrl+Alt+W (Linux), Cmd+Option+W (macOS)
+- **6 providers** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
+- **Post-processing** — clean up grammar and filler words with Ollama
+- **Presets** — save custom post-processing prompts
+- **Settings UI** — provider, language, microphone, shortcuts, and more
+- **Cross-platform** — Linux (X11/Wayland), macOS, Windows
 
 ## Installation
 
@@ -42,7 +45,7 @@ flatpak install flathub ink.whis.Whis
 ```bash
 wget https://github.com/frankdierolf/whis/releases/latest/download/Whis_amd64.AppImage
 chmod +x Whis_amd64.AppImage
-./Whis_amd64.AppImage --install
+./Whis_amd64.AppImage --install   # Wayland: install first, then launch from app menu
 ```
 
 **Debian/Ubuntu**:
@@ -58,8 +61,8 @@ flatpak install flathub ink.whis.Whis
 
 ## Requirements
 
-- API key from [OpenAI](https://platform.openai.com/api-keys) (or Groq, Deepgram, ...) — or use local Whisper (no API key needed)
-- Linux (X11/Wayland)
+- API key from [OpenAI](https://platform.openai.com/api-keys), Mistral, Groq, Deepgram, or ElevenLabs — or use local Whisper (no API key needed)
+- Linux (X11/Wayland), macOS, or Windows
 
 ## Prefer the terminal?
 
