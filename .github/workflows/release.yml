@@ -295,6 +295,90 @@ jobs:
           name: whis-desktop-dmg
           path: target/release/bundle/dmg/*.dmg
 
+  build-desktop-macos-intel:
+    name: "Desktop: macOS Intel"
+    needs: [prepare]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
+      - name: Build desktop app for Intel
+        run: just build-release-desktop-macos-intel
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: whis-desktop-dmg-intel
+          path: target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+
+  build-desktop-linux-arm64:
+    name: "Desktop: Linux ARM64"
+    needs: [prepare]
+    runs-on: ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libasound2-dev
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
+      - name: Build desktop app
+        run: just build-release-desktop
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: whis-desktop-appimage-arm64
+          path: target/release/bundle/appimage/*.AppImage
+
+      - name: Upload deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: whis-desktop-deb-arm64
+          path: target/release/bundle/deb/*.deb
+
+      - name: Upload rpm
+        uses: actions/upload-artifact@v4
+        with:
+          name: whis-desktop-rpm-arm64
+          path: target/release/bundle/rpm/*.rpm
+
   build-mobile-android:
     name: "Mobile: Android (Alpha)"
     needs: [prepare]
@@ -345,8 +429,10 @@ jobs:
       - build-macos
       - build-windows
       - build-desktop-linux
+      - build-desktop-linux-arm64
       - build-desktop-windows
       - build-desktop-macos
+      - build-desktop-macos-intel
       - build-mobile-android
     runs-on: ubuntu-latest
     steps:

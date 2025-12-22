@@ -1069,6 +1069,14 @@ build-release-desktop: deps-desktop
     (cd crates/whis-desktop/ui && npm run build)
     (cd crates/whis-desktop && cargo tauri build)
 
+# Build desktop release for macOS Intel (cross-compile from Apple Silicon)
+[group('release')]
+build-release-desktop-macos-intel: _check-npm _check-tauri
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd crates/whis-desktop/ui && npm ci && npm run build)
+    (cd crates/whis-desktop && cargo tauri build --target x86_64-apple-darwin)
+
 # Build mobile release APK
 [group('release')]
 build-release-mobile: deps-mobile
