@@ -64,8 +64,19 @@ pub fn is_ollama_running(url: &str) -> Result<bool, String> {
     }
 }
 
+/// Check if running inside a Flatpak sandbox
+fn is_flatpak() -> bool {
+    std::path::Path::new("/.flatpak-info").exists()
+}
+
 /// Check if Ollama binary is installed
 pub fn is_ollama_installed() -> bool {
+    // In Flatpak, we can't check for host binaries
+    // Return true and rely on HTTP API check instead
+    if is_flatpak() {
+        return true;
+    }
+
     Command::new("ollama")
         .arg("--version")
         .stdout(Stdio::null())
