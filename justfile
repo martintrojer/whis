@@ -118,6 +118,16 @@ _check-android-device:
         exit 1
     fi
 
+[private]
+_init-android: _check-tauri
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -d "crates/whis-mobile/gen/android" ]; then
+        echo "→ Initializing Android project..."
+        cd crates/whis-mobile && cargo tauri android init
+        echo "✓ Android project initialized"
+    fi
+
 # ============================================================================
 # CLI
 # ============================================================================
@@ -828,7 +838,7 @@ setup-mobile:
 
 # Fetch mobile dependencies
 [group('mobile')]
-deps-mobile: _check-npm _check-tauri _check-android
+deps-mobile: _check-npm _check-tauri _check-android _init-android
     cargo fetch
     cd crates/whis-mobile/ui && npm ci
 
