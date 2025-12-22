@@ -4,6 +4,7 @@
 # Commands follow the pattern: {action}-{component}
 
 set shell := ["bash", "-cu"]
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
 # macOS build environment for whisper.cpp C++17 support
 export MACOSX_DEPLOYMENT_TARGET := "10.15"
@@ -17,17 +18,35 @@ default:
 # PRIVATE DEPENDENCY CHECKS
 # ============================================================================
 
+[unix]
 [private]
 _check-cargo:
-    @cargo --version >/dev/null 2>&1 || { echo "❌ cargo not found. Run: just setup-cli"; exit 1; }
+    @cargo --version >/dev/null 2>&1 || { echo "cargo not found. Run: just setup-cli"; exit 1; }
 
+[windows]
+[private]
+_check-cargo:
+    @cargo --version >$null 2>&1; if (-not $?) { Write-Error "cargo not found. Run: just setup-cli"; exit 1 }
+
+[unix]
 [private]
 _check-npm:
-    @npm --version >/dev/null 2>&1 || { echo "❌ npm not found. Install Node.js: https://nodejs.org"; exit 1; }
+    @npm --version >/dev/null 2>&1 || { echo "npm not found. Install Node.js: https://nodejs.org"; exit 1; }
 
+[windows]
+[private]
+_check-npm:
+    @npm --version >$null 2>&1; if (-not $?) { Write-Error "npm not found. Install Node.js: https://nodejs.org"; exit 1 }
+
+[unix]
 [private]
 _check-tauri:
-    @cargo tauri --version >/dev/null 2>&1 || { echo "❌ tauri-cli not found. Run: just setup-desktop"; exit 1; }
+    @cargo tauri --version >/dev/null 2>&1 || { echo "tauri-cli not found. Run: just setup-desktop"; exit 1; }
+
+[windows]
+[private]
+_check-tauri:
+    @cargo tauri --version >$null 2>&1; if (-not $?) { Write-Error "tauri-cli not found. Run: just setup-desktop"; exit 1 }
 
 [private]
 _check-android:
