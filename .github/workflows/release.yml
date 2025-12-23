@@ -243,14 +243,8 @@ jobs:
         with:
           node-version: '20'
 
-      # Workaround: reqwest 0.12.27 has a Windows compilation bug (TokioIo import missing)
-      # Use cargo-binstall to download prebuilt binary instead of compiling from source
-      # See: https://github.com/seanmonstar/reqwest/issues/2895
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@main
-
       - name: Install Tauri CLI
-        run: cargo binstall tauri-cli --no-confirm
+        run: cargo install tauri-cli
 
       - name: Build desktop app
         run: just build-release-desktop
