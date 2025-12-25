@@ -112,7 +112,7 @@ pub enum Commands {
         #[arg(long)]
         elevenlabs_api_key: Option<String>,
 
-        /// Set the transcription provider (openai, mistral, groq, deepgram, elevenlabs, local-whisper, local-parakeet)
+        /// Set the transcription provider (openai, openai-realtime, mistral, groq, deepgram, elevenlabs, local-whisper, local-parakeet)
         #[arg(long)]
         provider: Option<String>,
 

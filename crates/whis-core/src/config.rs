@@ -7,6 +7,8 @@ use std::fmt;
 pub enum TranscriptionProvider {
     #[default]
     OpenAI,
+    #[serde(rename = "openai-realtime")]
+    OpenAIRealtime,
     Mistral,
     Groq,
     Deepgram,
@@ -22,6 +24,7 @@ impl TranscriptionProvider {
     pub fn as_str(&self) -> &'static str {
         match self {
             TranscriptionProvider::OpenAI => "openai",
+            TranscriptionProvider::OpenAIRealtime => "openai-realtime",
             TranscriptionProvider::Mistral => "mistral",
             TranscriptionProvider::Groq => "groq",
             TranscriptionProvider::Deepgram => "deepgram",
@@ -34,7 +37,9 @@ impl TranscriptionProvider {
     /// Get the environment variable name for this provider's API key (or path/URL for local)
     pub fn api_key_env_var(&self) -> &'static str {
         match self {
-            TranscriptionProvider::OpenAI => "OPENAI_API_KEY",
+            TranscriptionProvider::OpenAI | TranscriptionProvider::OpenAIRealtime => {
+                "OPENAI_API_KEY"
+            }
             TranscriptionProvider::Mistral => "MISTRAL_API_KEY",
             TranscriptionProvider::Groq => "GROQ_API_KEY",
             TranscriptionProvider::Deepgram => "DEEPGRAM_API_KEY",
@@ -48,6 +53,7 @@ impl TranscriptionProvider {
     pub fn all() -> &'static [TranscriptionProvider] {
         &[
             TranscriptionProvider::OpenAI,
+            TranscriptionProvider::OpenAIRealtime,
             TranscriptionProvider::Mistral,
             TranscriptionProvider::Groq,
             TranscriptionProvider::Deepgram,
@@ -61,6 +67,7 @@ impl TranscriptionProvider {
     pub fn display_name(&self) -> &'static str {
         match self {
             TranscriptionProvider::OpenAI => "OpenAI",
+            TranscriptionProvider::OpenAIRealtime => "OpenAI Realtime",
             TranscriptionProvider::Mistral => "Mistral",
             TranscriptionProvider::Groq => "Groq",
             TranscriptionProvider::Deepgram => "Deepgram",
@@ -99,6 +106,9 @@ impl std::str::FromStr for TranscriptionProvider {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "openai" => Ok(TranscriptionProvider::OpenAI),
+            "openai-realtime" | "openairealttime" | "realtime" => {
+                Ok(TranscriptionProvider::OpenAIRealtime)
+            }
             "mistral" => Ok(TranscriptionProvider::Mistral),
             "groq" => Ok(TranscriptionProvider::Groq),
             "deepgram" => Ok(TranscriptionProvider::Deepgram),
@@ -108,7 +118,7 @@ impl std::str::FromStr for TranscriptionProvider {
                 Ok(TranscriptionProvider::LocalParakeet)
             }
             _ => Err(format!(
-                "Unknown provider: {}. Available: openai, mistral, groq, deepgram, elevenlabs, local-whisper, local-parakeet",
+                "Unknown provider: {}. Available: openai, openai-realtime, mistral, groq, deepgram, elevenlabs, local-whisper, local-parakeet",
                 s
             )),
         }

@@ -30,8 +30,10 @@ dirs = "5"
 crossterm = "0.29"
 
 [features]
-default = ["vad", "local-transcription"]
+default = ["vad", "local-transcription", "realtime"]
 # Voice Activity Detection to skip silence during recording
 vad = ["whis-core/vad"]
 # Local transcription via transcribe-rs (Whisper + Parakeet models)
 local-transcription = ["whis-core/local-transcription"]
+# OpenAI Realtime API for streaming transcription
+realtime = ["whis-core/realtime"]

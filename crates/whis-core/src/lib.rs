@@ -34,6 +34,8 @@ pub use preset::{Preset, PresetSource};
 pub use provider::transcribe_raw;
 #[cfg(feature = "local-transcription")]
 pub use provider::transcribe_raw_parakeet;
+#[cfg(feature = "realtime")]
+pub use provider::OpenAIRealtimeProvider;
 pub use provider::{
     DEFAULT_TIMEOUT_SECS, ProgressCallback, TranscriptionBackend, TranscriptionRequest,
     TranscriptionResult, TranscriptionStage, registry,

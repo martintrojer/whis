@@ -111,6 +111,9 @@ impl Default for VadConfig {
     }
 }
 
+/// Sender type for streaming audio samples during recording
+pub type AudioStreamSender = tokio::sync::mpsc::Sender<Vec<f32>>;
+
 pub struct AudioRecorder {
     samples: Arc<Mutex<Vec<f32>>>,
     /// Output sample rate (always 16kHz after resampling)
@@ -127,6 +130,8 @@ pub struct AudioRecorder {
     /// VAD configuration for next recording
     #[cfg(feature = "vad")]
     vad_config: VadConfig,
+    /// Optional sender for streaming samples during recording
+    stream_tx: Option<Arc<AudioStreamSender>>,
 }
 
 // SAFETY: AudioRecorder is always used behind a Mutex in AppState, ensuring
@@ -154,6 +159,7 @@ impl AudioRecorder {
             vad: None,
             #[cfg(feature = "vad")]
             vad_config: VadConfig::default(),
+            stream_tx: None,
         })
     }
 
@@ -280,6 +286,33 @@ impl AudioRecorder {
         Ok(())
     }
 
+    /// Start recording and stream samples to a channel for real-time processing.
+    ///
+    /// Returns a receiver that receives chunks of resampled 16kHz mono f32 samples
+    /// as they are recorded. The receiver should be consumed in a separate async task.
+    ///
+    /// Used by streaming transcription providers like OpenAI Realtime API.
+    pub fn start_recording_streaming(
+        &mut self,
+    ) -> Result<tokio::sync::mpsc::Receiver<Vec<f32>>> {
+        self.start_recording_streaming_with_device(None)
+    }
+
+    /// Start recording with streaming and a specific device name
+    pub fn start_recording_streaming_with_device(
+        &mut self,
+        device_name: Option<&str>,
+    ) -> Result<tokio::sync::mpsc::Receiver<Vec<f32>>> {
+        // Create channel for streaming samples
+        let (tx, rx) = tokio::sync::mpsc::channel(64);
+        self.stream_tx = Some(Arc::new(tx));
+
+        // Start recording normally
+        self.start_recording_with_device(device_name)?;
+
+        Ok(rx)
+    }
+
     #[cfg(feature = "vad")]
     fn build_stream<T>(
         &self,
@@ -294,6 +327,7 @@ impl AudioRecorder {
         f32: cpal::FromSample<T>,
     {
         let err_fn = |err| eprintln!("Error in audio stream: {err}");
+        let stream_tx = self.stream_tx.clone();
 
         let stream = device.build_input_stream(
             config,
@@ -319,6 +353,12 @@ impl AudioRecorder {
                 // Store samples (speech only if VAD enabled)
                 if !final_samples.is_empty() {
                     samples.lock().unwrap().extend_from_slice(&final_samples);
+
+                    // Stream samples if channel is configured (for real-time transcription)
+                    if let Some(ref tx) = stream_tx {
+                        // Use try_send to avoid blocking the audio thread
+                        let _ = tx.try_send(final_samples.clone());
+                    }
                 }
             },
             err_fn,
@@ -341,6 +381,7 @@ impl AudioRecorder {
         f32: cpal::FromSample<T>,
     {
         let err_fn = |err| eprintln!("Error in audio stream: {err}");
+        let stream_tx = self.stream_tx.clone();
 
         let stream = device.build_input_stream(
             config,
@@ -355,6 +396,12 @@ impl AudioRecorder {
                 // Store resampled samples
                 if !resampled.is_empty() {
                     samples.lock().unwrap().extend_from_slice(&resampled);
+
+                    // Stream samples if channel is configured (for real-time transcription)
+                    if let Some(ref tx) = stream_tx {
+                        // Use try_send to avoid blocking the audio thread
+                        let _ = tx.try_send(resampled.clone());
+                    }
                 }
             },
             err_fn,
@@ -369,6 +416,9 @@ impl AudioRecorder {
     pub fn stop_recording(&mut self) -> Result<RecordingData> {
         // Drop the stream first to release the microphone
         self.stream = None;
+
+        // Drop the streaming sender to signal end of audio to receivers
+        self.stream_tx = None;
 
         // Flush the resampler to get any remaining buffered samples
         let flushed_resampler = if let Some(resampler) = &self.resampler {

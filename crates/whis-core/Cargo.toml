@@ -20,6 +20,10 @@ dotenvy.workspace = true
 dirs = "5"
 async-trait = "0.1"
 
+# WebSocket for OpenAI Realtime API
+tokio-tungstenite = { version = "0.26", features = ["native-tls"], optional = true }
+base64 = { version = "0.22", optional = true }
+
 # Embedded MP3 encoder for mobile (no FFmpeg dependency)
 mp3lame-encoder = { version = "0.2", optional = true }
 
@@ -44,7 +48,7 @@ flate2 = { version = "1.0", optional = true }
 tempfile = { version = "3", optional = true }
 
 [features]
-default = ["ffmpeg", "clipboard", "local-transcription", "vad"]
+default = ["ffmpeg", "clipboard", "local-transcription", "vad", "realtime"]
 # Desktop: use FFmpeg process for audio encoding and arboard for clipboard
 ffmpeg = ["hound"]
 clipboard = ["arboard"]
@@ -54,3 +58,5 @@ embedded-encoder = ["mp3lame-encoder"]
 local-transcription = ["whisper-rs", "minimp3", "parakeet-rs", "tar", "flate2", "tempfile"]
 # Voice Activity Detection to skip silence during recording
 vad = ["voice_activity_detector"]
+# OpenAI Realtime API for streaming transcription
+realtime = ["tokio-tungstenite", "base64"]

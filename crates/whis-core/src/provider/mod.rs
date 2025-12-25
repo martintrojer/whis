@@ -52,6 +52,8 @@ mod local_parakeet;
 mod local_whisper;
 mod mistral;
 mod openai;
+#[cfg(feature = "realtime")]
+mod openai_realtime;
 
 /// Default timeout for API requests (5 minutes)
 pub const DEFAULT_TIMEOUT_SECS: u64 = 300;
@@ -69,6 +71,8 @@ pub use local_whisper::LocalWhisperProvider;
 pub use local_whisper::transcribe_raw;
 pub use mistral::MistralProvider;
 pub use openai::OpenAIProvider;
+#[cfg(feature = "realtime")]
+pub use openai_realtime::OpenAIRealtimeProvider;
 
 use crate::config::TranscriptionProvider;
 
@@ -269,6 +273,8 @@ impl ProviderRegistry {
         let mut providers: HashMap<&'static str, Arc<dyn TranscriptionBackend>> = HashMap::new();
 
         providers.insert("openai", Arc::new(OpenAIProvider));
+        #[cfg(feature = "realtime")]
+        providers.insert("openai-realtime", Arc::new(OpenAIRealtimeProvider));
         providers.insert("mistral", Arc::new(MistralProvider));
         providers.insert("groq", Arc::new(GroqProvider));
         providers.insert("deepgram", Arc::new(DeepgramProvider));

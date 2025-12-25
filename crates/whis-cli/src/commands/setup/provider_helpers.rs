@@ -5,6 +5,7 @@ use whis_core::{Settings, TranscriptionProvider};
 /// Cloud providers for transcription (excludes local providers)
 pub const CLOUD_PROVIDERS: &[TranscriptionProvider] = &[
     TranscriptionProvider::OpenAI,
+    TranscriptionProvider::OpenAIRealtime,
     TranscriptionProvider::Mistral,
     TranscriptionProvider::Groq,
     TranscriptionProvider::Deepgram,
@@ -21,6 +22,7 @@ pub const PP_PROVIDERS: &[TranscriptionProvider] = &[
 pub fn provider_description(provider: &TranscriptionProvider) -> &'static str {
     match provider {
         TranscriptionProvider::OpenAI => "High quality, most popular",
+        TranscriptionProvider::OpenAIRealtime => "Streaming, lower latency",
         TranscriptionProvider::Mistral => "European provider, good quality",
         TranscriptionProvider::Groq => "Very fast, good for real-time",
         TranscriptionProvider::Deepgram => "Fast, good for conversations",
@@ -32,7 +34,9 @@ pub fn provider_description(provider: &TranscriptionProvider) -> &'static str {
 /// Get the API key URL for a provider
 pub fn api_key_url(provider: &TranscriptionProvider) -> &'static str {
     match provider {
-        TranscriptionProvider::OpenAI => "https://platform.openai.com/api-keys",
+        TranscriptionProvider::OpenAI | TranscriptionProvider::OpenAIRealtime => {
+            "https://platform.openai.com/api-keys"
+        }
         TranscriptionProvider::Mistral => "https://console.mistral.ai/api-keys",
         TranscriptionProvider::Groq => "https://console.groq.com/keys",
         TranscriptionProvider::Deepgram => "https://console.deepgram.com",

@@ -7,6 +7,8 @@ use whis_core::{
     Settings, TranscriptionProvider, copy_to_clipboard, load_audio_file, load_audio_stdin, ollama,
     parallel_transcribe, post_process, transcribe_audio,
 };
+#[cfg(feature = "realtime")]
+use whis_core::OpenAIRealtimeProvider;
 
 use crate::app;
 
@@ -41,7 +43,9 @@ fn resolve_post_processor(
     // OpenAI and Mistral have built-in post-processing capabilities
     // Other providers need an available OpenAI or Mistral key
     match provider {
-        TranscriptionProvider::OpenAI => PostProcessor::OpenAI,
+        TranscriptionProvider::OpenAI | TranscriptionProvider::OpenAIRealtime => {
+            PostProcessor::OpenAI
+        }
         TranscriptionProvider::Mistral => PostProcessor::Mistral,
         // Cloud providers without built-in LLM: try OpenAI/Mistral keys
         TranscriptionProvider::Groq
@@ -158,6 +162,66 @@ pub fn run(
                 chunks,
                 None,
             ))?,
+        }
+    } else if config.provider == TranscriptionProvider::OpenAIRealtime {
+        // OpenAI Realtime API: streaming transcription during recording
+        #[cfg(feature = "realtime")]
+        {
+            let mut recorder = AudioRecorder::new()?;
+
+            // Start streaming recording (samples sent to channel as recorded)
+            let audio_rx = recorder.start_recording_streaming()?;
+
+            // Spawn transcription task that consumes the audio stream
+            let api_key = config.api_key.clone();
+            let language = config.language.clone();
+            let transcription_handle = runtime.spawn(async move {
+                OpenAIRealtimeProvider::transcribe_stream(&api_key, audio_rx, language).await
+            });
+
+            // Wait for user to stop recording
+            if let Some(dur) = duration {
+                if !quiet {
+                    println!("Recording for {} seconds...", dur.as_secs());
+                    io::stdout().flush()?;
+                }
+                std::thread::sleep(dur);
+            } else {
+                let settings = Settings::load();
+                let hotkey = &settings.shortcut;
+
+                if !quiet {
+                    if std::io::stdin().is_terminal() {
+                        println!("Press Enter or {} to stop", hotkey);
+                    } else {
+                        println!("Press {} to stop", hotkey);
+                    }
+                    print!("Recording...");
+                    io::stdout().flush()?;
+                }
+                app::wait_for_stop(hotkey)?;
+            }
+
+            // Stop recording - this drops the sender and signals end of stream
+            let _ = recorder.stop_recording()?;
+
+            if !quiet {
+                if whis_core::verbose::is_verbose() {
+                    println!("\nTranscribing...");
+                } else {
+                    app::typewriter(" Transcribing...", 25);
+                }
+            }
+
+            // Wait for transcription to complete
+            runtime.block_on(transcription_handle)??
+        }
+        #[cfg(not(feature = "realtime"))]
+        {
+            return Err(anyhow!(
+                "OpenAI Realtime provider requires the 'realtime' feature. \
+                 Use 'openai' provider for file-based transcription."
+            ));
         }
     } else {
         // Microphone recording mode (default)
