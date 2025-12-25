@@ -142,7 +142,13 @@ pub fn wait_for_stop(hotkey_str: &str) -> Result<()> {
 }
 
 /// Print text with a typewriter effect
+/// When delay_ms is 0, prints instantly (no animation)
 pub fn typewriter(text: &str, delay_ms: u64) {
+    if delay_ms == 0 {
+        print!("{}", text);
+        std::io::stdout().flush().ok();
+        return;
+    }
     for c in text.chars() {
         print!("{}", c);
         std::io::stdout().flush().ok();

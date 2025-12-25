@@ -205,15 +205,13 @@ pub fn run(
             // Stop recording - this drops the sender and signals end of stream
             let _ = recorder.stop_recording()?;
 
+            // Show "Transcribing..." with faster animation for Realtime
             if !quiet {
-                if whis_core::verbose::is_verbose() {
-                    println!("\nTranscribing...");
-                } else {
-                    app::typewriter(" Transcribing...", 25);
-                }
+                app::typewriter(" Transcribing...", 10);
             }
 
             // Wait for transcription to complete
+            // (transcription happens during recording, so this is usually instant)
             runtime.block_on(transcription_handle)??
         }
         #[cfg(not(feature = "realtime"))]
@@ -466,7 +464,14 @@ pub fn run(
         if whis_core::verbose::is_verbose() {
             println!("Done");
         } else {
-            app::typewriter(" Done", 20);
+            // Realtime: faster animation (streaming done during recording)
+            // Other providers: normal typewriter effect
+            let delay = if config.provider == TranscriptionProvider::OpenAIRealtime {
+                10
+            } else {
+                20
+            };
+            app::typewriter(" Done", delay);
             println!(); // End the status line
         }
         println!("Copied to clipboard");
