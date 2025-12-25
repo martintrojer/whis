@@ -8,7 +8,7 @@ use tauri::{
 use whis_core::{
     AudioRecorder, DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, RecordingOutput,
     TranscriptionProvider, copy_to_clipboard, ollama, parallel_transcribe, post_process,
-    transcribe_audio,
+    preload_ollama, transcribe_audio,
 };
 
 // Static icons for each state (pre-loaded at compile time)
@@ -205,6 +205,22 @@ fn start_recording_sync(app: &AppHandle, state: &AppState) -> Result<(), String>
 
     *state.recorder.lock().unwrap() = Some(recorder);
     *state.state.lock().unwrap() = RecordingState::Recording;
+
+    // Preload Ollama model in background if using Ollama post-processing
+    // This overlaps model loading with recording to reduce latency
+    {
+        let settings = state.settings.lock().unwrap();
+        if settings.post_processor == PostProcessor::Ollama {
+            let ollama_url = settings
+                .get_ollama_url()
+                .unwrap_or_else(|| ollama::DEFAULT_OLLAMA_URL.to_string());
+            let ollama_model = settings
+                .get_ollama_model()
+                .unwrap_or_else(|| ollama::DEFAULT_OLLAMA_MODEL.to_string());
+
+            preload_ollama(&ollama_url, &ollama_model);
+        }
+    }
 
     // Update tray
     update_tray(app, RecordingState::Recording);

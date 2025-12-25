@@ -9,6 +9,7 @@ import LocalWhisperConfig from '../components/settings/LocalWhisperConfig.vue'
 import ModeCards from '../components/settings/ModeCards.vue'
 import PostProcessingConfig from '../components/settings/PostProcessingConfig.vue'
 import { settingsStore } from '../stores/settings'
+import { isLocalProvider } from '../types'
 
 const helpOpen = ref(false)
 
@@ -20,7 +21,7 @@ const postProcessor = computed(() => settingsStore.state.post_processor)
 
 // Transcription mode: cloud vs local
 const transcriptionMode = ref<TranscriptionMode>(
-  provider.value === 'local-whisper' ? 'local' : 'cloud',
+  isLocalProvider(provider.value) ? 'local' : 'cloud',
 )
 
 // Whisper model validation (for local provider)
@@ -28,10 +29,16 @@ const whisperModelValid = ref(false)
 
 // Watch for provider changes to validate model
 watch(provider, async () => {
-  if (provider.value === 'local-whisper') {
+  if (isLocalProvider(provider.value)) {
     try {
       const { invoke } = await import('@tauri-apps/api/core')
-      whisperModelValid.value = await invoke<boolean>('is_whisper_model_valid')
+      // Validate the model for the current local provider
+      if (provider.value === 'local-whisper') {
+        whisperModelValid.value = await invoke<boolean>('is_whisper_model_valid')
+      }
+      else if (provider.value === 'local-parakeet') {
+        whisperModelValid.value = await invoke<boolean>('is_parakeet_model_valid')
+      }
     }
     catch {
       whisperModelValid.value = false
@@ -69,7 +76,7 @@ function handleModeChange(mode: TranscriptionMode) {
   transcriptionMode.value = mode
   if (mode === 'cloud') {
     // Switch to default cloud provider if currently on local
-    if (provider.value === 'local-whisper') {
+    if (isLocalProvider(provider.value)) {
       settingsStore.setProvider('openai')
       // Auto-sync post-processor to match (if user has cloud post-processor enabled)
       if (postProcessor.value !== 'none' && postProcessor.value !== 'ollama') {
@@ -78,9 +85,9 @@ function handleModeChange(mode: TranscriptionMode) {
     }
   }
   else {
-    // Switch to local-whisper if currently on cloud
-    if (provider.value !== 'local-whisper') {
-      settingsStore.setProvider('local-whisper')
+    // Switch to local-parakeet (recommended) if currently on cloud
+    if (!isLocalProvider(provider.value)) {
+      settingsStore.setProvider('local-parakeet')
     }
   }
 }
@@ -174,10 +181,11 @@ function handleMicrophoneChange(value: string | null) {
           @update:api-key="handleApiKeyUpdate"
         />
 
-        <!-- Local Whisper Config -->
+        <!-- Local Transcription Config (Whisper or Parakeet) -->
         <LocalWhisperConfig
           v-if="transcriptionMode === 'local'"
           :show-config-card="true"
+          :provider="provider"
         />
 
         <!-- Transcription Section -->

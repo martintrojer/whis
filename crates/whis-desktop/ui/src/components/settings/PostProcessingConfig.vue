@@ -58,7 +58,7 @@ function getDefaultPostProcessor(): PostProcessor {
     return 'openai'
   if (provider === 'mistral')
     return 'mistral'
-  if (provider === 'local-whisper')
+  if (provider === 'local-whisper' || provider === 'local-parakeet')
     return 'ollama'
   // Default fallback
   return 'openai'

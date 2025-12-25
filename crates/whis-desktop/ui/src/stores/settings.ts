@@ -19,6 +19,7 @@ const defaultSettings: Settings = {
   language: null,
   api_keys: {},
   whisper_model_path: null,
+  parakeet_model_path: null,
   post_processor: 'none',
   ollama_url: null,
   ollama_model: null,
@@ -51,6 +52,7 @@ const debouncedSave = debounce(async () => {
         language: state.language,
         api_keys: state.api_keys,
         whisper_model_path: state.whisper_model_path,
+        parakeet_model_path: state.parakeet_model_path,
         post_processor: state.post_processor,
         ollama_url: state.ollama_url,
         ollama_model: state.ollama_model,
@@ -72,6 +74,7 @@ watch(
     state.language,
     state.api_keys,
     state.whisper_model_path,
+    state.parakeet_model_path,
     state.post_processor,
     state.ollama_url,
     state.ollama_model,
@@ -95,6 +98,7 @@ async function load() {
     state.language = settings.language
     state.api_keys = settings.api_keys || {}
     state.whisper_model_path = settings.whisper_model_path
+    state.parakeet_model_path = settings.parakeet_model_path
     state.post_processor = settings.post_processor || 'none'
     state.ollama_url = settings.ollama_url
     state.ollama_model = settings.ollama_model
@@ -116,6 +120,7 @@ async function save(): Promise<boolean> {
         language: state.language,
         api_keys: state.api_keys,
         whisper_model_path: state.whisper_model_path,
+        parakeet_model_path: state.parakeet_model_path,
         post_processor: state.post_processor,
         ollama_url: state.ollama_url,
         ollama_model: state.ollama_model,
@@ -170,6 +175,10 @@ function setWhisperModelPath(value: string | null) {
   state.whisper_model_path = value
 }
 
+function setParakeetModelPath(value: string | null) {
+  state.parakeet_model_path = value
+}
+
 function setPostProcessor(value: PostProcessor) {
   state.post_processor = value
 }
@@ -216,6 +225,7 @@ export const settingsStore = {
   setLanguage,
   setApiKey,
   setWhisperModelPath,
+  setParakeetModelPath,
   setPostProcessor,
   setOllamaUrl,
   setOllamaModel,

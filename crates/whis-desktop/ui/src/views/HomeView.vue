@@ -50,6 +50,10 @@ const configSummary = computed(() => {
     mode = 'Local'
     providerName = 'Whisper'
   }
+  else if (provider === 'local-parakeet') {
+    mode = 'Local'
+    providerName = 'Parakeet'
+  }
   else {
     // Capitalize cloud provider names
     providerName = provider.charAt(0).toUpperCase() + provider.slice(1)

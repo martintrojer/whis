@@ -13,6 +13,7 @@ export type Provider
     | 'deepgram'
     | 'elevenlabs'
     | 'local-whisper'
+    | 'local-parakeet'
 
 // Text post-processing providers
 export type PostProcessor = 'none' | 'openai' | 'mistral' | 'ollama'
@@ -24,6 +25,7 @@ export interface Settings {
   language: string | null
   api_keys: Record<string, string>
   whisper_model_path: string | null
+  parakeet_model_path: string | null
   post_processor: PostProcessor
   ollama_url: string | null
   ollama_model: string | null
@@ -59,6 +61,14 @@ export interface WhisperModelInfo {
   path: string
 }
 
+// Parakeet model info from backend
+export interface ParakeetModelInfo {
+  name: string
+  description: string
+  installed: boolean
+  path: string
+}
+
 // Preset info from backend
 export interface PresetInfo {
   name: string
@@ -87,5 +97,5 @@ export interface CloudProviderInfo {
 
 // Helper to check if provider is local
 export function isLocalProvider(provider: Provider): boolean {
-  return provider === 'local-whisper'
+  return provider === 'local-whisper' || provider === 'local-parakeet'
 }

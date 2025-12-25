@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import type { SelectOption } from '../../types'
+import type { Provider, SelectOption } from '../../types'
 import { computed, ref } from 'vue'
 import { useWhisperModel } from '../../composables/useWhisperModel'
 import { settingsStore } from '../../stores/settings'
 import AppSelect from '../AppSelect.vue'
 
-defineProps<{
+const props = defineProps<{
   showConfigCard?: boolean
+  provider?: Provider
 }>()
 
 const showPathInput = ref(false)
@@ -26,6 +27,22 @@ const {
 } = useWhisperModel()
 
 const whisperModelPath = settingsStore.state.whisper_model_path
+const parakeetModelPath = settingsStore.state.parakeet_model_path
+
+// Local engine options
+const localEngineOptions: SelectOption[] = [
+  { value: 'local-parakeet', label: 'Parakeet V3 (Recommended)' },
+  { value: 'local-whisper', label: 'Whisper' },
+]
+
+// Whether we're using Parakeet
+const isParakeet = computed(() => props.provider === 'local-parakeet')
+
+function handleEngineChange(value: string | null) {
+  if (value === 'local-whisper' || value === 'local-parakeet') {
+    settingsStore.setProvider(value as Provider)
+  }
+}
 
 // Convert available models to SelectOption format
 const modelOptions = computed<SelectOption[]>(() =>
@@ -44,45 +61,77 @@ function handleModelChange(value: string | null) {
 <template>
   <!-- Model Configuration Card -->
   <div v-if="showConfigCard" class="config-card">
-    <!-- Model selection -->
-    <div class="model-selector">
+    <!-- Engine selector -->
+    <div class="engine-selector">
       <AppSelect
-        :model-value="selectedModel"
-        :options="modelOptions"
-        :disabled="downloadingModel"
-        @update:model-value="handleModelChange"
+        :model-value="provider ?? 'local-parakeet'"
+        :options="localEngineOptions"
+        @update:model-value="handleEngineChange"
       />
-      <button
-        class="btn-primary"
-        :disabled="downloadingModel || isSelectedModelInstalled"
-        @click="downloadModel"
-      >
-        {{ downloadingModel ? `${downloadProgressPercent}%` : isSelectedModelInstalled ? 'Installed' : 'Download' }}
-      </button>
     </div>
-    <p v-if="downloadProgress" class="hint">
-      {{ downloadProgressText }}
-    </p>
-    <p v-else-if="downloadStatus" class="hint" :class="{ error: downloadStatus.includes('failed'), success: downloadStatus.includes('successfully') }">
-      {{ downloadStatus }}
-    </p>
-    <p v-else class="hint">
-      {{ selectedModel === 'small' ? 'Recommended for most users' : selectedModelSize }}
-    </p>
-    <button class="path-toggle" type="button" @click="showPathInput = !showPathInput">
-      <span class="toggle-indicator">{{ showPathInput ? 'v' : '>' }}</span>
-      <span>or specify path</span>
-    </button>
-    <input
-      v-show="showPathInput"
-      type="text"
-      class="text-input"
-      :value="whisperModelPath || ''"
-      placeholder="/path/to/model.bin"
-      spellcheck="false"
-      aria-label="Custom Whisper model path"
-      @input="settingsStore.setWhisperModelPath(($event.target as HTMLInputElement).value || null)"
-    >
+
+    <!-- Parakeet config (simplified - just shows status) -->
+    <template v-if="isParakeet">
+      <p class="hint">
+        Parakeet V3: Fast and accurate local transcription (~478 MB)
+      </p>
+      <button class="path-toggle" type="button" @click="showPathInput = !showPathInput">
+        <span class="toggle-indicator">{{ showPathInput ? 'v' : '>' }}</span>
+        <span>specify model path</span>
+      </button>
+      <input
+        v-show="showPathInput"
+        type="text"
+        class="text-input"
+        :value="parakeetModelPath || ''"
+        placeholder="/path/to/parakeet-model-dir"
+        spellcheck="false"
+        aria-label="Custom Parakeet model path"
+        @input="settingsStore.setParakeetModelPath(($event.target as HTMLInputElement).value || null)"
+      >
+    </template>
+
+    <!-- Whisper config (existing model selection) -->
+    <template v-else>
+      <div class="model-selector">
+        <AppSelect
+          :model-value="selectedModel"
+          :options="modelOptions"
+          :disabled="downloadingModel"
+          @update:model-value="handleModelChange"
+        />
+        <button
+          class="btn-primary"
+          :disabled="downloadingModel || isSelectedModelInstalled"
+          @click="downloadModel"
+        >
+          {{ downloadingModel ? `${downloadProgressPercent}%` : isSelectedModelInstalled ? 'Installed' : 'Download' }}
+        </button>
+      </div>
+      <p v-if="downloadProgress" class="hint">
+        {{ downloadProgressText }}
+      </p>
+      <p v-else-if="downloadStatus" class="hint" :class="{ error: downloadStatus.includes('failed'), success: downloadStatus.includes('successfully') }">
+        {{ downloadStatus }}
+      </p>
+      <p v-else class="hint">
+        {{ selectedModel === 'small' ? 'Recommended for most users' : selectedModelSize }}
+      </p>
+      <button class="path-toggle" type="button" @click="showPathInput = !showPathInput">
+        <span class="toggle-indicator">{{ showPathInput ? 'v' : '>' }}</span>
+        <span>or specify path</span>
+      </button>
+      <input
+        v-show="showPathInput"
+        type="text"
+        class="text-input"
+        :value="whisperModelPath || ''"
+        placeholder="/path/to/model.bin"
+        spellcheck="false"
+        aria-label="Custom Whisper model path"
+        @input="settingsStore.setWhisperModelPath(($event.target as HTMLInputElement).value || null)"
+      >
+    </template>
   </div>
 </template>
 
@@ -92,6 +141,10 @@ function handleModelChange(value: string | null) {
   flex-direction: column;
   gap: 8px;
   margin-bottom: 20px;
+}
+
+.engine-selector {
+  margin-bottom: 4px;
 }
 
 .model-selector {
