@@ -864,19 +864,19 @@ deps-mobile: _check-npm _check-tauri _check-android _init-android
 dev-mobile: deps-mobile _check-android-device
     #!/usr/bin/env bash
     set -euo pipefail
-    cd crates/whis-mobile/ui && npm run build
+    (cd crates/whis-mobile/ui && npm run build)
     # Forward port 5173 from device to host for stable dev server connection
     adb reverse tcp:5173 tcp:5173
     # Use --host 127.0.0.1 to force localhost (works via adb reverse tunnel)
-    cd crates/whis-mobile && cargo tauri android dev --host 127.0.0.1
+    (cd crates/whis-mobile && cargo tauri android dev --host 127.0.0.1)
 
 # Build mobile APK
 [group('mobile')]
 build-mobile: deps-mobile
     #!/usr/bin/env bash
     set -euo pipefail
-    cd crates/whis-mobile/ui && npm run build
-    cd crates/whis-mobile && cargo tauri android build
+    (cd crates/whis-mobile/ui && npm run build)
+    (cd crates/whis-mobile && cargo tauri android build)
 
 # Lint mobile code
 [group('mobile')]

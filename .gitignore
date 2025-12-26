@@ -30,8 +30,8 @@ dist/
 vite.config.js
 vite.config.d.ts
 
-# Tauri generated
-gen/
+# Tauri generated (only ignore desktop, mobile gen is tracked for Android customizations)
+crates/whis-desktop/gen/
 
 # Flatpak build artifacts
 .flatpak-builder/
