@@ -21,7 +21,7 @@ dirs = "6"
 async-trait = "0.1"
 
 # WebSocket for OpenAI Realtime API
-tokio-tungstenite = { version = "0.28", features = ["native-tls"], optional = true }
+tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"], optional = true }
 base64 = { version = "0.22", optional = true }
 
 # Embedded MP3 encoder for mobile (no FFmpeg dependency)

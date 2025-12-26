@@ -198,6 +198,7 @@ pub fn list_models() {
 
 /// Available Parakeet models with their download URLs
 /// Format: (name, url, description, size_mb)
+#[cfg(feature = "local-transcription")]
 pub const PARAKEET_MODELS: &[(&str, &str, &str, u64)] = &[
     (
         "parakeet-v3",
@@ -217,6 +218,7 @@ pub const PARAKEET_MODELS: &[(&str, &str, &str, u64)] = &[
 pub const DEFAULT_PARAKEET_MODEL: &str = "parakeet-v3";
 
 /// Directory name after extraction (tar.gz contains this directory)
+#[cfg(feature = "local-transcription")]
 fn parakeet_dirname(model_name: &str) -> String {
     match model_name {
         "parakeet-v3" => "parakeet-tdt-0.6b-v3-int8".to_string(),
@@ -226,6 +228,7 @@ fn parakeet_dirname(model_name: &str) -> String {
 }
 
 /// Get the default path for a Parakeet model directory
+#[cfg(feature = "local-transcription")]
 pub fn default_parakeet_model_path(model_name: &str) -> PathBuf {
     default_models_dir()
         .join("parakeet")
@@ -233,6 +236,7 @@ pub fn default_parakeet_model_path(model_name: &str) -> PathBuf {
 }
 
 /// Check if a Parakeet model directory exists and is valid
+#[cfg(feature = "local-transcription")]
 pub fn parakeet_model_exists(path: &Path) -> bool {
     // Parakeet models are directories containing ONNX files
     if !path.exists() || !path.is_dir() {
@@ -248,6 +252,7 @@ pub fn parakeet_model_exists(path: &Path) -> bool {
 }
 
 /// Get the URL for a Parakeet model by name
+#[cfg(feature = "local-transcription")]
 pub fn get_parakeet_model_url(name: &str) -> Option<&'static str> {
     PARAKEET_MODELS
         .iter()
@@ -256,6 +261,7 @@ pub fn get_parakeet_model_url(name: &str) -> Option<&'static str> {
 }
 
 /// Download a Parakeet model with progress indication
+#[cfg(feature = "local-transcription")]
 pub fn download_parakeet_model(model_name: &str, dest: &Path) -> Result<()> {
     download_parakeet_model_with_progress(model_name, dest, |downloaded, total| {
         let progress = if total > 0 {
@@ -274,6 +280,7 @@ pub fn download_parakeet_model(model_name: &str, dest: &Path) -> Result<()> {
 }
 
 /// Download a Parakeet model with a custom progress callback
+#[cfg(feature = "local-transcription")]
 pub fn download_parakeet_model_with_progress<F>(
     model_name: &str,
     dest: &Path,
@@ -385,6 +392,7 @@ where
 }
 
 /// Ensure a Parakeet model is available, downloading if needed
+#[cfg(feature = "local-transcription")]
 pub fn ensure_parakeet_model(model_name: &str) -> Result<PathBuf> {
     let path = default_parakeet_model_path(model_name);
 
@@ -397,6 +405,7 @@ pub fn ensure_parakeet_model(model_name: &str) -> Result<PathBuf> {
 }
 
 /// List available Parakeet models with descriptions
+#[cfg(feature = "local-transcription")]
 pub fn list_parakeet_models() {
     eprintln!("Available Parakeet models:");
     eprintln!();

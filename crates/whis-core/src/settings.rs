@@ -144,10 +144,13 @@ impl Settings {
                 .get_whisper_model_path()
                 .map(|p| std::path::Path::new(&p).exists())
                 .unwrap_or(false),
+            #[cfg(feature = "local-transcription")]
             TranscriptionProvider::LocalParakeet => self
                 .get_parakeet_model_path()
                 .map(|p| crate::model::parakeet_model_exists(std::path::Path::new(&p)))
                 .unwrap_or(false),
+            #[cfg(not(feature = "local-transcription"))]
+            TranscriptionProvider::LocalParakeet => false,
             _ => self.has_api_key(),
         }
     }

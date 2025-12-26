@@ -245,12 +245,15 @@ impl Preset {
 
     /// Save this preset as a user preset file
     pub fn save(&self) -> Result<(), String> {
-        // Ensure presets directory exists
-        let dir = Self::presets_dir();
-        fs::create_dir_all(&dir)
+        self.save_to(&Self::presets_dir())
+    }
+
+    /// Save this preset to a specific presets directory
+    pub fn save_to(&self, presets_dir: &std::path::Path) -> Result<(), String> {
+        fs::create_dir_all(presets_dir)
             .map_err(|e| format!("Failed to create presets directory: {}", e))?;
 
-        let path = dir.join(format!("{}.json", self.name));
+        let path = presets_dir.join(format!("{}.json", self.name));
         let content = serde_json::to_string_pretty(self)
             .map_err(|e| format!("Failed to serialize: {}", e))?;
 
@@ -261,11 +264,16 @@ impl Preset {
 
     /// Delete a user preset by name
     pub fn delete(name: &str) -> Result<(), String> {
+        Self::delete_from(name, &Self::presets_dir())
+    }
+
+    /// Delete a user preset from a specific presets directory
+    pub fn delete_from(name: &str, presets_dir: &std::path::Path) -> Result<(), String> {
         if Self::is_builtin(name) {
             return Err(format!("Cannot delete built-in preset '{}'", name));
         }
 
-        let path = Self::presets_dir().join(format!("{}.json", name));
+        let path = presets_dir.join(format!("{}.json", name));
 
         if !path.exists() {
             return Err(format!("Preset '{}' not found", name));
@@ -274,5 +282,96 @@ impl Preset {
         fs::remove_file(&path).map_err(|e| format!("Failed to delete preset: {}", e))?;
 
         Ok(())
+    }
+
+    /// Load a user preset from a specific presets directory
+    pub fn load_user_from(name: &str, presets_dir: &std::path::Path) -> Option<Preset> {
+        let path = presets_dir.join(format!("{}.json", name));
+        match fs::read_to_string(&path) {
+            Ok(content) => match serde_json::from_str::<Preset>(&content) {
+                Ok(mut preset) => {
+                    preset.name = name.to_string();
+                    Some(preset)
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Warning: Failed to parse preset '{}': {}",
+                        path.display(),
+                        e
+                    );
+                    None
+                }
+            },
+            Err(e) if e.kind() == io::ErrorKind::NotFound => None,
+            Err(e) => {
+                eprintln!("Warning: Failed to read preset '{}': {}", path.display(), e);
+                None
+            }
+        }
+    }
+
+    /// Load a preset by name from a specific presets directory
+    pub fn load_from(name: &str, presets_dir: &std::path::Path) -> Result<(Preset, PresetSource), String> {
+        // Check user presets first
+        if let Some(preset) = Self::load_user_from(name, presets_dir) {
+            return Ok((preset, PresetSource::User));
+        }
+
+        // Fall back to built-in
+        if let Some(preset) = Self::builtins().into_iter().find(|p| p.name == name) {
+            return Ok((preset, PresetSource::BuiltIn));
+        }
+
+        Err(format!(
+            "Unknown preset '{}'\nAvailable: {}",
+            name,
+            Self::all_names().join(", ")
+        ))
+    }
+
+    /// List all presets from a specific presets directory
+    pub fn list_all_from(presets_dir: &std::path::Path) -> Vec<(Preset, PresetSource)> {
+        let mut presets: std::collections::HashMap<String, (Preset, PresetSource)> =
+            std::collections::HashMap::new();
+
+        // Add built-ins first
+        for preset in Self::builtins() {
+            presets.insert(preset.name.clone(), (preset, PresetSource::BuiltIn));
+        }
+
+        // Add user presets (overwrite built-ins if same name)
+        if let Ok(entries) = fs::read_dir(presets_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().is_some_and(|ext| ext == "json") {
+                    let Some(filename_stem) = path.file_stem().and_then(|s| s.to_str()) else {
+                        continue;
+                    };
+                    match fs::read_to_string(&path) {
+                        Ok(content) => match serde_json::from_str::<Preset>(&content) {
+                            Ok(mut preset) => {
+                                preset.name = filename_stem.to_string();
+                                presets.insert(preset.name.clone(), (preset, PresetSource::User));
+                            }
+                            Err(e) => {
+                                eprintln!(
+                                    "Warning: Failed to parse preset '{}': {}",
+                                    path.display(),
+                                    e
+                                );
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("Warning: Failed to read preset '{}': {}", path.display(), e);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sort by name
+        let mut result: Vec<_> = presets.into_values().collect();
+        result.sort_by(|a, b| a.0.name.cmp(&b.0.name));
+        result
     }
 }
