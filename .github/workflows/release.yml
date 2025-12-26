@@ -90,8 +90,16 @@ jobs:
       - name: Install cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
+      - name: Download ONNX Runtime for ARM64
+        run: |
+          mkdir -p /tmp/onnxruntime-aarch64
+          curl -L https://github.com/microsoft/onnxruntime/releases/download/v1.22.0/onnxruntime-linux-aarch64-1.22.0.tgz | tar xz -C /tmp/onnxruntime-aarch64 --strip-components=1
+
       - name: Build with cross
         run: just build-release-cli-cross aarch64-unknown-linux-gnu
+        env:
+          ORT_STRATEGY: system
+          ORT_LIB_LOCATION: /tmp/onnxruntime-aarch64/lib
 
       - name: Package
         run: |
