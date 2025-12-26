@@ -3,9 +3,9 @@
 use whis_core::{Settings, TranscriptionProvider};
 
 /// Cloud providers for transcription (excludes local providers)
+/// Note: OpenAIRealtime is excluded - it's selected via method choice in cloud.rs
 pub const CLOUD_PROVIDERS: &[TranscriptionProvider] = &[
     TranscriptionProvider::OpenAI,
-    TranscriptionProvider::OpenAIRealtime,
     TranscriptionProvider::Mistral,
     TranscriptionProvider::Groq,
     TranscriptionProvider::Deepgram,

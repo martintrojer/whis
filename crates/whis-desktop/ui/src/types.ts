@@ -8,12 +8,16 @@ export interface SelectOption<T = string | null> {
 // Transcription providers
 export type Provider
   = | 'openai'
+    | 'openai-realtime'
     | 'mistral'
     | 'groq'
     | 'deepgram'
     | 'elevenlabs'
     | 'local-whisper'
     | 'local-parakeet'
+
+// OpenAI transcription method
+export type TranscriptionMethod = 'standard' | 'streaming'
 
 // Text post-processing providers
 export type PostProcessor = 'none' | 'openai' | 'mistral' | 'ollama'

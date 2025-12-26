@@ -485,8 +485,8 @@ dev-desktop: deps-desktop
 build-desktop: deps-desktop
     #!/usr/bin/env bash
     set -euo pipefail
-    cd crates/whis-desktop/ui && npm run build
-    cd crates/whis-desktop && cargo tauri build
+    (cd crates/whis-desktop/ui && npm run build)
+    (cd crates/whis-desktop && cargo tauri build)
 
 # Lint desktop code
 [group('desktop')]
@@ -568,6 +568,11 @@ uninstall-desktop:
     else
         echo "Desktop app not installed"
     fi
+    # Clean up desktop integration files (AppImage removal may not reliably do this)
+    rm -f ~/.local/share/applications/ink.whis.Whis.desktop
+    rm -f ~/.local/share/icons/hicolor/*/apps/ink.whis.Whis.png
+    rm -f ~/.local/share/icons/hicolor/*/apps/ink.whis.Whis.svg
+    update-desktop-database ~/.local/share/applications 2>/dev/null || true
 
 [group('desktop')]
 [macos]

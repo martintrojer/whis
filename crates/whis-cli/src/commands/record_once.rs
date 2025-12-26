@@ -198,6 +198,10 @@ pub fn run(
                     }
                     print!("Recording...");
                     io::stdout().flush()?;
+                    // In verbose mode, add newline so streaming logs appear cleanly
+                    if whis_core::verbose::is_verbose() {
+                        println!();
+                    }
                 }
                 app::wait_for_stop(hotkey)?;
             }
@@ -207,7 +211,11 @@ pub fn run(
 
             // Show "Transcribing..." with faster animation for Realtime
             if !quiet {
-                app::typewriter(" Transcribing...", 10);
+                if whis_core::verbose::is_verbose() {
+                    println!("Transcribing...");
+                } else {
+                    app::typewriter(" Transcribing...", 10);
+                }
             }
 
             // Wait for transcription to complete

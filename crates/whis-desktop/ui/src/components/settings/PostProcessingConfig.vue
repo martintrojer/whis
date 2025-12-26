@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { settingsStore } from '../../stores/settings'
 import AppSelect from '../AppSelect.vue'
 import OllamaConfig from './OllamaConfig.vue'
+import ToggleSwitch from './ToggleSwitch.vue'
 
 const router = useRouter()
 
@@ -95,15 +96,10 @@ function goToPresets() {
         <label>Post-processing</label>
         <span class="toggle-desc">Clean up with AI</span>
       </div>
-      <button
-        class="toggle-switch"
-        :class="{ active: postProcessingEnabled }"
-        :aria-pressed="postProcessingEnabled"
-        type="button"
-        @click="togglePostProcessing(!postProcessingEnabled)"
-      >
-        <span class="toggle-knob" />
-      </button>
+      <ToggleSwitch
+        :model-value="postProcessingEnabled"
+        @update:model-value="togglePostProcessing"
+      />
     </div>
 
     <!-- Config (shown when post-processing ON) -->
@@ -197,42 +193,6 @@ function goToPresets() {
   font-size: 11px;
   color: var(--text-weak);
   opacity: 0.7;
-}
-
-/* Toggle Switch */
-.toggle-switch {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  background: var(--border);
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  padding: 0;
-}
-
-.toggle-switch:hover {
-  background: var(--text-weak);
-}
-
-.toggle-switch.active {
-  background: var(--accent);
-}
-
-.toggle-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background: var(--bg);
-  border-radius: 50%;
-  transition: transform 0.15s ease;
-}
-
-.toggle-switch.active .toggle-knob {
-  transform: translateX(16px);
 }
 
 /* Config section */

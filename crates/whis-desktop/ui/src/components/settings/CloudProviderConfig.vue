@@ -29,16 +29,22 @@ const cloudProviders: CloudProviderInfo[] = [
   { value: 'elevenlabs', label: 'ElevenLabs', desc: 'Best for voice projects', keyUrl: 'https://elevenlabs.io/app/settings/api-keys', placeholder: '...' },
 ]
 
+// Normalize provider for API key lookup (openai-realtime uses openai key)
+const normalizedProvider = computed(() =>
+  props.provider === 'openai-realtime' ? 'openai' : props.provider,
+)
+
 const currentProvider = computed((): CloudProviderInfo => {
-  const found = cloudProviders.find(p => p.value === props.provider)
+  const found = cloudProviders.find(p => p.value === normalizedProvider.value)
   return found ?? cloudProviders[0]!
 })
 
-const currentApiKey = computed(() => props.apiKeys[props.provider] || '')
+const currentApiKey = computed(() => props.apiKeys[normalizedProvider.value] || '')
 
 function handleApiKeyChange(event: Event) {
   const value = (event.target as HTMLInputElement).value
-  emit('update:apiKey', props.provider, value)
+  // Always store under normalized provider name (openai for both methods)
+  emit('update:apiKey', normalizedProvider.value, value)
 }
 </script>
 
@@ -47,7 +53,7 @@ function handleApiKeyChange(event: Event) {
   <div v-if="showConfigCard" class="config-card">
     <div class="api-key-input">
       <input
-        :type="keyMasked[provider] ? 'password' : 'text'"
+        :type="keyMasked[normalizedProvider] ? 'password' : 'text'"
         :value="currentApiKey"
         :placeholder="currentProvider.placeholder"
         spellcheck="false"
@@ -58,11 +64,11 @@ function handleApiKeyChange(event: Event) {
       <button
         class="toggle-btn"
         type="button"
-        :aria-pressed="!keyMasked[provider]"
+        :aria-pressed="!keyMasked[normalizedProvider]"
         aria-label="Toggle API key visibility"
-        @click="keyMasked[provider] = !keyMasked[provider]"
+        @click="keyMasked[normalizedProvider] = !keyMasked[normalizedProvider]"
       >
-        {{ keyMasked[provider] ? 'show' : 'hide' }}
+        {{ keyMasked[normalizedProvider] ? 'show' : 'hide' }}
       </button>
     </div>
     <p class="hint">

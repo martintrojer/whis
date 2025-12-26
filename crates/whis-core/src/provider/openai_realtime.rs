@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tokio::time::{timeout, Duration};
 use tokio_tungstenite::{
     connect_async,
@@ -177,10 +177,41 @@ impl OpenAIRealtimeProvider {
             }
         }
 
-        // Stream audio chunks
+        // Set up channels for concurrent read/write
+        // error_tx: read task sends error if server sends one during streaming
+        // done_tx: main task signals read task when streaming is complete
+        let (error_tx, mut error_rx) = oneshot::channel::<anyhow::Error>();
+        let (done_tx, done_rx) = oneshot::channel::<()>();
+
+        // Spawn read task to monitor WebSocket during streaming
+        // This task handles server messages (errors, pings) while we stream audio
+        let read_handle = tokio::spawn(async move {
+            read_websocket_events(read, error_tx, done_rx).await
+        });
+
+        // Stream audio chunks while monitoring for errors
         let mut chunk_count = 0;
         let mut total_samples = 0;
-        while let Some(samples) = audio_rx.recv().await {
+
+        loop {
+            // Check if read task detected an error
+            match error_rx.try_recv() {
+                Ok(err) => return Err(err),
+                Err(oneshot::error::TryRecvError::Closed) => {
+                    // Read task ended unexpectedly
+                    return Err(anyhow!("WebSocket read task ended unexpectedly"));
+                }
+                Err(oneshot::error::TryRecvError::Empty) => {
+                    // No error yet, continue
+                }
+            }
+
+            // Receive next audio chunk
+            let Some(samples) = audio_rx.recv().await else {
+                // Audio channel closed - streaming complete
+                break;
+            };
+
             if samples.is_empty() {
                 continue;
             }
@@ -206,10 +237,6 @@ impl OpenAIRealtimeProvider {
             // Encode as base64
             let audio_base64 = BASE64.encode(&bytes);
 
-            if crate::verbose::is_verbose() && chunk_count == 1 {
-                eprintln!("[realtime] First audio chunk: {} samples, {} bytes after resample", samples.len(), bytes.len());
-            }
-
             // Send audio append message
             let append = AudioBufferAppend {
                 msg_type: "input_audio_buffer.append",
@@ -223,7 +250,10 @@ impl OpenAIRealtimeProvider {
         }
 
         if crate::verbose::is_verbose() {
-            eprintln!("[realtime] Sent {} chunks, {} total samples", chunk_count, total_samples);
+            eprintln!(
+                "[realtime] Sent {} chunks, {} total samples",
+                chunk_count, total_samples
+            );
         }
 
         // Audio channel closed - commit the buffer
@@ -245,59 +275,128 @@ impl OpenAIRealtimeProvider {
             .await
             .context("Failed to create response")?;
 
-        // Wait for transcription result with timeout
-        let mut final_transcript = String::new();
+        // Signal read task that streaming is complete, switch to transcript mode
+        let _ = done_tx.send(());
 
-        let wait_result = timeout(Duration::from_secs(30), async {
-            loop {
-                match read.next().await {
-                    Some(Ok(Message::Text(text))) => {
-                        let event: RealtimeEvent = serde_json::from_str(&text)
-                            .context("Failed to parse server event")?;
-
-                        // Verbose logging for debugging
-                        if crate::verbose::is_verbose() {
-                            eprintln!("[realtime] event: {}", event.event_type);
-                        }
-
-                        match event.event_type.as_str() {
-                            "error" => {
-                                if let Some(err) = event.error {
-                                    return Err(anyhow!("OpenAI Realtime error: {}", err.message));
-                                }
-                            }
-                            "conversation.item.input_audio_transcription.completed" => {
-                                if let Some(transcript) = event.transcript {
-                                    final_transcript = transcript.clone();
-                                    return Ok(transcript);
-                                }
-                            }
-                            // Ignore other events (response.created, response.done, etc.)
-                            _ => {}
-                        }
-                    }
-                    Some(Ok(Message::Close(_))) => {
-                        return Ok(final_transcript.clone());
-                    }
-                    Some(Err(e)) => {
-                        return Err(anyhow!("WebSocket error: {e}"));
-                    }
-                    None => {
-                        return Ok(final_transcript.clone());
-                    }
-                    _ => {} // Ignore Ping, Pong, Binary
-                }
-            }
-        })
-        .await;
+        // Wait for read task to return transcript with timeout
+        let transcript_result = timeout(Duration::from_secs(30), read_handle).await;
 
         // Close WebSocket gracefully
         let _ = write.send(Message::Close(None)).await;
 
-        match wait_result {
-            Ok(Ok(transcript)) => Ok(transcript),
-            Ok(Err(e)) => Err(e),
+        match transcript_result {
+            Ok(Ok(Ok(transcript))) => Ok(transcript),
+            Ok(Ok(Err(e))) => Err(e),
+            Ok(Err(e)) => Err(anyhow!("Read task panicked: {e}")),
             Err(_) => Err(anyhow!("Timeout waiting for transcription result")),
+        }
+    }
+}
+
+/// Handle WebSocket read events concurrently with audio streaming
+///
+/// During streaming phase: monitors for errors, handles ping/pong
+/// After done signal: waits for final transcript
+async fn read_websocket_events<S>(
+    mut read: S,
+    error_tx: oneshot::Sender<anyhow::Error>,
+    mut done_rx: oneshot::Receiver<()>,
+) -> Result<String>
+where
+    S: futures_util::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>>
+        + Unpin,
+{
+    // Phase 1: Monitor for errors during audio streaming
+    loop {
+        tokio::select! {
+            // Check if main task signaled streaming is complete
+            _ = &mut done_rx => {
+                // Streaming complete, transition to transcript waiting phase
+                break;
+            }
+
+            // Process WebSocket messages
+            msg = read.next() => {
+                match msg {
+                    Some(Ok(Message::Text(text))) => {
+                        let event: RealtimeEvent = match serde_json::from_str(&text) {
+                            Ok(e) => e,
+                            Err(e) => {
+                                let err = anyhow!("Failed to parse server event: {e}");
+                                let _ = error_tx.send(anyhow::Error::msg(err.to_string()));
+                                return Err(err);
+                            }
+                        };
+
+                        if event.event_type == "error" {
+                            if let Some(e) = event.error {
+                                let err = anyhow!("OpenAI Realtime error: {}", e.message);
+                                let _ = error_tx.send(anyhow::Error::msg(err.to_string()));
+                                return Err(err);
+                            }
+                        }
+                        // Ignore other events during streaming (status updates, etc.)
+                    }
+                    Some(Ok(Message::Close(frame))) => {
+                        let err = anyhow!("WebSocket closed during streaming: {:?}", frame);
+                        let _ = error_tx.send(anyhow::Error::msg(err.to_string()));
+                        return Err(err);
+                    }
+                    Some(Ok(Message::Ping(_))) | Some(Ok(Message::Pong(_))) => {
+                        // Tungstenite handles ping/pong automatically
+                    }
+                    Some(Err(e)) => {
+                        let err = anyhow!("WebSocket error during streaming: {e}");
+                        let _ = error_tx.send(anyhow::Error::msg(err.to_string()));
+                        return Err(err);
+                    }
+                    None => {
+                        let err = anyhow!("WebSocket closed unexpectedly during streaming");
+                        let _ = error_tx.send(anyhow::Error::msg(err.to_string()));
+                        return Err(err);
+                    }
+                    _ => {} // Ignore Binary
+                }
+            }
+        }
+    }
+
+    // Phase 2: Wait for final transcript after streaming completes
+    loop {
+        match read.next().await {
+            Some(Ok(Message::Text(text))) => {
+                let event: RealtimeEvent =
+                    serde_json::from_str(&text).context("Failed to parse server event")?;
+
+                if crate::verbose::is_verbose() {
+                    eprintln!("[realtime] event: {}", event.event_type);
+                }
+
+                match event.event_type.as_str() {
+                    "error" => {
+                        if let Some(err) = event.error {
+                            return Err(anyhow!("OpenAI Realtime error: {}", err.message));
+                        }
+                    }
+                    "conversation.item.input_audio_transcription.completed" => {
+                        if let Some(transcript) = event.transcript {
+                            return Ok(transcript);
+                        }
+                    }
+                    // Ignore other events (response.created, response.done, etc.)
+                    _ => {}
+                }
+            }
+            Some(Ok(Message::Close(_))) => {
+                return Err(anyhow!("WebSocket closed before receiving transcription"));
+            }
+            Some(Err(e)) => {
+                return Err(anyhow!("WebSocket error: {e}"));
+            }
+            None => {
+                return Err(anyhow!("Connection ended before receiving transcription"));
+            }
+            _ => {} // Ignore Ping, Pong, Binary
         }
     }
 }

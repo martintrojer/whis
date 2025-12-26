@@ -106,8 +106,14 @@ impl Settings {
     /// 1. api_keys map
     /// 2. Environment variable
     pub fn get_api_key_for(&self, provider: &TranscriptionProvider) -> Option<String> {
+        // Normalize provider for API key lookup (OpenAI Realtime uses same key as OpenAI)
+        let key_provider = match provider {
+            TranscriptionProvider::OpenAIRealtime => "openai",
+            _ => provider.as_str(),
+        };
+
         // Check api_keys map first
-        if let Some(key) = self.api_keys.get(provider.as_str())
+        if let Some(key) = self.api_keys.get(key_provider)
             && !key.is_empty()
         {
             return Some(key.clone());

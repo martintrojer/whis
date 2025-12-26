@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TranscriptionMode } from '../components/settings/ModeCards.vue'
-import type { PostProcessor, Provider, SelectOption } from '../types'
+import type { PostProcessor, Provider, SelectOption, TranscriptionMethod } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 import { computed, onMounted, ref, watch } from 'vue'
 import AppSelect from '../components/AppSelect.vue'
@@ -8,6 +8,7 @@ import CloudProviderConfig from '../components/settings/CloudProviderConfig.vue'
 import LocalWhisperConfig from '../components/settings/LocalWhisperConfig.vue'
 import ModeCards from '../components/settings/ModeCards.vue'
 import PostProcessingConfig from '../components/settings/PostProcessingConfig.vue'
+import ToggleSwitch from '../components/settings/ToggleSwitch.vue'
 import { settingsStore } from '../stores/settings'
 import { isLocalProvider } from '../types'
 
@@ -23,6 +24,26 @@ const postProcessor = computed(() => settingsStore.state.post_processor)
 const transcriptionMode = ref<TranscriptionMode>(
   isLocalProvider(provider.value) ? 'local' : 'cloud',
 )
+
+// OpenAI transcription method: standard vs streaming
+const openaiMethod = computed<TranscriptionMethod>(() => {
+  if (provider.value === 'openai-realtime')
+    return 'streaming'
+  return 'standard'
+})
+
+// Whether to show OpenAI method toggle (cloud mode + OpenAI selected)
+const showOpenAIMethod = computed(() =>
+  transcriptionMode.value === 'cloud'
+  && (provider.value === 'openai' || provider.value === 'openai-realtime'),
+)
+
+// Normalize provider for dropdown display (openai-realtime shows as openai)
+const displayProvider = computed(() => {
+  if (provider.value === 'openai-realtime')
+    return 'openai'
+  return provider.value
+})
 
 // Whisper model validation (for local provider)
 const whisperModelValid = ref(false)
@@ -54,6 +75,14 @@ const cloudProviderOptions: SelectOption[] = [
   { value: 'deepgram', label: 'Deepgram' },
   { value: 'elevenlabs', label: 'ElevenLabs' },
 ]
+
+// Filter providers based on streaming mode (only OpenAI supports streaming)
+const filteredProviderOptions = computed(() => {
+  if (openaiMethod.value === 'streaming') {
+    return cloudProviderOptions.filter(p => p.value === 'openai')
+  }
+  return cloudProviderOptions
+})
 
 // Common language codes for the dropdown
 const languageOptions: SelectOption[] = [
@@ -95,6 +124,13 @@ function handleModeChange(mode: TranscriptionMode) {
 function handleProviderUpdate(value: string | null) {
   if (!value)
     return
+
+  // If OpenAI selected and we're already in streaming mode, keep streaming
+  if (value === 'openai' && openaiMethod.value === 'streaming') {
+    // Already on openai-realtime, no change needed
+    return
+  }
+
   const newProvider = value as Provider
   settingsStore.setProvider(newProvider)
   // Auto-sync post-processor to match provider (if user has cloud post-processor enabled)
@@ -106,6 +142,19 @@ function handleProviderUpdate(value: string | null) {
 
 function handleApiKeyUpdate(providerKey: string, value: string) {
   settingsStore.setApiKey(providerKey, value)
+}
+
+function handleOpenAIMethodChange(method: TranscriptionMethod) {
+  const newProvider = method === 'standard' ? 'openai' : 'openai-realtime'
+  settingsStore.setProvider(newProvider)
+  // Keep post-processor as openai (both methods use same API)
+  if (postProcessor.value !== 'none' && postProcessor.value !== 'ollama') {
+    settingsStore.setPostProcessor('openai')
+  }
+}
+
+function handleStreamingToggle(enabled: boolean) {
+  handleOpenAIMethodChange(enabled ? 'streaming' : 'standard')
 }
 
 function handleLanguageChange(value: string | null) {
@@ -198,9 +247,18 @@ function handleMicrophoneChange(value: string | null) {
           <div v-if="transcriptionMode === 'cloud'" class="field-row">
             <label>Service</label>
             <AppSelect
-              :model-value="provider"
-              :options="cloudProviderOptions"
+              :model-value="displayProvider"
+              :options="filteredProviderOptions"
               @update:model-value="handleProviderUpdate"
+            />
+          </div>
+
+          <!-- Streaming toggle (only for OpenAI in cloud mode) -->
+          <div v-if="showOpenAIMethod" class="field-row">
+            <label>Streaming</label>
+            <ToggleSwitch
+              :model-value="openaiMethod === 'streaming'"
+              @update:model-value="handleStreamingToggle"
             />
           </div>
 
@@ -249,6 +307,11 @@ function handleMicrophoneChange(value: string | null) {
           <div class="help-section">
             <h3>transcription service</h3>
             <p>Choose which cloud service performs speech-to-text. Each has different pricing, speed, and language support. Requires a separate API account.</p>
+          </div>
+
+          <div class="help-section">
+            <h3>streaming</h3>
+            <p>OpenAI-only feature. When enabled, audio streams to OpenAI during recording for lower latency. When disabled, audio is uploaded after recording (works with files too).</p>
           </div>
 
           <div class="help-section">

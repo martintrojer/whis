@@ -203,7 +203,7 @@ pub fn prompt_and_validate_key(provider: &TranscriptionProvider) -> Result<Strin
 
     // Validate key format
     match provider {
-        TranscriptionProvider::OpenAI => {
+        TranscriptionProvider::OpenAI | TranscriptionProvider::OpenAIRealtime => {
             if !api_key.starts_with("sk-") {
                 return Err(anyhow!("Invalid OpenAI key format. Keys start with 'sk-'"));
             }
@@ -322,14 +322,40 @@ pub fn setup_transcription_cloud() -> Result<()> {
     println!();
 
     // Default to current provider if configured, otherwise first
+    // Treat OpenAIRealtime same as OpenAI for default selection
     let default = CLOUD_PROVIDERS
         .iter()
-        .position(|p| *p == settings.provider)
+        .position(|p| {
+            *p == settings.provider
+                || (*p == TranscriptionProvider::OpenAI
+                    && settings.provider == TranscriptionProvider::OpenAIRealtime)
+        })
         .map(|i| i + 1)
         .unwrap_or(1);
 
     let choice = prompt_choice_with_default("Select", 1, CLOUD_PROVIDERS.len(), Some(default))?;
-    let provider = CLOUD_PROVIDERS[choice - 1].clone();
+    let mut provider = CLOUD_PROVIDERS[choice - 1].clone();
+
+    // If OpenAI selected, ask for method (Standard vs Streaming)
+    if provider == TranscriptionProvider::OpenAI {
+        println!();
+        println!("Method:");
+        println!("  1. Standard  - Batch processing");
+        println!("  2. Streaming - Real-time, lower latency");
+        println!();
+
+        // Default to current method if already using OpenAI variant
+        let current_method = if settings.provider == TranscriptionProvider::OpenAIRealtime {
+            2
+        } else {
+            1
+        };
+
+        let method_choice = prompt_choice_with_default("Select", 1, 2, Some(current_method))?;
+        if method_choice == 2 {
+            provider = TranscriptionProvider::OpenAIRealtime;
+        }
+    }
 
     // Check if API key already exists for this provider
     if let Some(existing_key) = settings.get_api_key_for(&provider) {
