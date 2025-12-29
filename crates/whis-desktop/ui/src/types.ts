@@ -69,6 +69,7 @@ export interface WhisperModelInfo {
 export interface ParakeetModelInfo {
   name: string
   description: string
+  size: string
   installed: boolean
   path: string
 }

@@ -181,6 +181,11 @@ fn start_recording_sync(app: &AppHandle, state: &AppState) -> Result<(), String>
                         "Whisper model path not configured. Add it in Settings.".to_string()
                     })?
                 }
+                TranscriptionProvider::LocalParakeet => {
+                    settings.get_parakeet_model_path().ok_or_else(|| {
+                        "Parakeet model not configured. Add it in Settings.".to_string()
+                    })?
+                }
                 _ => settings.get_api_key().ok_or_else(|| {
                     format!("No {} API key configured. Add it in Settings.", provider)
                 })?,

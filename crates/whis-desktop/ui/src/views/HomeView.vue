@@ -79,7 +79,7 @@ const canRecord = computed(() => {
 
 // Check configuration readiness (proactive check for better UX)
 async function checkConfigReadiness() {
-  const { provider, post_processor, api_keys, whisper_model_path, ollama_url } = settingsStore.state
+  const { provider, post_processor, api_keys, whisper_model_path, parakeet_model_path, ollama_url } = settingsStore.state
 
   configReadiness.value.checking = true
   try {
@@ -93,6 +93,7 @@ async function checkConfigReadiness() {
       postProcessor: post_processor,
       apiKeys: api_keys,
       whisperModelPath: whisper_model_path,
+      parakeetModelPath: parakeet_model_path,
       ollamaUrl: ollama_url,
     })
     configReadiness.value = {
@@ -116,6 +117,7 @@ watch(
     settingsStore.state.post_processor,
     settingsStore.state.api_keys,
     settingsStore.state.whisper_model_path,
+    settingsStore.state.parakeet_model_path,
     settingsStore.state.ollama_url,
   ],
   () => checkConfigReadiness(),

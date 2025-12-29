@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Provider, SelectOption } from '../../types'
 import { computed, ref } from 'vue'
+import { useParakeetModel } from '../../composables/useParakeetModel'
 import { useWhisperModel } from '../../composables/useWhisperModel'
 import { settingsStore } from '../../stores/settings'
 import AppSelect from '../AppSelect.vue'
@@ -12,19 +13,34 @@ const props = defineProps<{
 
 const showPathInput = ref(false)
 
+// Whisper model composable
 const {
-  availableModels,
-  selectedModel,
-  downloadingModel,
-  downloadStatus,
-  downloadProgress,
-  downloadProgressPercent,
-  downloadProgressText,
-  isSelectedModelInstalled,
-  selectedModelSize,
-  downloadModel,
+  availableModels: whisperModels,
+  selectedModel: selectedWhisperModel,
+  downloadingModel: downloadingWhisper,
+  downloadStatus: whisperDownloadStatus,
+  downloadProgress: whisperDownloadProgress,
+  downloadProgressPercent: whisperProgressPercent,
+  downloadProgressText: whisperProgressText,
+  isSelectedModelInstalled: isWhisperInstalled,
+  selectedModelSize: whisperModelSize,
+  downloadModel: downloadWhisperModel,
   MODEL_SIZES,
 } = useWhisperModel()
+
+// Parakeet model composable
+const {
+  availableModels: parakeetModels,
+  selectedModel: selectedParakeetModel,
+  downloadingModel: downloadingParakeet,
+  downloadStatus: parakeetDownloadStatus,
+  downloadProgress: parakeetDownloadProgress,
+  downloadProgressPercent: parakeetProgressPercent,
+  downloadProgressText: parakeetProgressText,
+  isSelectedModelInstalled: isParakeetInstalled,
+  selectedModelSize: parakeetModelSize,
+  downloadModel: downloadParakeetModel,
+} = useParakeetModel()
 
 const whisperModelPath = settingsStore.state.whisper_model_path
 const parakeetModelPath = settingsStore.state.parakeet_model_path
@@ -44,17 +60,30 @@ function handleEngineChange(value: string | null) {
   }
 }
 
-// Convert available models to SelectOption format
-const modelOptions = computed<SelectOption[]>(() =>
-  availableModels.value.map(model => ({
+// Whisper model options
+const whisperModelOptions = computed<SelectOption[]>(() =>
+  whisperModels.value.map(model => ({
     value: model.name,
     label: `${model.name}${model.installed ? ' [installed]' : ''} - ${MODEL_SIZES[model.name]}`,
   })),
 )
 
-function handleModelChange(value: string | null) {
+// Parakeet model options
+const parakeetModelOptions = computed<SelectOption[]>(() =>
+  parakeetModels.value.map(model => ({
+    value: model.name,
+    label: `${model.name}${model.installed ? ' [installed]' : ''} - ${model.size}`,
+  })),
+)
+
+function handleWhisperModelChange(value: string | null) {
   if (value)
-    selectedModel.value = value
+    selectedWhisperModel.value = value
+}
+
+function handleParakeetModelChange(value: string | null) {
+  if (value)
+    selectedParakeetModel.value = value
 }
 </script>
 
@@ -70,14 +99,35 @@ function handleModelChange(value: string | null) {
       />
     </div>
 
-    <!-- Parakeet config (simplified - just shows status) -->
+    <!-- Parakeet config with download -->
     <template v-if="isParakeet">
-      <p class="hint">
-        Parakeet V3: Fast and accurate local transcription (~478 MB)
+      <div class="model-selector">
+        <AppSelect
+          :model-value="selectedParakeetModel"
+          :options="parakeetModelOptions"
+          :disabled="downloadingParakeet"
+          @update:model-value="handleParakeetModelChange"
+        />
+        <button
+          class="btn-primary"
+          :disabled="downloadingParakeet || isParakeetInstalled"
+          @click="downloadParakeetModel"
+        >
+          {{ downloadingParakeet ? `${parakeetProgressPercent}%` : isParakeetInstalled ? 'Installed' : 'Download' }}
+        </button>
+      </div>
+      <p v-if="parakeetDownloadProgress" class="hint">
+        {{ parakeetProgressText }}
+      </p>
+      <p v-else-if="parakeetDownloadStatus" class="hint" :class="{ error: parakeetDownloadStatus.includes('failed'), success: parakeetDownloadStatus.includes('successfully') }">
+        {{ parakeetDownloadStatus }}
+      </p>
+      <p v-else class="hint">
+        {{ parakeetModelSize || 'Fast and accurate local transcription' }}
       </p>
       <button class="path-toggle" type="button" @click="showPathInput = !showPathInput">
         <span class="toggle-indicator">{{ showPathInput ? 'v' : '>' }}</span>
-        <span>specify model path</span>
+        <span>or specify path</span>
       </button>
       <input
         v-show="showPathInput"
@@ -91,31 +141,31 @@ function handleModelChange(value: string | null) {
       >
     </template>
 
-    <!-- Whisper config (existing model selection) -->
+    <!-- Whisper config with download -->
     <template v-else>
       <div class="model-selector">
         <AppSelect
-          :model-value="selectedModel"
-          :options="modelOptions"
-          :disabled="downloadingModel"
-          @update:model-value="handleModelChange"
+          :model-value="selectedWhisperModel"
+          :options="whisperModelOptions"
+          :disabled="downloadingWhisper"
+          @update:model-value="handleWhisperModelChange"
         />
         <button
           class="btn-primary"
-          :disabled="downloadingModel || isSelectedModelInstalled"
-          @click="downloadModel"
+          :disabled="downloadingWhisper || isWhisperInstalled"
+          @click="downloadWhisperModel"
         >
-          {{ downloadingModel ? `${downloadProgressPercent}%` : isSelectedModelInstalled ? 'Installed' : 'Download' }}
+          {{ downloadingWhisper ? `${whisperProgressPercent}%` : isWhisperInstalled ? 'Installed' : 'Download' }}
         </button>
       </div>
-      <p v-if="downloadProgress" class="hint">
-        {{ downloadProgressText }}
+      <p v-if="whisperDownloadProgress" class="hint">
+        {{ whisperProgressText }}
       </p>
-      <p v-else-if="downloadStatus" class="hint" :class="{ error: downloadStatus.includes('failed'), success: downloadStatus.includes('successfully') }">
-        {{ downloadStatus }}
+      <p v-else-if="whisperDownloadStatus" class="hint" :class="{ error: whisperDownloadStatus.includes('failed'), success: whisperDownloadStatus.includes('successfully') }">
+        {{ whisperDownloadStatus }}
       </p>
       <p v-else class="hint">
-        {{ selectedModel === 'small' ? 'Recommended for most users' : selectedModelSize }}
+        {{ selectedWhisperModel === 'small' ? 'Recommended for most users' : whisperModelSize }}
       </p>
       <button class="path-toggle" type="button" @click="showPathInput = !showPathInput">
         <span class="toggle-indicator">{{ showPathInput ? 'v' : '>' }}</span>

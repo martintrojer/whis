@@ -104,7 +104,8 @@ pub async fn save_settings(
             current.provider != settings.provider
                 || current.api_keys != settings.api_keys
                 || current.language != settings.language
-                || current.whisper_model_path != settings.whisper_model_path,
+                || current.whisper_model_path != settings.whisper_model_path
+                || current.parakeet_model_path != settings.parakeet_model_path,
             current.shortcut != settings.shortcut,
         )
     };
@@ -329,6 +330,75 @@ pub struct WhisperModelInfo {
     pub description: String,
     pub installed: bool,
     pub path: String,
+}
+
+/// Parakeet model info for frontend
+#[derive(serde::Serialize)]
+pub struct ParakeetModelInfo {
+    pub name: String,
+    pub description: String,
+    pub size: String,
+    pub installed: bool,
+    pub path: String,
+}
+
+/// Get available Parakeet models for download
+#[tauri::command]
+pub fn get_parakeet_models() -> Vec<ParakeetModelInfo> {
+    whis_core::model::PARAKEET_MODELS
+        .iter()
+        .map(|(name, _, desc, size)| {
+            let path = whis_core::model::default_parakeet_model_path(name);
+            ParakeetModelInfo {
+                name: name.to_string(),
+                description: desc.to_string(),
+                size: format!("~{} MB", size),
+                installed: whis_core::model::parakeet_model_exists(&path),
+                path: path.to_string_lossy().to_string(),
+            }
+        })
+        .collect()
+}
+
+/// Check if configured Parakeet model is valid
+#[tauri::command]
+pub fn is_parakeet_model_valid(state: State<'_, AppState>) -> bool {
+    state
+        .settings
+        .lock()
+        .unwrap()
+        .get_parakeet_model_path()
+        .map(|p| whis_core::model::parakeet_model_exists(std::path::Path::new(&p)))
+        .unwrap_or(false)
+}
+
+/// Download a Parakeet model with progress events
+#[tauri::command]
+pub async fn download_parakeet_model(app: AppHandle, model_name: String) -> Result<String, String> {
+    use tauri::Emitter;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let dest = whis_core::model::default_parakeet_model_path(&model_name);
+
+        // Skip if already exists
+        if whis_core::model::parakeet_model_exists(&dest) {
+            return Ok(dest.to_string_lossy().to_string());
+        }
+
+        // Download with progress
+        whis_core::model::download_parakeet_model_with_progress(
+            &model_name,
+            &dest,
+            |downloaded, total| {
+                let _ = app.emit("download-progress", DownloadProgress { downloaded, total });
+            },
+        )
+        .map_err(|e| e.to_string())?;
+
+        Ok(dest.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Preset info for the UI
@@ -731,6 +801,7 @@ pub async fn check_config_readiness(
     post_processor: String,
     api_keys: std::collections::HashMap<String, String>,
     whisper_model_path: Option<String>,
+    parakeet_model_path: Option<String>,
     ollama_url: Option<String>,
 ) -> ConfigReadiness {
     // Check transcription readiness
@@ -739,6 +810,15 @@ pub async fn check_config_readiness(
             Some(path) if std::path::Path::new(path).exists() => (true, None),
             Some(_) => (false, Some("Whisper model file not found".to_string())),
             None => (false, Some("Whisper model path not configured".to_string())),
+        },
+        "local-parakeet" => match &parakeet_model_path {
+            Some(path)
+                if whis_core::model::parakeet_model_exists(std::path::Path::new(path)) =>
+            {
+                (true, None)
+            }
+            Some(_) => (false, Some("Parakeet model not found or invalid".to_string())),
+            None => (false, Some("Parakeet model not configured".to_string())),
         },
         provider => {
             // Normalize provider for API key lookup (openai-realtime uses openai key)
