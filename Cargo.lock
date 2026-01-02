@@ -7164,7 +7164,7 @@ checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
 
 [[package]]
 name = "whis"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "clap",
@@ -7183,7 +7183,7 @@ dependencies = [
 
 [[package]]
 name = "whis-core"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "arboard",
@@ -7212,7 +7212,7 @@ dependencies = [
 
 [[package]]
 name = "whis-desktop"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "ashpd",
@@ -7234,7 +7234,7 @@ dependencies = [
 
 [[package]]
 name = "whis-mobile"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "serde",
@@ -7250,7 +7250,7 @@ dependencies = [
 
 [[package]]
 name = "whis-screenshots"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "clap",
