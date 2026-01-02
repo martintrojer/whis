@@ -121,7 +121,7 @@ jobs:
             BODY="${{ github.event.release.body }}"
             if [ -n "$BODY" ]; then
               # Get first non-empty line, strip markdown
-              DESCRIPTION=$(echo "$BODY" | grep -v '^$' | head -1 | sed 's/[#*]//g' | sed 's/^ *//')
+              DESCRIPTION=$(echo "$BODY" | grep -v '^$' | head -1 | sed 's/[#*]/ /g' | sed 's/^ *//' | sed 's/  \+/ /g')
             fi
           fi
 
