@@ -52,7 +52,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      appVersion: '0.6.2',
+      appVersion: '0.6.4',
     },
   },
 
