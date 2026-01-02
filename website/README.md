@@ -21,7 +21,7 @@ Landing page for Whis. Demo, features, downloads for CLI and Desktop, and FAQ.
 
 ## Screenshot
 
-![Screenshot](./screenshot.png)
+![Screenshot](./public/screenshot.png)
 
 ## Development
 
@@ -40,7 +40,12 @@ See `.github/workflows/website.yml`.
 ## Structure
 
 ```
-views/       # Page components (Home, CLI, Desktop, Mobile, FAQ)
-components/  # Reusable UI components
-assets/      # CSS tokens and base styles
+app/
+  pages/       # Page routes (index, cli, desktop, mobile, faq, downloads)
+  components/  # Reusable UI components
+  composables/ # Composable functions (GitHub API, platform detection)
+  assets/      # CSS tokens and base styles
+  layouts/     # Layout components (default)
+public/        # Static files
+.nuxt/         # Auto-generated (temporary)
 ```

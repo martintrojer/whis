@@ -1,5 +1,4 @@
 import { computed, onMounted, ref } from 'vue'
-import { version as fallbackVersion } from '../../package.json'
 
 export interface ReleaseAsset {
   name: string
@@ -12,6 +11,9 @@ export interface Release {
 }
 
 export function useGitHubRelease() {
+  const config = useRuntimeConfig()
+  const fallbackVersion = config.public.appVersion as string
+
   const release = ref<Release | null>(null)
   const loading = ref(true)
 

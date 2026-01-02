@@ -1,6 +1,24 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import TerminalDemo from '@/components/TerminalDemo.vue'
+
+useHead({
+  title: 'whis | Voice-to-text for Linux',
+  link: [
+    { rel: 'canonical', href: 'https://whis.ink' },
+  ],
+  meta: [
+    { name: 'description', content: 'Voice-to-text for Linux. CLI for terminal workflows, Desktop app for system-wide access.' },
+    { property: 'og:title', content: 'whis | Voice-to-text for Linux' },
+    { property: 'og:description', content: 'Voice-to-text for Linux. CLI for terminal workflows, Desktop app for system-wide access.' },
+    { property: 'og:url', content: 'https://whis.ink' },
+    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'whis | Voice-to-text for Linux' },
+    { name: 'twitter:description', content: 'Voice-to-text for Linux. CLI for terminal workflows, Desktop app for system-wide access.' },
+    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
+  ],
+})
 
 const stars = ref<number | null>(null)
 const downloads = ref<number | null>(null)
@@ -67,10 +85,10 @@ function formatNumber(n: number): string {
     </div>
 
     <div class="cta-group">
-      <RouterLink to="/downloads" class="cta-primary">
+      <NuxtLink to="/downloads" class="cta-primary">
         <span class="cta-icon">↓</span>
         Download
-      </RouterLink>
+      </NuxtLink>
       <a
         href="https://github.com/frankdierolf/whis"
         target="_blank"
@@ -101,7 +119,9 @@ function formatNumber(n: number): string {
       <span class="stat">MIT license</span>
     </div>
 
-    <TerminalDemo />
+    <ClientOnly>
+      <TerminalDemo />
+    </ClientOnly>
   </div>
 </template>
 

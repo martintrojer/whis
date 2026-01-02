@@ -1,8 +1,24 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import Lightbox from '@/components/Lightbox.vue'
-import ViewHeader from '@/components/ViewHeader.vue'
-import { useGitHubRelease } from '@/composables/useGitHubRelease'
+
+useHead({
+  title: 'Mobile App - whis',
+  link: [
+    { rel: 'canonical', href: 'https://whis.ink/mobile' },
+  ],
+  meta: [
+    { name: 'description', content: 'whis mobile application for Android. Voice-to-text on the go.' },
+    { property: 'og:title', content: 'Mobile App - whis' },
+    { property: 'og:description', content: 'whis mobile application for Android. Voice-to-text on the go.' },
+    { property: 'og:url', content: 'https://whis.ink/mobile' },
+    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'Mobile App - whis' },
+    { name: 'twitter:description', content: 'whis mobile application for Android. Voice-to-text on the go.' },
+    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
+  ],
+})
 
 const { version, findAsset } = useGitHubRelease()
 
@@ -36,9 +52,9 @@ const apkUrl = computed(() => {
         <span class="download-version">{{ version }}</span>
       </a>
       <p class="install-note">
-        <RouterLink to="/downloads">
+        <NuxtLink to="/downloads">
           More options →
-        </RouterLink>
+        </NuxtLink>
       </p>
     </section>
 

@@ -1,9 +1,24 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import CommandCopy from '@/components/CommandCopy.vue'
-import Lightbox from '@/components/Lightbox.vue'
-import TabPanel from '@/components/TabPanel.vue'
-import ViewHeader from '@/components/ViewHeader.vue'
+
+useHead({
+  title: 'CLI - whis',
+  link: [
+    { rel: 'canonical', href: 'https://whis.ink/cli' },
+  ],
+  meta: [
+    { name: 'description', content: 'whis command-line interface. Pipe your voice to clipboard in terminal workflows.' },
+    { property: 'og:title', content: 'CLI - whis' },
+    { property: 'og:description', content: 'whis command-line interface. Pipe your voice to clipboard in terminal workflows.' },
+    { property: 'og:url', content: 'https://whis.ink/cli' },
+    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'CLI - whis' },
+    { name: 'twitter:description', content: 'whis command-line interface. Pipe your voice to clipboard in terminal workflows.' },
+    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
+  ],
+})
 
 const installTab = ref('cargo')
 const lightboxOpen = ref(false)
@@ -55,9 +70,9 @@ const demoImage = [
         </div>
       </TabPanel>
       <p class="install-note">
-        <RouterLink to="/downloads">
+        <NuxtLink to="/downloads">
           More options →
-        </RouterLink>
+        </NuxtLink>
       </p>
     </section>
 

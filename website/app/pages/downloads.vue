@@ -1,10 +1,25 @@
 <script setup lang="ts">
 import type { Platform } from '@/composables/usePlatformDetection'
 import { computed, ref, watch } from 'vue'
-import TabPanel from '@/components/TabPanel.vue'
-import ViewHeader from '@/components/ViewHeader.vue'
-import { useGitHubRelease } from '@/composables/useGitHubRelease'
-import { usePlatformDetection } from '@/composables/usePlatformDetection'
+
+useHead({
+  title: 'Downloads - whis',
+  link: [
+    { rel: 'canonical', href: 'https://whis.ink/downloads' },
+  ],
+  meta: [
+    { name: 'description', content: 'Download whis for Linux, macOS, Windows, and Android. Multiple formats available.' },
+    { property: 'og:title', content: 'Downloads - whis' },
+    { property: 'og:description', content: 'Download whis for Linux, macOS, Windows, and Android. Multiple formats available.' },
+    { property: 'og:url', content: 'https://whis.ink/downloads' },
+    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'Downloads - whis' },
+    { name: 'twitter:description', content: 'Download whis for Linux, macOS, Windows, and Android. Multiple formats available.' },
+    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
+  ],
+})
 
 const { platform, arch } = usePlatformDetection()
 const { version, versionNum, findAsset } = useGitHubRelease()

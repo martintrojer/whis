@@ -1,6 +1,22 @@
 <script setup lang="ts">
-import FaqAccordion from '@/components/FaqAccordion.vue'
-import ViewHeader from '@/components/ViewHeader.vue'
+useHead({
+  title: 'FAQ - whis',
+  link: [
+    { rel: 'canonical', href: 'https://whis.ink/faq' },
+  ],
+  meta: [
+    { name: 'description', content: 'Frequently asked questions about whis voice-to-text tool.' },
+    { property: 'og:title', content: 'FAQ - whis' },
+    { property: 'og:description', content: 'Frequently asked questions about whis voice-to-text tool.' },
+    { property: 'og:url', content: 'https://whis.ink/faq' },
+    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'FAQ - whis' },
+    { name: 'twitter:description', content: 'Frequently asked questions about whis voice-to-text tool.' },
+    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
+  ],
+})
 
 const faqItems = [
   {

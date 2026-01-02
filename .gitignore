@@ -22,10 +22,14 @@ Thumbs.db
 node_modules/
 dist/
 
+# Nuxt
+.nuxt/
+.output/
+
 # TypeScript build cache
 *.tsbuildinfo
 
-# Compiled vite config (source is vite.config.ts)
+# Legacy Vite build artifacts (project migrated to Nuxt)
 vite.config.js
 vite.config.d.ts
 

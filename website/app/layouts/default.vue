@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { version } from '../package.json'
+
+const config = useRuntimeConfig()
+const version = config.public.appVersion
 
 const route = useRoute()
 const sidebarOpen = ref(false)
 
 const navItems = [
-  { path: '/', name: 'home', label: 'home' },
+  { path: '/', name: 'index', label: 'home' },
   { path: '/downloads', name: 'downloads', label: 'downloads' },
   { path: '/cli', name: 'cli', label: 'cli' },
   { path: '/desktop', name: 'desktop', label: 'desktop' },
@@ -49,7 +50,7 @@ function closeSidebar() {
       </div>
 
       <nav class="nav">
-        <RouterLink
+        <NuxtLink
           v-for="item in navItems"
           :key="item.name"
           :to="item.path"
@@ -61,19 +62,19 @@ function closeSidebar() {
             route.name === item.name ? '>' : ' '
           }}</span>
           <span>{{ item.label }}</span>
-        </RouterLink>
+        </NuxtLink>
       </nav>
 
       <div class="sidebar-footer">
-        <RouterLink to="/downloads" class="version-badge">
+        <NuxtLink to="/downloads" class="version-badge">
           v{{ version }} · MIT
-        </RouterLink>
+        </NuxtLink>
       </div>
     </aside>
 
     <!-- Content -->
     <main class="content">
-      <RouterView />
+      <slot />
     </main>
   </div>
 </template>

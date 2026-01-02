@@ -1,11 +1,25 @@
 <script setup lang="ts">
 import type { Platform } from '@/composables/usePlatformDetection'
 import { computed, ref } from 'vue'
-import ImageCarousel from '@/components/ImageCarousel.vue'
-import Lightbox from '@/components/Lightbox.vue'
-import ViewHeader from '@/components/ViewHeader.vue'
-import { useGitHubRelease } from '@/composables/useGitHubRelease'
-import { usePlatformDetection } from '@/composables/usePlatformDetection'
+
+useHead({
+  title: 'Desktop App - whis',
+  link: [
+    { rel: 'canonical', href: 'https://whis.ink/desktop' },
+  ],
+  meta: [
+    { name: 'description', content: 'whis desktop application with system tray for system-wide voice-to-text access.' },
+    { property: 'og:title', content: 'Desktop App - whis' },
+    { property: 'og:description', content: 'whis desktop application with system tray for system-wide voice-to-text access.' },
+    { property: 'og:url', content: 'https://whis.ink/desktop' },
+    { property: 'og:image', content: 'https://whis.ink/og-image.jpg' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'Desktop App - whis' },
+    { name: 'twitter:description', content: 'whis desktop application with system tray for system-wide voice-to-text access.' },
+    { name: 'twitter:image', content: 'https://whis.ink/og-image.jpg' },
+  ],
+})
 
 const { platform, arch } = usePlatformDetection()
 const { version, versionNum, findAsset } = useGitHubRelease()
@@ -86,9 +100,9 @@ function openLightbox(index: number) {
         <span class="download-version">{{ version }}</span>
       </a>
       <p class="install-note">
-        <RouterLink to="/downloads">
+        <NuxtLink to="/downloads">
           More options →
-        </RouterLink>
+        </NuxtLink>
       </p>
     </section>
 
