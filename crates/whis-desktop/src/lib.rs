@@ -9,22 +9,35 @@ use whis_core::Settings;
 
 pub fn run(start_in_tray: bool) {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+if !args.contains(&"--start-in-tray".to_string()) {
+                match app.get_webview_window("main") {
+                    Some(window) => {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                    None => {
+                        let _ = window::show_main_window(app);
+                    }
+                }
+            }
+        }))
         .plugin(tauri_plugin_process::init())
         .setup(move |app| {
             // Load settings from disk
             let loaded_settings = Settings::load();
 
+            // Initialize state with tray availability
+            app.manage(state::AppState::new(loaded_settings, true));
+
             // Initialize system tray (optional - may fail on tray-less environments)
-            let tray_available = match tray::setup_tray(app) {
+            let _tray_available = match tray::setup_tray(app) {
                 Ok(_) => true,
                 Err(e) => {
                     eprintln!("Tray unavailable: {e}. Running in window mode.");
                     false
                 }
             };
-
-            // Initialize state with tray availability
-            app.manage(state::AppState::new(loaded_settings, tray_available));
 
             // Setup global shortcuts (hybrid: Tauri plugin / Portal / CLI fallback)
             shortcuts::setup_shortcuts(app);
@@ -34,7 +47,7 @@ pub fn run(start_in_tray: bool) {
 
             // Only show main window if NOT starting in tray
             if !start_in_tray {
-                window::show_main_window(app)?;
+                window::show_main_window(app.handle())?;
             }
 
             Ok(())

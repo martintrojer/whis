@@ -1,8 +1,8 @@
-use tauri::{WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
 
 /// Show the main window when tray is not available
 /// This provides a fallback UI for tray-less desktop environments
-pub fn show_main_window(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+pub fn show_main_window(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
         .title("Whis")
         .inner_size(600.0, 400.0)
