@@ -49,6 +49,7 @@ fn run() -> Result<()> {
             cli.processing.duration,
             cli.processing.no_vad,
             cli.output.save_raw,
+            cli.processing.legacy_batch,
         ),
     }
 }

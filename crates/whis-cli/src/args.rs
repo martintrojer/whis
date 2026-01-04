@@ -62,6 +62,10 @@ pub struct ProcessingOptions {
     /// Disable Voice Activity Detection (records all audio including silence)
     #[arg(long)]
     pub no_vad: bool,
+
+    /// Use legacy batch transcription instead of progressive (for testing/comparison)
+    #[arg(long)]
+    pub legacy_batch: bool,
 }
 
 /// Output options for transcription results

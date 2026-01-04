@@ -89,6 +89,7 @@ pub fn run(
     duration: Option<Duration>,
     no_vad: bool,
     save_raw: Option<PathBuf>,
+    legacy_batch: bool,
 ) -> Result<()> {
     // Create configuration
     let config = RecordConfig::new(post_process, preset_name, print, duration, no_vad, save_raw)?;
@@ -114,49 +115,64 @@ pub fn run(
         InputSource::Microphone
     };
 
-    // Phase 1: Record/Load audio
-    let record_result = match input_source {
-        InputSource::File(path) => {
-            let mode = modes::FileMode::new(path);
-            mode.execute(quiet)?
-        }
-        InputSource::Stdin { format } => {
-            let mode = modes::StdinMode::new(format);
-            mode.execute(quiet)?
-        }
-        InputSource::Microphone => {
-            let mic_config = modes::MicrophoneConfig {
-                duration: config.duration,
-                no_vad: config.no_vad,
-                provider: transcription_config.provider.clone(),
-                will_post_process: config.post_process || config.preset.is_some(),
-            };
-            let mode = modes::MicrophoneMode::new(mic_config);
-            mode.execute(quiet, &runtime)?
-        }
-    };
+    // Use progressive transcription for microphone mode (unless legacy_batch flag is set)
+    let use_progressive = matches!(input_source, InputSource::Microphone) && !legacy_batch;
 
-    // Save raw samples if requested
-    if let Some(save_path) = &config.save_raw {
-        if let Some((samples, sample_rate)) = &record_result.raw_samples {
-            save_raw_samples_as_wav(samples, *sample_rate, save_path)?;
-            if !quiet {
-                eprintln!("✓ Saved raw audio to: {}", save_path.display());
+    let transcription_result = if use_progressive {
+        // Progressive path: Record + Transcribe in parallel
+        let mic_config = modes::MicrophoneConfig {
+            duration: config.duration,
+            no_vad: config.no_vad,
+            provider: transcription_config.provider.clone(),
+            will_post_process: config.post_process || config.preset.is_some(),
+        };
+        runtime.block_on(progressive_record_and_transcribe(
+            mic_config,
+            &transcription_config,
+            quiet,
+        ))?
+    } else {
+        // Legacy batch path: Record first, then transcribe
+        // Phase 1: Record/Load audio
+        let record_result = match input_source {
+            InputSource::File(path) => {
+                let mode = modes::FileMode::new(path);
+                mode.execute(quiet)?
+            }
+            InputSource::Stdin { format } => {
+                let mode = modes::StdinMode::new(format);
+                mode.execute(quiet)?
+            }
+            InputSource::Microphone => {
+                let mic_config = modes::MicrophoneConfig {
+                    duration: config.duration,
+                    no_vad: config.no_vad,
+                    provider: transcription_config.provider.clone(),
+                    will_post_process: config.post_process || config.preset.is_some(),
+                };
+                let mode = modes::MicrophoneMode::new(mic_config);
+                mode.execute(quiet, &runtime)?
+            }
+        };
+
+        // Save raw samples if requested
+        if let Some(save_path) = &config.save_raw {
+            if let Some((samples, sample_rate)) = &record_result.raw_samples {
+                save_raw_samples_as_wav(samples, *sample_rate, save_path)?;
+                if !quiet {
+                    eprintln!("✓ Saved raw audio to: {}", save_path.display());
+                }
             }
         }
-    }
 
-    // Phase 2: Transcribe audio to text
-    let transcription_cfg = pipeline::TranscriptionConfig {
-        provider: transcription_config.provider,
-        api_key: transcription_config.api_key,
-        language: transcription_config.language,
+        // Phase 2: Transcribe audio to text
+        let transcription_cfg = pipeline::TranscriptionConfig {
+            provider: transcription_config.provider,
+            api_key: transcription_config.api_key,
+            language: transcription_config.language,
+        };
+        runtime.block_on(pipeline::transcribe(record_result, &transcription_cfg, quiet))?
     };
-    let transcription_result = runtime.block_on(pipeline::transcribe(
-        record_result,
-        &transcription_cfg,
-        quiet,
-    ))?;
 
     // Phase 3: Post-process and apply presets
     let processing_cfg = pipeline::ProcessingConfig {
@@ -178,6 +194,164 @@ pub fn run(
     pipeline::output(processed_result, output_mode, quiet)?;
 
     Ok(())
+}
+
+/// Progressive recording + transcription (combines recording and transcription phases)
+///
+/// This function runs recording and transcription in parallel using the progressive
+/// architecture. Audio is chunked during recording and transcribed immediately.
+async fn progressive_record_and_transcribe(
+    mic_config: modes::MicrophoneConfig,
+    transcription_config: &app::TranscriptionConfig,
+    quiet: bool,
+) -> Result<types::TranscriptionResult> {
+    use tokio::sync::mpsc;
+    use whis_core::{
+        progressive_transcribe_cloud, AudioRecorder, ChunkerConfig, ProgressiveChunker, Settings,
+        TranscriptionProvider,
+    };
+    #[cfg(feature = "local-transcription")]
+    use whis_core::progressive_transcribe_local;
+
+    // Create recorder
+    let mut recorder = AudioRecorder::new()?;
+
+    // Configure VAD
+    let settings = Settings::load();
+    let vad_enabled = settings.ui.vad.enabled && !mic_config.no_vad;
+    recorder.set_vad(vad_enabled, settings.ui.vad.threshold);
+
+    // Preload models in background (same as batch mode)
+    preload_models(&mic_config);
+
+    // Start streaming recording
+    let mut audio_rx_bounded = recorder.start_recording_streaming()?;
+
+    // Create unbounded channel for chunker (adapter pattern)
+    let (audio_tx_unbounded, audio_rx_unbounded) = mpsc::unbounded_channel();
+
+    // Spawn adapter task to forward from bounded to unbounded channel
+    tokio::spawn(async move {
+        while let Some(samples) = audio_rx_bounded.recv().await {
+            if audio_tx_unbounded.send(samples).is_err() {
+                break; // Receiver dropped
+            }
+        }
+    });
+
+    // Create channels for progressive chunking
+    let (chunk_tx, chunk_rx) = mpsc::unbounded_channel();
+
+    // Create chunker config
+    let chunker_config = ChunkerConfig {
+        target_duration_secs: 90,
+        min_duration_secs: 60,
+        max_duration_secs: 120,
+        vad_aware: vad_enabled,
+    };
+
+    // Spawn chunker task
+    let mut chunker = ProgressiveChunker::new(chunker_config, chunk_tx);
+    let chunker_task = tokio::spawn(async move {
+        // Note: VAD state streaming not yet implemented, using fixed-duration chunking
+        chunker
+            .consume_stream(audio_rx_unbounded, None)
+            .await
+            .map_err(|e| anyhow::anyhow!(e))
+    });
+
+    // Spawn transcription task based on provider
+    let transcription_task = {
+        let provider = transcription_config.provider.clone();
+        let api_key = transcription_config.api_key.clone();
+        let language = transcription_config.language.clone();
+
+        tokio::spawn(async move {
+            #[cfg(feature = "local-transcription")]
+            if provider == TranscriptionProvider::LocalParakeet {
+                // Local Parakeet progressive transcription
+                let model_path = Settings::load()
+                    .transcription
+                    .parakeet_model_path()
+                    .ok_or_else(|| anyhow::anyhow!("Parakeet model path not configured"))?;
+
+                return progressive_transcribe_local(&model_path, chunk_rx, 3, None).await;
+            }
+
+            // Cloud provider progressive transcription
+            progressive_transcribe_cloud(&provider, &api_key, language.as_deref(), chunk_rx, None)
+                .await
+        })
+    };
+
+    // Wait for recording to complete (user input or duration)
+    if let Some(dur) = mic_config.duration {
+        // Timed recording
+        if !quiet {
+            println!("Recording for {} seconds...", dur.as_secs());
+        }
+        tokio::time::sleep(dur).await;
+    } else {
+        // Interactive mode
+        if !quiet {
+            let hotkey = &settings.ui.shortcut;
+            println!("Press Enter or {} to stop", hotkey);
+            print!("Recording...");
+            use std::io::Write;
+            std::io::stdout().flush()?;
+        }
+
+        // Wait for user to stop (blocking operation, run in spawn_blocking)
+        let hotkey = settings.ui.shortcut.clone();
+        tokio::task::spawn_blocking(move || app::wait_for_stop(&hotkey))
+            .await??;
+
+        if !quiet && whis_core::verbose::is_verbose() {
+            println!();
+        }
+    }
+
+    // Stop recording (closes audio stream, signals chunker to finish)
+    recorder.stop_recording()?;
+
+    // Wait for chunker to finish
+    chunker_task.await??;
+
+    // Wait for transcription to finish
+    if !quiet {
+        if whis_core::verbose::is_verbose() {
+            println!("Transcribing...");
+        } else {
+            app::typewriter(" Transcribing...", 25);
+        }
+    }
+
+    let text = transcription_task.await??;
+
+    Ok(types::TranscriptionResult { text })
+}
+
+/// Preload models in background to reduce latency (extracted from MicrophoneMode)
+fn preload_models(config: &modes::MicrophoneConfig) {
+    #[cfg(feature = "local-transcription")]
+    if config.provider == whis_core::TranscriptionProvider::LocalWhisper {
+        let settings = whis_core::Settings::load();
+        if let Some(model_path) = settings.transcription.whisper_model_path() {
+            whis_core::whisper_preload_model(&model_path);
+        }
+    }
+
+    if config.will_post_process {
+        let settings = whis_core::Settings::load();
+        if settings.post_processing.processor == whis_core::PostProcessor::Ollama {
+            if let (Some(url), Some(model)) = (
+                settings.services.ollama.url(),
+                settings.services.ollama.model(),
+            ) {
+                whis_core::preload_ollama(&url, &model);
+            }
+        }
+    }
 }
 
 /// Save raw audio samples as WAV file

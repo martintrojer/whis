@@ -16,8 +16,9 @@ pub mod transcribe;
 pub mod verbose;
 
 pub use audio::{
-    AudioChunk, AudioDeviceInfo, AudioRecorder, RecordingData, RecordingOutput, VadConfig,
-    list_audio_devices, load_audio_file, load_audio_stdin,
+    AudioChunk, AudioDeviceInfo, AudioRecorder, ChunkerConfig, ProgressiveChunk, ProgressiveChunker,
+    RecordingData, RecordingOutput, VadConfig, list_audio_devices, load_audio_file,
+    load_audio_stdin,
 };
 #[cfg(feature = "clipboard")]
 pub use clipboard::{ClipboardMethod, copy_to_clipboard};
@@ -41,9 +42,9 @@ pub use provider::{whisper_preload_model, whisper_set_keep_loaded, whisper_unloa
 pub use settings::Settings;
 pub use state::RecordingState;
 pub use transcribe::{
-    ChunkTranscription, parallel_transcribe, transcribe_audio, transcribe_audio_with_format,
-    transcribe_audio_with_progress,
+    ChunkTranscription, parallel_transcribe, progressive_transcribe_cloud, transcribe_audio,
+    transcribe_audio_with_format, transcribe_audio_with_progress,
 };
 #[cfg(feature = "local-transcription")]
-pub use transcribe::{LocalAudioChunk, parallel_transcribe_local};
+pub use transcribe::{LocalAudioChunk, parallel_transcribe_local, progressive_transcribe_local};
 pub use verbose::set_verbose;
