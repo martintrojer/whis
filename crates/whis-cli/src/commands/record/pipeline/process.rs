@@ -15,7 +15,7 @@ pub struct ProcessingConfig {
 }
 
 /// Execute post-processing phase
-pub async fn execute(
+pub async fn process(
     transcription: TranscriptionResult,
     config: &ProcessingConfig,
     quiet: bool,

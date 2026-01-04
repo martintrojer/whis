@@ -373,7 +373,7 @@ impl RecordingData {
         }
 
         crate::verbose!(
-            "Split recording into {} chunks for parallel transcription",
+            "Split recording into {} chunks for transcription",
             chunks.len()
         );
 

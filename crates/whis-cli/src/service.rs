@@ -8,7 +8,7 @@ use crate::ipc::{IpcMessage, IpcResponse, IpcServer};
 use std::time::Duration;
 use whis_core::{
     AudioRecorder, DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, RecordingOutput, Settings,
-    TranscriptionProvider, copy_to_clipboard, parallel_transcribe, post_process, transcribe_audio,
+    TranscriptionProvider, batch_transcribe, copy_to_clipboard, post_process, transcribe_audio,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -228,8 +228,7 @@ impl Service {
                 .await
                 .context("Failed to join task")??,
                 RecordingOutput::Chunked(chunks) => {
-                    parallel_transcribe(&provider, &api_key, language.as_deref(), chunks, None)
-                        .await?
+                    batch_transcribe(&provider, &api_key, language.as_deref(), chunks, None).await?
                 }
             }
         };
@@ -248,11 +247,13 @@ impl Service {
                 .await
                 .context("Failed to join task")??,
                 RecordingOutput::Chunked(chunks) => {
-                    parallel_transcribe(&provider, &api_key, language.as_deref(), chunks, None)
-                        .await?
+                    batch_transcribe(&provider, &api_key, language.as_deref(), chunks, None).await?
                 }
             }
         };
+
+        // Print completion message immediately after transcription finishes
+        println!("#{count} Done.");
 
         // Apply post-processing if configured
         let settings = Settings::load();
@@ -270,9 +271,9 @@ impl Service {
                     .unwrap_or(DEFAULT_POST_PROCESSING_PROMPT);
 
                 match post_process(
-                    &transcription,
-                    &settings.post_processing.processor,
                     &post_processor_api_key,
+                    &settings.post_processing.processor,
+                    &transcription,
                     prompt,
                     None,
                 )

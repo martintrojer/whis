@@ -7,6 +7,8 @@
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
+use once_cell::sync::OnceCell;
+use std::sync::Mutex;
 
 use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult, TranscriptionStage};
 
@@ -77,24 +79,16 @@ pub fn transcribe_raw(model_path: &str, samples: Vec<f32>) -> Result<Transcripti
 /// ONNX Runtime has memory constraints with long audio in Parakeet models.
 /// This function automatically chunks audio longer than 90 seconds to avoid ORT errors.
 fn transcribe_samples(model_path: &str, samples: Vec<f32>) -> Result<TranscriptionResult> {
-    use std::path::Path;
-    use transcribe_rs::{
-        TranscriptionEngine,
-        engines::parakeet::{
-            ParakeetEngine, ParakeetInferenceParams, ParakeetModelParams, TimestampGranularity,
-        },
-    };
+    use transcribe_rs::engines::parakeet::{ParakeetInferenceParams, TimestampGranularity};
 
     // Empirically tested: Parakeet works well up to ~90 seconds
     // Beyond that, ONNX Runtime can hit memory limits (ORT error)
     const CHUNK_SIZE: usize = 1_440_000; // 90 seconds at 16kHz
     const OVERLAP: usize = 16_000; // 1 second overlap for context at chunk boundaries
 
-    // Load model once and reuse for all chunks (Phase 1: Model Reuse optimization)
-    let mut engine = ParakeetEngine::new();
-    engine
-        .load_model_with_params(Path::new(model_path), ParakeetModelParams::int8())
-        .map_err(|e| anyhow::anyhow!("Failed to load Parakeet model: {}", e))?;
+    // Get or load shared engine from global cache
+    let engine_mutex = get_or_load_engine(model_path)?;
+    let mut engine = engine_mutex.lock().unwrap();
 
     // Configure inference parameters
     let params = ParakeetInferenceParams {
@@ -191,4 +185,66 @@ fn decode_mp3_to_samples(mp3_data: &[u8]) -> Result<Vec<f32>> {
 
     // Resample to 16kHz mono if needed
     crate::resample::resample_to_16k(&samples, sample_rate, channels)
+}
+
+/// Global shared Parakeet engine (loaded once, reused for all transcriptions)
+static PARAKEET_ENGINE: OnceCell<Mutex<transcribe_rs::engines::parakeet::ParakeetEngine>> =
+    OnceCell::new();
+
+/// Get or load the shared Parakeet engine
+///
+/// This function ensures the model is loaded only once and then cached globally.
+/// All subsequent calls reuse the same engine instance, reducing memory usage
+/// and eliminating repeated model loading overhead.
+fn get_or_load_engine(
+    model_path: &str,
+) -> Result<&'static Mutex<transcribe_rs::engines::parakeet::ParakeetEngine>> {
+    use std::path::Path;
+    use transcribe_rs::TranscriptionEngine;
+    use transcribe_rs::engines::parakeet::{ParakeetEngine, ParakeetModelParams};
+
+    PARAKEET_ENGINE.get_or_try_init(|| {
+        crate::verbose!("Loading Parakeet model: {}", model_path);
+
+        let mut engine = ParakeetEngine::new();
+        engine
+            .load_model_with_params(Path::new(model_path), ParakeetModelParams::int8())
+            .map_err(|e| anyhow::anyhow!("Failed to load Parakeet model: {}", e))?;
+
+        crate::verbose!("✓ Parakeet model loaded");
+        Ok(Mutex::new(engine))
+    })
+}
+
+/// Preload Parakeet model in background to reduce first-transcription latency
+///
+/// This function spawns a background thread that loads the Parakeet model
+/// into memory. This reduces the latency when transcription actually starts,
+/// as the model will already be loaded.
+///
+/// The preloaded model is cached in a static variable and reused for all
+/// subsequent transcription calls.
+///
+/// # Arguments
+/// * `model_path` - Path to the Parakeet model directory
+///
+/// # Example
+/// ```no_run
+/// use whis_core::preload_parakeet;
+/// preload_parakeet("/path/to/parakeet/model");
+/// // Model loads in background while recording...
+/// ```
+pub fn preload_parakeet(model_path: &str) {
+    let model_path = model_path.to_string();
+    std::thread::spawn(move || {
+        crate::verbose!("Preloading Parakeet model: {}", model_path);
+
+        // Load into shared static cache using get_or_load_engine
+        if let Err(e) = get_or_load_engine(&model_path) {
+            eprintln!("Warning: Failed to preload Parakeet model: {}", e);
+            return;
+        }
+
+        crate::verbose!("✓ Parakeet model preloaded");
+    });
 }

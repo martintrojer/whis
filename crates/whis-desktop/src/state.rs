@@ -1,8 +1,8 @@
 use std::sync::Mutex;
 use tauri::menu::MenuItem;
+use tokio::sync::oneshot;
 pub use whis_core::RecordingState;
 use whis_core::{AudioRecorder, Settings, TranscriptionProvider};
-use tokio::sync::oneshot;
 
 /// Cached transcription configuration (provider + API key + language)
 pub struct TranscriptionConfig {

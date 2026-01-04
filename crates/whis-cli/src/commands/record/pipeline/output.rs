@@ -15,7 +15,7 @@ pub enum OutputMode {
 }
 
 /// Execute output phase
-pub fn execute(result: ProcessedResult, mode: OutputMode, quiet: bool) -> Result<()> {
+pub fn output(result: ProcessedResult, mode: OutputMode, quiet: bool) -> Result<()> {
     let text = result.text.trim();
 
     match mode {
@@ -31,7 +31,7 @@ pub fn execute(result: ProcessedResult, mode: OutputMode, quiet: bool) -> Result
             if !quiet {
                 // Only show confirmation if not in quiet mode
                 if io::stdout().is_terminal() {
-                    println!("\nCopied to clipboard!");
+                    println!("Copied to clipboard!");
                 }
             }
         }

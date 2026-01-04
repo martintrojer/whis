@@ -39,6 +39,17 @@
 //!    - Copy to clipboard (default)
 //!    - Print to stdout (--print flag)
 //!
+//! # Execution Paths
+//!
+//! ## Progressive Mode (Microphone Only)
+//! - Recording and transcription happen CONCURRENTLY
+//! - 90-second chunks sent to API as they arrive
+//! - Faster perceived latency (overlapped phases)
+//!
+//! ## Batch Mode (File/Stdin)
+//! - Recording completes first, then transcription begins
+//! - Sequential phases: Record → Transcribe → Process → Output
+//!
 //! # Usage
 //!
 //! ```rust
@@ -47,15 +58,15 @@
 //!
 //! // Transcribe file with post-processing
 //! commands::record::run(
-//!     true,                          // post_process
-//!     None,                          // preset_name
+//!     true,                             // post_process
+//!     None,                             // preset_name
 //!     Some(PathBuf::from("audio.mp3")), // file_path
-//!     false,                         // stdin_mode
-//!     "mp3",                         // input_format
-//!     false,                         // print
-//!     None,                          // duration
-//!     false,                         // no_vad
-//!     None,                          // save_raw
+//!     false,                            // stdin_mode
+//!     "mp3",                            // input_format
+//!     false,                            // print
+//!     None,                             // duration
+//!     false,                            // no_vad
+//!     None,                             // save_raw
 //! )?;
 //! ```
 //!
@@ -89,7 +100,6 @@ pub fn run(
     duration: Option<Duration>,
     no_vad: bool,
     save_raw: Option<PathBuf>,
-    legacy_batch: bool,
 ) -> Result<()> {
     // Create configuration
     let config = RecordConfig::new(post_process, preset_name, print, duration, no_vad, save_raw)?;
@@ -115,11 +125,12 @@ pub fn run(
         InputSource::Microphone
     };
 
-    // Use progressive transcription for microphone mode (unless legacy_batch flag is set)
-    let use_progressive = matches!(input_source, InputSource::Microphone) && !legacy_batch;
+    // Microphone always uses progressive (record + transcribe concurrently)
+    // File/stdin use batch (record fully, then transcribe)
+    let use_progressive = matches!(input_source, InputSource::Microphone);
 
     let transcription_result = if use_progressive {
-        // Progressive path: Record + Transcribe in parallel
+        // Progressive path: Record and transcribe concurrently (overlap recording with transcription)
         let mic_config = modes::MicrophoneConfig {
             duration: config.duration,
             no_vad: config.no_vad,
@@ -132,8 +143,8 @@ pub fn run(
             quiet,
         ))?
     } else {
-        // Legacy batch path: Record first, then transcribe
-        // Phase 1: Record/Load audio
+        // Batch path: Record first, then transcribe (for pre-recorded audio)
+        // Note: Microphone always uses progressive path (see line 119)
         let record_result = match input_source {
             InputSource::File(path) => {
                 let mode = modes::FileMode::new(path);
@@ -144,14 +155,7 @@ pub fn run(
                 mode.execute(quiet)?
             }
             InputSource::Microphone => {
-                let mic_config = modes::MicrophoneConfig {
-                    duration: config.duration,
-                    no_vad: config.no_vad,
-                    provider: transcription_config.provider.clone(),
-                    will_post_process: config.post_process || config.preset.is_some(),
-                };
-                let mode = modes::MicrophoneMode::new(mic_config);
-                mode.execute(quiet, &runtime)?
+                unreachable!("Microphone input always uses progressive transcription path")
             }
         };
 
@@ -171,7 +175,11 @@ pub fn run(
             api_key: transcription_config.api_key,
             language: transcription_config.language,
         };
-        runtime.block_on(pipeline::transcribe(record_result, &transcription_cfg, quiet))?
+        runtime.block_on(pipeline::transcribe(
+            record_result,
+            &transcription_cfg,
+            quiet,
+        ))?
     };
 
     // Phase 3: Post-process and apply presets
@@ -198,20 +206,21 @@ pub fn run(
 
 /// Progressive recording + transcription (combines recording and transcription phases)
 ///
-/// This function runs recording and transcription in parallel using the progressive
-/// architecture. Audio is chunked during recording and transcribed immediately.
+/// This function overlaps recording and transcription using the progressive
+/// architecture. Audio is chunked during recording and transcribed immediately
+/// (cloud providers transcribe chunks in parallel, local providers sequentially).
 async fn progressive_record_and_transcribe(
     mic_config: modes::MicrophoneConfig,
     transcription_config: &app::TranscriptionConfig,
     quiet: bool,
 ) -> Result<types::TranscriptionResult> {
     use tokio::sync::mpsc;
-    use whis_core::{
-        progressive_transcribe_cloud, AudioRecorder, ChunkerConfig, ProgressiveChunker, Settings,
-        TranscriptionProvider,
-    };
     #[cfg(feature = "local-transcription")]
     use whis_core::progressive_transcribe_local;
+    use whis_core::{
+        AudioRecorder, ChunkerConfig, ProgressiveChunker, Settings, TranscriptionProvider,
+        progressive_transcribe_cloud,
+    };
 
     // Create recorder
     let mut recorder = AudioRecorder::new()?;
@@ -275,7 +284,7 @@ async fn progressive_record_and_transcribe(
                     .parakeet_model_path()
                     .ok_or_else(|| anyhow::anyhow!("Parakeet model path not configured"))?;
 
-                return progressive_transcribe_local(&model_path, chunk_rx, 3, None).await;
+                return progressive_transcribe_local(&model_path, chunk_rx, None).await;
             }
 
             // Cloud provider progressive transcription
@@ -303,8 +312,7 @@ async fn progressive_record_and_transcribe(
 
         // Wait for user to stop (blocking operation, run in spawn_blocking)
         let hotkey = settings.ui.shortcut.clone();
-        tokio::task::spawn_blocking(move || app::wait_for_stop(&hotkey))
-            .await??;
+        tokio::task::spawn_blocking(move || app::wait_for_stop(&hotkey)).await??;
 
         if !quiet && whis_core::verbose::is_verbose() {
             println!();
@@ -328,19 +336,37 @@ async fn progressive_record_and_transcribe(
 
     let text = transcription_task.await??;
 
+    // Print completion message immediately after transcription finishes
+    if !quiet {
+        println!(" Done.");
+    }
+
     Ok(types::TranscriptionResult { text })
 }
 
 /// Preload models in background to reduce latency (extracted from MicrophoneMode)
 fn preload_models(config: &modes::MicrophoneConfig) {
     #[cfg(feature = "local-transcription")]
-    if config.provider == whis_core::TranscriptionProvider::LocalWhisper {
+    {
         let settings = whis_core::Settings::load();
-        if let Some(model_path) = settings.transcription.whisper_model_path() {
-            whis_core::whisper_preload_model(&model_path);
+
+        // Preload the configured local model (Whisper OR Parakeet, not both)
+        match config.provider {
+            whis_core::TranscriptionProvider::LocalWhisper => {
+                if let Some(model_path) = settings.transcription.whisper_model_path() {
+                    whis_core::whisper_preload_model(&model_path);
+                }
+            }
+            whis_core::TranscriptionProvider::LocalParakeet => {
+                if let Some(model_path) = settings.transcription.parakeet_model_path() {
+                    whis_core::preload_parakeet(&model_path);
+                }
+            }
+            _ => {} // Cloud providers don't need preload
         }
     }
 
+    // Preload Ollama if post-processing enabled
     if config.will_post_process {
         let settings = whis_core::Settings::load();
         if settings.post_processing.processor == whis_core::PostProcessor::Ollama {

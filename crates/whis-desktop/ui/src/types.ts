@@ -31,7 +31,6 @@ export interface Settings {
     local_models: {
       whisper_path: string | null
       parakeet_path: string | null
-      parakeet_progressive_workers: number
     }
   }
   post_processing: {

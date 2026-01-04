@@ -7250,6 +7250,7 @@ dependencies = [
  "hound",
  "minimp3",
  "mp3lame-encoder",
+ "once_cell",
  "reqwest 0.13.1",
  "rubato",
  "serde",

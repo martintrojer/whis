@@ -41,15 +41,6 @@ pub struct LocalModelsConfig {
     /// (e.g., ~/.local/share/whis/models/parakeet/parakeet-tdt-0.6b-v3-int8)
     #[serde(default)]
     pub parakeet_path: Option<String>,
-
-    /// Number of parallel workers for Parakeet progressive transcription
-    /// (1 = sequential ~2GB RAM, 2 = parallel ~4GB, 3 = parallel ~6GB)
-    #[serde(default = "default_parakeet_progressive_workers")]
-    pub parakeet_progressive_workers: usize,
-}
-
-fn default_parakeet_progressive_workers() -> usize {
-    1 // Conservative default: single worker, minimal memory usage (~2GB)
 }
 
 impl Default for TranscriptionSettings {

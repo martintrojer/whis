@@ -10,8 +10,8 @@
 use crate::state::{AppState, RecordingState};
 use tauri::{AppHandle, Emitter, Manager};
 use whis_core::{
-    DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, RecordingOutput, copy_to_clipboard, ollama,
-    parallel_transcribe, post_process, transcribe_audio,
+    DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, RecordingOutput, batch_transcribe,
+    copy_to_clipboard, ollama, post_process, transcribe_audio,
 };
 
 /// Stop recording and run the full transcription pipeline (progressive mode)
@@ -196,8 +196,8 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
             .map_err(|e| e.to_string())?
         }
         RecordingOutput::Chunked(chunks) => {
-            // parallel_transcribe is async, so we can await it directly
-            parallel_transcribe(&provider, &api_key, language.as_deref(), chunks, None)
+            // batch_transcribe is async, so we can await it directly
+            batch_transcribe(&provider, &api_key, language.as_deref(), chunks, None)
                 .await
                 .map_err(|e| e.to_string())?
         }

@@ -26,6 +26,6 @@ pub struct AudioChunk {
 pub enum RecordingOutput {
     /// Small file that can be transcribed directly
     Single(Vec<u8>),
-    /// Large file split into chunks for parallel transcription
+    /// Large file split into chunks for transcription (parallel for cloud, sequential for local)
     Chunked(Vec<AudioChunk>),
 }

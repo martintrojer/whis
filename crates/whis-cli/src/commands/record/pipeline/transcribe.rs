@@ -12,7 +12,7 @@
 //!
 //! - **Local Providers**: Whisper.cpp, Parakeet
 //!   - Uses raw f32 samples directly
-//!   - Optional parallel processing for long audio
+//!   - Sequential chunk processing with shared model cache
 //!
 //! # Processing Flow
 //!
@@ -21,14 +21,14 @@
 //!     │
 //!     ├─ audio: RecordingOutput
 //!     │   ├─ Single(Vec<u8>)  → transcribe_audio()
-//!     │   └─ Chunked(Vec)     → parallel_transcribe()
+//!     │   └─ Chunked(Vec)     → batch_transcribe()
 //!     │
 //!     └─ raw_samples: Option<(Vec<f32>, u32)>
 //!         └─ For local providers only
 //! ```
 
 use anyhow::Result;
-use whis_core::{RecordingOutput, TranscriptionProvider, parallel_transcribe, transcribe_audio};
+use whis_core::{RecordingOutput, TranscriptionProvider, batch_transcribe, transcribe_audio};
 
 use super::super::types::{RecordResult, TranscriptionResult};
 use crate::app;
@@ -41,7 +41,7 @@ pub struct TranscriptionConfig {
 }
 
 /// Execute transcription phase
-pub async fn execute(
+pub async fn transcribe(
     record_result: RecordResult,
     config: &TranscriptionConfig,
     quiet: bool,
@@ -62,7 +62,7 @@ pub async fn execute(
             audio_data,
         )?,
         RecordingOutput::Chunked(chunks) => {
-            parallel_transcribe(
+            batch_transcribe(
                 &config.provider,
                 &config.api_key,
                 config.language.as_deref(),
@@ -72,6 +72,11 @@ pub async fn execute(
             .await?
         }
     };
+
+    // Print completion message immediately after transcription finishes
+    if !quiet {
+        println!(" Done.");
+    }
 
     Ok(TranscriptionResult { text })
 }

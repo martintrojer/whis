@@ -102,6 +102,8 @@ pub use groq::GroqProvider;
 #[cfg(feature = "local-transcription")]
 pub use local_parakeet::LocalParakeetProvider;
 #[cfg(feature = "local-transcription")]
+pub use local_parakeet::preload_parakeet;
+#[cfg(feature = "local-transcription")]
 pub use local_parakeet::transcribe_raw as transcribe_raw_parakeet;
 #[cfg(feature = "local-transcription")]
 pub use local_whisper::LocalWhisperProvider;
@@ -182,7 +184,7 @@ pub trait TranscriptionBackend: Send + Sync {
         request: TranscriptionRequest,
     ) -> Result<TranscriptionResult>;
 
-    /// Async transcription for parallel chunk processing
+    /// Async transcription for chunk processing
     async fn transcribe_async(
         &self,
         client: &reqwest::Client,

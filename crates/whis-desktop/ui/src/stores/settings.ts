@@ -34,7 +34,6 @@ const defaultSettings: Settings = {
     local_models: {
       whisper_path: null,
       parakeet_path: null,
-      parakeet_progressive_workers: 1,
     },
   },
   post_processing: {
@@ -131,7 +130,6 @@ async function load() {
       local_models: {
         whisper_path: settings.transcription.local_models.whisper_path,
         parakeet_path: settings.transcription.local_models.parakeet_path,
-        parakeet_progressive_workers: settings.transcription.local_models.parakeet_progressive_workers || 1,
       },
     }
     state.post_processing = {

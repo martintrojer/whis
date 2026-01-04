@@ -10,5 +10,5 @@ pub mod microphone;
 pub mod stdin;
 
 pub use file::FileMode;
-pub use microphone::{MicrophoneConfig, MicrophoneMode};
+pub use microphone::MicrophoneConfig;
 pub use stdin::StdinMode;

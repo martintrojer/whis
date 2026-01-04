@@ -10,6 +10,6 @@ pub mod output;
 pub mod process;
 pub mod transcribe;
 
-pub use output::{OutputMode, execute as output};
-pub use process::{ProcessingConfig, execute as process};
-pub use transcribe::{TranscriptionConfig, execute as transcribe};
+pub use output::{OutputMode, output};
+pub use process::{ProcessingConfig, process};
+pub use transcribe::{TranscriptionConfig, transcribe};

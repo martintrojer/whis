@@ -45,7 +45,7 @@ mod vad;
 // Re-export public types
 pub use chunker::{AudioChunk as ProgressiveChunk, ChunkerConfig, ProgressiveChunker};
 pub use devices::list_audio_devices;
-pub use encoder::{create_encoder, AudioEncoder};
+pub use encoder::{AudioEncoder, create_encoder};
 pub use error::AudioError;
 pub use loader::{load_audio_file, load_audio_stdin};
 pub use recorder::{AudioRecorder, AudioStreamSender, RecorderConfig, RecordingData};
