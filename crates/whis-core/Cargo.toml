@@ -30,7 +30,7 @@ mp3lame-encoder = { version = "0.2", optional = true }
 
 # Real-time resampling to 16kHz (always enabled - benefits all providers)
 rubato = "1.0"
-audioadapter = "0.5"
+audioadapter = "2.0"
 audioadapter-buffers = "2.0"
 
 # Voice Activity Detection using Silero VAD model
