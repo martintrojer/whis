@@ -274,7 +274,7 @@ build-cli: _check-cargo
 # Lint CLI code
 [group('cli')]
 lint-cli: _check-cargo
-    cargo clippy -p whis --all-targets
+    cargo clippy -p whis --all-targets --fix --allow-dirty --allow-staged
 
 # Format CLI code
 [group('cli')]
@@ -509,7 +509,7 @@ build-desktop: deps-desktop
 lint-desktop: _check-npm
     #!/usr/bin/env bash
     set -euo pipefail
-    cd crates/whis-desktop/ui && npm run lint
+    cd crates/whis-desktop/ui && npm run lint:fix
 
 # Format desktop code
 [group('desktop')]
@@ -899,7 +899,7 @@ build-mobile: deps-mobile
 lint-mobile: _check-npm
     #!/usr/bin/env bash
     set -euo pipefail
-    cd crates/whis-mobile/ui && npm run lint
+    cd crates/whis-mobile/ui && npm run lint:fix
 
 # Format mobile code
 [group('mobile')]
@@ -976,7 +976,7 @@ build-website: deps-website
 lint-website: _check-npm
     #!/usr/bin/env bash
     set -euo pipefail
-    cd website && npm run lint
+    cd website && npm run lint:fix
 
 # Format website code
 [group('website')]
@@ -1012,10 +1012,10 @@ build-all: deps-all
 lint-all: build-all
     #!/usr/bin/env bash
     set -euo pipefail
-    cargo clippy --all-targets --all-features
-    (cd crates/whis-desktop/ui && npm run lint)
-    (cd crates/whis-mobile/ui && npm run lint)
-    (cd website && npm run lint)
+    cargo clippy --all-targets --all-features --fix --allow-dirty --allow-staged
+    (cd crates/whis-desktop/ui && npm run lint:fix)
+    (cd crates/whis-mobile/ui && npm run lint:fix)
+    (cd website && npm run lint:fix)
 
 # Format all code
 [group('all')]
