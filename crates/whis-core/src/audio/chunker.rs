@@ -42,7 +42,7 @@ pub struct AudioChunk {
     /// Audio samples (16kHz mono f32)
     pub samples: Vec<f32>,
     /// Whether this chunk has leading overlap from previous chunk
-    pub has_overlap: bool,
+    pub has_leading_overlap: bool,
 }
 
 /// Configuration for progressive chunking
@@ -110,7 +110,7 @@ impl ChunkBuffer {
         let chunk = AudioChunk {
             index: self.chunk_index,
             samples: std::mem::take(&mut self.current_chunk),
-            has_overlap: self.chunk_index > 0,
+            has_leading_overlap: self.chunk_index > 0,
         };
 
         // Prepend overlap to next chunk (for continuity)
@@ -129,7 +129,7 @@ impl ChunkBuffer {
         Some(AudioChunk {
             index: self.chunk_index,
             samples: std::mem::take(&mut self.current_chunk),
-            has_overlap: self.chunk_index > 0,
+            has_leading_overlap: self.chunk_index > 0,
         })
     }
 }
@@ -261,7 +261,7 @@ mod tests {
         let chunk = buffer.create_chunk();
         assert_eq!(chunk.index, 0);
         assert_eq!(chunk.samples.len(), 48000);
-        assert!(!chunk.has_overlap);
+        assert!(!chunk.has_leading_overlap);
 
         // Next chunk should start with 2-second overlap
         assert_eq!(buffer.current_chunk.len(), OVERLAP_SAMPLES);

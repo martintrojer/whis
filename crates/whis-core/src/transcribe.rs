@@ -317,6 +317,16 @@ fn merge_transcriptions(transcriptions: Vec<ChunkTranscription>) -> String {
         } else if transcription.has_leading_overlap {
             // This chunk has overlap - try to find and remove duplicate words
             let cleaned_text = remove_overlap(&merged, text);
+
+            // Skip completely deduplicated chunks to avoid extra whitespace
+            if cleaned_text.trim().is_empty() {
+                crate::verbose!(
+                    "Chunk {} completely deduplicated after overlap removal",
+                    transcription.index
+                );
+                continue;
+            }
+
             if !merged.ends_with(' ') && !cleaned_text.is_empty() && !cleaned_text.starts_with(' ')
             {
                 merged.push(' ');
@@ -406,7 +416,7 @@ pub async fn progressive_transcribe_cloud(
         chunks.push(AudioChunk {
             index: chunk.index,
             data: mp3_data,
-            has_leading_overlap: chunk.has_overlap,
+            has_leading_overlap: chunk.has_leading_overlap,
         });
     }
 
@@ -436,7 +446,7 @@ pub async fn progressive_transcribe_local(
         chunks.push(LocalAudioChunk {
             index: chunk.index,
             samples: chunk.samples,
-            has_leading_overlap: chunk.has_overlap,
+            has_leading_overlap: chunk.has_leading_overlap,
         });
     }
 
