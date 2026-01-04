@@ -1,3 +1,22 @@
+//! Whis Desktop - Tauri Application
+//!
+//! Desktop application for voice transcription with global keyboard shortcuts
+//! and system tray integration.
+//!
+//! ## Architecture
+//!
+//! ```text
+//! whis-desktop/
+//! ├── commands/      - Tauri command handlers (30+ commands)
+//! ├── recording/     - Recording orchestration & pipeline
+//! ├── shortcuts/     - Global keyboard shortcuts (3 backends)
+//! ├── tray/          - System tray UI & interactions
+//! ├── state.rs       - Application state management
+//! ├── window.rs      - Window utilities
+//! ├── lib.rs         - Application entry point
+//! └── main.rs        - CLI argument parsing
+//! ```
+
 mod commands;
 pub mod recording;
 pub mod shortcuts;
@@ -65,42 +84,41 @@ if !args.contains(&"--start-in-tray".to_string()) {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            // System commands (Phase 1)
+            // System commands
             commands::get_toggle_command,
             commands::can_reopen_window,
             commands::list_audio_devices,
             commands::exit_app,
-            // Validation commands (Phase 1)
+            // Validation commands
             commands::validate_openai_api_key,
             commands::validate_mistral_api_key,
             commands::validate_groq_api_key,
             commands::validate_deepgram_api_key,
             commands::validate_elevenlabs_api_key,
-            // TODO: Phase 3 - migrate these commands to modular structure
+            // Recording commands
             commands::get_status,
             commands::is_api_configured,
+            commands::toggle_recording,
+            // Settings commands
             commands::get_settings,
             commands::save_settings,
+            commands::check_config_readiness,
+            // Shortcut commands
             commands::shortcut_backend,
             commands::configure_shortcut,
             commands::configure_shortcut_with_trigger,
             commands::portal_shortcut,
             commands::reset_shortcut,
             commands::portal_bind_error,
-            commands::toggle_recording,
+            // Model commands
             commands::download_whisper_model,
-            commands::test_ollama_connection,
-            commands::list_ollama_models,
-            commands::pull_ollama_model,
-            commands::start_ollama,
-            commands::check_ollama_status,
-            commands::check_config_readiness,
             commands::get_whisper_models,
             commands::is_whisper_model_valid,
             commands::get_parakeet_models,
             commands::is_parakeet_model_valid,
             commands::download_parakeet_model,
             commands::get_active_download,
+            // Preset commands
             commands::list_presets,
             commands::apply_preset,
             commands::get_active_preset,
@@ -109,6 +127,12 @@ if !args.contains(&"--start-in-tray".to_string()) {
             commands::create_preset,
             commands::update_preset,
             commands::delete_preset,
+            // Ollama commands
+            commands::test_ollama_connection,
+            commands::list_ollama_models,
+            commands::pull_ollama_model,
+            commands::start_ollama,
+            commands::check_ollama_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
