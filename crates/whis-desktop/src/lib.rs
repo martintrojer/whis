@@ -30,7 +30,7 @@ use whis_core::Settings;
 pub fn run(start_in_tray: bool) {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
-if !args.contains(&"--start-in-tray".to_string()) {
+            if !args.contains(&"--start-in-tray".to_string()) {
                 match app.get_webview_window("main") {
                     Some(window) => {
                         let _ = window.show();

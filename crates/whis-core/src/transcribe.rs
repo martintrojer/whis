@@ -241,10 +241,7 @@ pub async fn parallel_transcribe_local(
             let has_leading_overlap = chunk.has_leading_overlap;
 
             // Transcribe using Parakeet
-            let result = crate::provider::transcribe_raw_parakeet(
-                &model_path,
-                chunk.samples,
-            );
+            let result = crate::provider::transcribe_raw_parakeet(&model_path, chunk.samples);
 
             let transcription = match result {
                 Ok(r) => ChunkTranscription {
@@ -375,4 +372,83 @@ fn remove_overlap(existing: &str, new_text: &str) -> String {
     } else {
         new_text.to_string()
     }
+}
+
+//
+// Progressive Transcription Functions
+//
+
+use crate::audio::chunker::AudioChunk as ProgressiveChunk;
+
+/// Progressive transcription for cloud providers
+///
+/// Consumes chunks from a channel as they're produced during recording,
+/// transcribes them in parallel, and merges the results.
+///
+/// # Arguments
+/// * `provider` - The transcription provider to use
+/// * `api_key` - API key for the provider
+/// * `language` - Optional language hint
+/// * `chunk_rx` - Channel receiving audio chunks during recording
+/// * `progress_callback` - Optional progress reporting
+pub async fn progressive_transcribe_cloud(
+    provider: &TranscriptionProvider,
+    api_key: &str,
+    language: Option<&str>,
+    mut chunk_rx: tokio::sync::mpsc::UnboundedReceiver<ProgressiveChunk>,
+    progress_callback: Option<Box<dyn Fn(usize, usize) + Send + Sync>>,
+) -> Result<String> {
+    // Collect chunks as they arrive
+    let mut chunks = Vec::new();
+    while let Some(chunk) = chunk_rx.recv().await {
+        // Convert ProgressiveChunk (f32 samples) to AudioChunk (MP3 bytes)
+        let mp3_data = samples_to_mp3(&chunk.samples)?;
+        chunks.push(AudioChunk {
+            index: chunk.index,
+            data: mp3_data,
+            has_leading_overlap: chunk.has_overlap,
+        });
+    }
+
+    // Use existing parallel transcription
+    parallel_transcribe(provider, api_key, language, chunks, progress_callback).await
+}
+
+/// Progressive transcription for local providers
+///
+/// Consumes chunks from a channel as they're produced during recording,
+/// transcribes them using the local model, and merges the results.
+///
+/// # Arguments
+/// * `model_path` - Path to local model directory
+/// * `chunk_rx` - Channel receiving audio chunks during recording
+/// * `num_workers` - Maximum concurrent workers
+/// * `progress_callback` - Optional progress reporting
+pub async fn progressive_transcribe_local(
+    model_path: &str,
+    mut chunk_rx: tokio::sync::mpsc::UnboundedReceiver<ProgressiveChunk>,
+    num_workers: usize,
+    progress_callback: Option<Box<dyn Fn(usize, usize) + Send + Sync>>,
+) -> Result<String> {
+    // Collect chunks as they arrive
+    let mut chunks = Vec::new();
+    while let Some(chunk) = chunk_rx.recv().await {
+        chunks.push(LocalAudioChunk {
+            index: chunk.index,
+            samples: chunk.samples,
+            has_leading_overlap: chunk.has_overlap,
+        });
+    }
+
+    // Use existing parallel local transcription
+    parallel_transcribe_local(model_path, chunks, num_workers, progress_callback).await
+}
+
+/// Convert f32 samples to MP3 bytes
+fn samples_to_mp3(samples: &[f32]) -> Result<Vec<u8>> {
+    use crate::audio::create_encoder;
+    let encoder = create_encoder();
+    encoder
+        .encode_samples(samples, crate::resample::WHISPER_SAMPLE_RATE)
+        .context("Failed to encode audio to MP3")
 }

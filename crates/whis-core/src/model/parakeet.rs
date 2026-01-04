@@ -87,8 +87,7 @@ impl ModelType for ParakeetModel {
         use std::fs::File;
         use tar::Archive;
 
-        let tar_gz = File::open(archive_path)
-            .context("Failed to open archive for extraction")?;
+        let tar_gz = File::open(archive_path).context("Failed to open archive for extraction")?;
         let tar = GzDecoder::new(tar_gz);
         let mut archive = Archive::new(tar);
 

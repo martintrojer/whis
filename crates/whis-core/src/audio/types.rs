@@ -29,4 +29,3 @@ pub enum RecordingOutput {
     /// Large file split into chunks for parallel transcription
     Chunked(Vec<AudioChunk>),
 }
-

@@ -67,8 +67,7 @@ impl RecordConfig {
     ) -> Result<Self> {
         // Load preset if provided
         let preset = if let Some(name) = preset_name {
-            let (p, _source) = Preset::load(&name)
-                .map_err(|e| anyhow::anyhow!("{}", e))?;
+            let (p, _source) = Preset::load(&name).map_err(|e| anyhow::anyhow!("{}", e))?;
             Some(p)
         } else {
             None

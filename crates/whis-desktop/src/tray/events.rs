@@ -4,7 +4,10 @@
 //! Platform-specific behavior for left-click on Linux vs macOS.
 
 use super::menu::update_tray;
-use crate::{recording, state::{AppState, RecordingState}};
+use crate::{
+    recording,
+    state::{AppState, RecordingState},
+};
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 /// Handle tray menu item clicks
@@ -90,15 +93,14 @@ fn open_settings_window(app: AppHandle) {
         return;
     }
 
-    let window =
-        WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("index.html".into()))
-            .title("Whis Settings")
-            .inner_size(600.0, 400.0)
-            .min_inner_size(400.0, 300.0)
-            .resizable(true)
-            .decorations(false)
-            .transparent(true)
-            .build();
+    let window = WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("index.html".into()))
+        .title("Whis Settings")
+        .inner_size(600.0, 400.0)
+        .min_inner_size(400.0, 300.0)
+        .resizable(true)
+        .decorations(false)
+        .transparent(true)
+        .build();
 
     // Fix Wayland window dragging by unsetting GTK titlebar
     // On Wayland, GTK's titlebar is required for dragging, but decorations(false)

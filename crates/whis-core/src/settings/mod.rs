@@ -140,7 +140,8 @@ impl Settings {
     /// - Post-processing (if enabled) has required credentials
     pub fn validate(&self) -> Result<()> {
         self.transcription.validate()?;
-        self.post_processing.validate(&self.transcription.api_keys)?;
+        self.post_processing
+            .validate(&self.transcription.api_keys)?;
         Ok(())
     }
 }

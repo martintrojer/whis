@@ -5,8 +5,8 @@
 use crate::state::AppState;
 use tauri::{AppHandle, State};
 use whis_core::{
-    model::{ModelType, ParakeetModel},
     Settings,
+    model::{ModelType, ParakeetModel},
 };
 
 /// Save settings response
@@ -67,8 +67,7 @@ pub async fn save_settings(
 
     // Only update shortcut if it actually changed
     let needs_restart = if shortcut_changed {
-        crate::shortcuts::update_shortcut(&app, &settings.ui.shortcut)
-            .map_err(|e| e.to_string())?
+        crate::shortcuts::update_shortcut(&app, &settings.ui.shortcut).map_err(|e| e.to_string())?
     } else {
         false
     };
@@ -96,7 +95,10 @@ pub async fn check_config_readiness(
         },
         "local-parakeet" => match &parakeet_model_path {
             Some(path) if ParakeetModel.verify(std::path::Path::new(path)) => (true, None),
-            Some(_) => (false, Some("Parakeet model not found or invalid".to_string())),
+            Some(_) => (
+                false,
+                Some("Parakeet model not found or invalid".to_string()),
+            ),
             None => (false, Some("Parakeet model not configured".to_string())),
         },
         provider => {

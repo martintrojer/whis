@@ -5,8 +5,8 @@ use std::io::{self, IsTerminal, Write};
 use std::time::Duration;
 use whis_core::{AudioRecorder, PostProcessor, RecordingOutput, Settings, TranscriptionProvider};
 
-use crate::app;
 use super::super::types::RecordResult;
+use crate::app;
 
 /// Microphone recording configuration
 #[derive(Debug, Clone)]

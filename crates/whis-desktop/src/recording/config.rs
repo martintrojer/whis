@@ -13,25 +13,18 @@ pub fn load_transcription_config(state: &AppState) -> Result<TranscriptionConfig
 
     // Get API key/model path based on provider type
     let api_key = match provider {
-        TranscriptionProvider::LocalWhisper => {
-            settings
-                .transcription
-                .whisper_model_path()
-                .ok_or_else(|| {
-                    "Whisper model path not configured. Add it in Settings.".to_string()
-                })?
-        }
-        TranscriptionProvider::LocalParakeet => {
-            settings
-                .transcription
-                .parakeet_model_path()
-                .ok_or_else(|| {
-                    "Parakeet model not configured. Add it in Settings.".to_string()
-                })?
-        }
-        _ => settings.transcription.api_key().ok_or_else(|| {
-            format!("No {} API key configured. Add it in Settings.", provider)
-        })?,
+        TranscriptionProvider::LocalWhisper => settings
+            .transcription
+            .whisper_model_path()
+            .ok_or_else(|| "Whisper model path not configured. Add it in Settings.".to_string())?,
+        TranscriptionProvider::LocalParakeet => settings
+            .transcription
+            .parakeet_model_path()
+            .ok_or_else(|| "Parakeet model not configured. Add it in Settings.".to_string())?,
+        _ => settings
+            .transcription
+            .api_key()
+            .ok_or_else(|| format!("No {} API key configured. Add it in Settings.", provider))?,
     };
 
     let language = settings.transcription.language.clone();

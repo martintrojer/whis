@@ -8,6 +8,22 @@ use anyhow::Result;
 /// VAD chunk size constant (for API compatibility)
 pub const VAD_CHUNK_SIZE: usize = 512;
 
+/// VAD state information for external queries (no-op version)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VadState {
+    /// Whether speech is currently being detected (always false for no-op)
+    pub is_speaking: bool,
+    /// Whether in hangover period (always false for no-op)
+    pub in_hangover: bool,
+}
+
+impl VadState {
+    /// Returns true if VAD is in complete silence (always true for no-op)
+    pub fn is_silence(&self) -> bool {
+        true
+    }
+}
+
 /// No-op Voice Activity Detection processor
 ///
 /// This implementation is used when the "vad" feature is disabled.
@@ -29,6 +45,19 @@ impl VadProcessor {
     /// Check if VAD is enabled (always false for no-op)
     pub fn is_enabled(&self) -> bool {
         false
+    }
+
+    /// Check if VAD is currently detecting complete silence (always true for no-op)
+    pub fn is_silence(&self) -> bool {
+        true
+    }
+
+    /// Get current VAD state (always returns silence for no-op)
+    pub fn state(&self) -> VadState {
+        VadState {
+            is_speaking: false,
+            in_hangover: false,
+        }
     }
 
     /// Process audio samples (passthrough - returns all samples)

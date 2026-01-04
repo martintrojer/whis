@@ -77,11 +77,13 @@ pub fn transcribe_raw(model_path: &str, samples: Vec<f32>) -> Result<Transcripti
 /// ONNX Runtime has memory constraints with long audio in Parakeet models.
 /// This function automatically chunks audio longer than 90 seconds to avoid ORT errors.
 fn transcribe_samples(model_path: &str, samples: Vec<f32>) -> Result<TranscriptionResult> {
+    use std::path::Path;
     use transcribe_rs::{
         TranscriptionEngine,
-        engines::parakeet::{ParakeetEngine, ParakeetInferenceParams, ParakeetModelParams, TimestampGranularity},
+        engines::parakeet::{
+            ParakeetEngine, ParakeetInferenceParams, ParakeetModelParams, TimestampGranularity,
+        },
     };
-    use std::path::Path;
 
     // Empirically tested: Parakeet works well up to ~90 seconds
     // Beyond that, ONNX Runtime can hit memory limits (ORT error)
@@ -91,10 +93,7 @@ fn transcribe_samples(model_path: &str, samples: Vec<f32>) -> Result<Transcripti
     // Load model once and reuse for all chunks (Phase 1: Model Reuse optimization)
     let mut engine = ParakeetEngine::new();
     engine
-        .load_model_with_params(
-            Path::new(model_path),
-            ParakeetModelParams::int8(),
-        )
+        .load_model_with_params(Path::new(model_path), ParakeetModelParams::int8())
         .map_err(|e| anyhow::anyhow!("Failed to load Parakeet model: {}", e))?;
 
     // Configure inference parameters
@@ -119,8 +118,12 @@ fn transcribe_samples(model_path: &str, samples: Vec<f32>) -> Result<Transcripti
     // Transcribe each chunk using the same engine instance
     let mut results = Vec::new();
     for (i, chunk) in chunks.iter().enumerate() {
-        eprintln!("Transcribing chunk {}/{} ({:.1}s)...",
-                  i + 1, chunks.len(), chunk.len() as f32 / 16000.0);
+        eprintln!(
+            "Transcribing chunk {}/{} ({:.1}s)...",
+            i + 1,
+            chunks.len(),
+            chunk.len() as f32 / 16000.0
+        );
 
         let result = transcribe_chunk_with_engine(&mut engine, chunk.to_vec(), &params)?;
         results.push(result.text);

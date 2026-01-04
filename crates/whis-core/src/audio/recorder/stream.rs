@@ -5,8 +5,8 @@ use cpal::traits::DeviceTrait;
 use cpal::{Device, Stream, StreamConfig};
 use std::sync::{Arc, Mutex};
 
-use super::processor::SampleProcessor;
 use super::AudioStreamSender;
+use super::processor::SampleProcessor;
 
 /// Build a unified audio input stream that works with or without VAD.
 ///
@@ -31,10 +31,8 @@ where
         config,
         move |data: &[T], _: &cpal::InputCallbackInfo| {
             // Convert to f32
-            let f32_samples: Vec<f32> = data
-                .iter()
-                .map(|&s| cpal::Sample::from_sample(s))
-                .collect();
+            let f32_samples: Vec<f32> =
+                data.iter().map(|&s| cpal::Sample::from_sample(s)).collect();
 
             // Process through resampler and VAD (if enabled)
             let processed_samples = processor.lock().unwrap().process(&f32_samples);

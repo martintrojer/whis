@@ -17,10 +17,10 @@ mod processor_noop;
 
 // Re-export the appropriate implementation
 #[cfg(feature = "vad")]
-pub use processor::VadProcessor;
+pub use processor::{VadProcessor, VadState};
 
 #[cfg(not(feature = "vad"))]
-pub use processor_noop::VadProcessor;
+pub use processor_noop::{VadProcessor, VadState};
 
 // VadConfig is always available (not feature-gated)
 

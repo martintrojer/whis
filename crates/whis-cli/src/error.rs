@@ -154,7 +154,9 @@ pub fn display_error(err: &WhisError) {
         }
 
         // Generic errors
-        WhisError::Other(msg) | WhisError::Audio(AudioError::Other(msg)) | WhisError::Provider(ProviderError::Other(msg)) => {
+        WhisError::Other(msg)
+        | WhisError::Audio(AudioError::Other(msg))
+        | WhisError::Provider(ProviderError::Other(msg)) => {
             eprintln!("Error: {}", msg);
             eprintln!();
             eprintln!("Hint: For more help, run:");

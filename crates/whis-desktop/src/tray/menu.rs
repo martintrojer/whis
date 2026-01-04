@@ -3,10 +3,13 @@
 //! Handles tray menu creation and dynamic updates based on recording state.
 //! Platform-specific implementations for macOS (rebuild menu) and Linux (update text).
 
-use super::icons::{set_tray_icon, ICON_IDLE, ICON_RECORDING, ICON_TRANSCRIBING};
 use super::TRAY_ID;
+use super::icons::{ICON_IDLE, ICON_RECORDING, ICON_TRANSCRIBING, set_tray_icon};
 use crate::state::{AppState, RecordingState};
-use tauri::{AppHandle, Manager, menu::{Menu, MenuItem, PredefinedMenuItem}};
+use tauri::{
+    AppHandle, Manager,
+    menu::{Menu, MenuItem, PredefinedMenuItem},
+};
 
 /// Update tray menu and icon for new recording state
 pub fn update_tray(app: &AppHandle, new_state: RecordingState) {

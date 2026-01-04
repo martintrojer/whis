@@ -225,9 +225,8 @@ async function initialize() {
       }
     }
   }
-  catch (e) {
+  catch {
     // Command not yet implemented or error - ignore
-    console.debug('No active download found:', e)
   }
 
   state.loaded = true

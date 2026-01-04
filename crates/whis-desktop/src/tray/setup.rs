@@ -2,7 +2,7 @@
 //!
 //! Handles initial system tray setup with menu creation and event handlers.
 
-use super::{events, TRAY_ID};
+use super::{TRAY_ID, events};
 use crate::state::AppState;
 use tauri::{
     Manager,

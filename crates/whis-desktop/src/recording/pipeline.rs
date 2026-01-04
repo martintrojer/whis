@@ -10,8 +10,8 @@
 use crate::state::{AppState, RecordingState};
 use tauri::{AppHandle, Emitter, Manager};
 use whis_core::{
-    copy_to_clipboard, ollama, parallel_transcribe, post_process, transcribe_audio,
-    PostProcessor, RecordingOutput, DEFAULT_POST_PROCESSING_PROMPT,
+    DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, RecordingOutput, copy_to_clipboard, ollama,
+    parallel_transcribe, post_process, transcribe_audio,
 };
 
 /// Stop recording and run the full transcription pipeline
@@ -99,7 +99,9 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
 
             // Get API key or URL based on post-processor type
             let api_key_or_url = if post_processor.requires_api_key() {
-                settings.post_processing.api_key(&settings.transcription.api_keys)
+                settings
+                    .post_processing
+                    .api_key(&settings.transcription.api_keys)
             } else if post_processor == PostProcessor::Ollama {
                 let ollama_url = settings
                     .services
@@ -119,57 +121,56 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
     };
 
     // Apply post-processing if enabled (outside of lock scope)
-    let final_text =
-        if let Some((post_processor, prompt, ollama_model, key_or_url)) = post_process_config {
-            // Auto-start Ollama if needed (and installed)
-            // Use spawn_blocking because ensure_ollama_running uses reqwest::blocking::Client
-            // which creates an internal tokio runtime that would panic if dropped in async context
-            if post_processor == PostProcessor::Ollama {
-                let url_for_check = key_or_url.clone();
-                let ollama_result = tauri::async_runtime::spawn_blocking(move || {
-                    ollama::ensure_ollama_running(&url_for_check)
-                })
-                .await
-                .map_err(|e| format!("Task join failed: {e}"))?;
+    let final_text = if let Some((post_processor, prompt, ollama_model, key_or_url)) =
+        post_process_config
+    {
+        // Auto-start Ollama if needed (and installed)
+        // Use spawn_blocking because ensure_ollama_running uses reqwest::blocking::Client
+        // which creates an internal tokio runtime that would panic if dropped in async context
+        if post_processor == PostProcessor::Ollama {
+            let url_for_check = key_or_url.clone();
+            let ollama_result = tauri::async_runtime::spawn_blocking(move || {
+                ollama::ensure_ollama_running(&url_for_check)
+            })
+            .await
+            .map_err(|e| format!("Task join failed: {e}"))?;
 
-                if let Err(e) = ollama_result {
-                    let warning = format!("Ollama: {e}");
-                    eprintln!("Post-processing warning: {warning}");
-                    let _ = app.emit("post-process-warning", &warning);
-                    // Skip post-processing, return raw transcription
-                    copy_to_clipboard(&transcription, clipboard_method)
-                        .map_err(|e| e.to_string())?;
-                    println!(
-                        "Done (unprocessed): {}",
-                        &transcription[..transcription.len().min(50)]
-                    );
-                    let _ = app.emit("transcription-complete", &transcription);
-                    return Ok(());
-                }
+            if let Err(e) = ollama_result {
+                let warning = format!("Ollama: {e}");
+                eprintln!("Post-processing warning: {warning}");
+                let _ = app.emit("post-process-warning", &warning);
+                // Skip post-processing, return raw transcription
+                copy_to_clipboard(&transcription, clipboard_method).map_err(|e| e.to_string())?;
+                println!(
+                    "Done (unprocessed): {}",
+                    &transcription[..transcription.len().min(50)]
+                );
+                let _ = app.emit("transcription-complete", &transcription);
+                return Ok(());
             }
+        }
 
-            println!("Post-processing...");
-            let _ = app.emit("post-process-started", ());
+        println!("Post-processing...");
+        let _ = app.emit("post-process-started", ());
 
-            let model = if post_processor == PostProcessor::Ollama {
-                ollama_model.as_deref()
-            } else {
-                None
-            };
-
-            match post_process(&transcription, &post_processor, &key_or_url, &prompt, model).await
-            {
-                Ok(processed) => processed,
-                Err(e) => {
-                    let warning = e.to_string();
-                    eprintln!("Post-processing warning: {warning}");
-                    let _ = app.emit("post-process-warning", &warning);
-                    transcription
-                }
-            }
+        let model = if post_processor == PostProcessor::Ollama {
+            ollama_model.as_deref()
         } else {
-            transcription
+            None
         };
+
+        match post_process(&transcription, &post_processor, &key_or_url, &prompt, model).await {
+            Ok(processed) => processed,
+            Err(e) => {
+                let warning = e.to_string();
+                eprintln!("Post-processing warning: {warning}");
+                let _ = app.emit("post-process-warning", &warning);
+                transcription
+            }
+        }
+    } else {
+        transcription
+    };
 
     // Copy to clipboard
     copy_to_clipboard(&final_text, clipboard_method).map_err(|e| e.to_string())?;

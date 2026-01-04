@@ -96,8 +96,8 @@ mod openai_realtime;
 pub const DEFAULT_TIMEOUT_SECS: u64 = 300;
 
 pub use deepgram::DeepgramProvider;
-pub use error::ProviderError;
 pub use elevenlabs::ElevenLabsProvider;
+pub use error::ProviderError;
 pub use groq::GroqProvider;
 #[cfg(feature = "local-transcription")]
 pub use local_parakeet::LocalParakeetProvider;
@@ -109,8 +109,7 @@ pub use local_whisper::LocalWhisperProvider;
 pub use local_whisper::transcribe_raw;
 #[cfg(feature = "local-transcription")]
 pub use local_whisper::{
-    set_keep_loaded as whisper_set_keep_loaded,
-    preload_model as whisper_preload_model,
+    preload_model as whisper_preload_model, set_keep_loaded as whisper_set_keep_loaded,
     unload_model as whisper_unload_model,
 };
 pub use mistral::MistralProvider;

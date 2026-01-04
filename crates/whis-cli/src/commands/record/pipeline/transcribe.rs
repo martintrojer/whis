@@ -30,8 +30,8 @@
 use anyhow::Result;
 use whis_core::{RecordingOutput, TranscriptionProvider, parallel_transcribe, transcribe_audio};
 
-use crate::app;
 use super::super::types::{RecordResult, TranscriptionResult};
+use crate::app;
 
 /// Transcription configuration
 pub struct TranscriptionConfig {
@@ -55,14 +55,12 @@ pub async fn execute(
     }
 
     let text = match record_result.audio {
-        RecordingOutput::Single(audio_data) => {
-            transcribe_audio(
-                &config.provider,
-                &config.api_key,
-                config.language.as_deref(),
-                audio_data,
-            )?
-        }
+        RecordingOutput::Single(audio_data) => transcribe_audio(
+            &config.provider,
+            &config.api_key,
+            config.language.as_deref(),
+            audio_data,
+        )?,
         RecordingOutput::Chunked(chunks) => {
             parallel_transcribe(
                 &config.provider,

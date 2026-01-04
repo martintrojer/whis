@@ -47,10 +47,10 @@ impl FrameResampler {
         let resampler = Fft::<f32>::new(
             source_rate as usize,
             WHISPER_SAMPLE_RATE as usize,
-            1024,              // chunk size
-            2,                 // sub-chunks for better quality
-            1,                 // output channels (mono)
-            FixedSync::Input,  // fixed input size
+            1024,             // chunk size
+            2,                // sub-chunks for better quality
+            1,                // output channels (mono)
+            FixedSync::Input, // fixed input size
         )
         .context("Failed to create frame resampler")?;
 
@@ -159,10 +159,10 @@ pub fn resample_to_16k(samples: &[f32], source_rate: u32, channels: u16) -> Resu
     let mut resampler = Fft::<f32>::new(
         source_rate as usize,
         WHISPER_SAMPLE_RATE as usize,
-        1024,              // chunk size
-        2,                 // sub-chunks
-        1,                 // channels (mono)
-        FixedSync::Input,  // fixed input size
+        1024,             // chunk size
+        2,                // sub-chunks
+        1,                // channels (mono)
+        FixedSync::Input, // fixed input size
     )
     .context("Failed to create resampler")?;
 

@@ -257,7 +257,10 @@ impl Service {
         // Apply post-processing if configured
         let settings = Settings::load();
         let final_text = if settings.post_processing.processor != PostProcessor::None {
-            if let Some(post_processor_api_key) = settings.post_processing.api_key(&settings.transcription.api_keys) {
+            if let Some(post_processor_api_key) = settings
+                .post_processing
+                .api_key(&settings.transcription.api_keys)
+            {
                 println!("#{count} Post-processing...");
 
                 let prompt = settings

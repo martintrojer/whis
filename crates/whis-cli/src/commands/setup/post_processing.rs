@@ -84,14 +84,17 @@ pub fn setup_post_processing() -> Result<()> {
         2 => {
             // OpenAI setup
             if settings
-                .transcription.api_key_for(&TranscriptionProvider::OpenAI)
+                .transcription
+                .api_key_for(&TranscriptionProvider::OpenAI)
                 .is_none()
             {
                 println!("OpenAI API key not configured.");
                 println!("Get your API key from: https://platform.openai.com/api-keys");
                 println!();
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::OpenAI)?;
-                settings.transcription.set_api_key(&TranscriptionProvider::OpenAI, api_key);
+                settings
+                    .transcription
+                    .set_api_key(&TranscriptionProvider::OpenAI, api_key);
             }
 
             settings.post_processing.processor = PostProcessor::OpenAI;
@@ -104,14 +107,17 @@ pub fn setup_post_processing() -> Result<()> {
         3 => {
             // Mistral setup
             if settings
-                .transcription.api_key_for(&TranscriptionProvider::Mistral)
+                .transcription
+                .api_key_for(&TranscriptionProvider::Mistral)
                 .is_none()
             {
                 println!("Mistral API key not configured.");
                 println!("Get your API key from: https://console.mistral.ai/api-keys");
                 println!();
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::Mistral)?;
-                settings.transcription.set_api_key(&TranscriptionProvider::Mistral, api_key);
+                settings
+                    .transcription
+                    .set_api_key(&TranscriptionProvider::Mistral, api_key);
             }
 
             settings.post_processing.processor = PostProcessor::Mistral;
@@ -143,7 +149,8 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
     println!("Choose post-processor:");
     println!("  1. Ollama (local, free)");
     if settings
-        .transcription.api_key_for(&TranscriptionProvider::OpenAI)
+        .transcription
+        .api_key_for(&TranscriptionProvider::OpenAI)
         .is_some()
     {
         println!("  2. OpenAI (cloud, uses existing key)");
@@ -151,7 +158,8 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
         println!("  2. OpenAI (cloud, requires API key)");
     }
     if settings
-        .transcription.api_key_for(&TranscriptionProvider::Mistral)
+        .transcription
+        .api_key_for(&TranscriptionProvider::Mistral)
         .is_some()
     {
         println!("  3. Mistral (cloud, uses existing key)");
@@ -196,14 +204,17 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
         2 => {
             // OpenAI
             if settings
-                .transcription.api_key_for(&TranscriptionProvider::OpenAI)
+                .transcription
+                .api_key_for(&TranscriptionProvider::OpenAI)
                 .is_none()
             {
                 println!("OpenAI API key not configured.");
                 println!("Get your API key from: https://platform.openai.com/api-keys");
                 println!();
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::OpenAI)?;
-                settings.transcription.set_api_key(&TranscriptionProvider::OpenAI, api_key);
+                settings
+                    .transcription
+                    .set_api_key(&TranscriptionProvider::OpenAI, api_key);
             }
             settings.post_processing.processor = PostProcessor::OpenAI;
             settings.save()?;
@@ -211,14 +222,17 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
         3 => {
             // Mistral
             if settings
-                .transcription.api_key_for(&TranscriptionProvider::Mistral)
+                .transcription
+                .api_key_for(&TranscriptionProvider::Mistral)
                 .is_none()
             {
                 println!("Mistral API key not configured.");
                 println!("Get your API key from: https://console.mistral.ai/api-keys");
                 println!();
                 let api_key = prompt_and_validate_key(&TranscriptionProvider::Mistral)?;
-                settings.transcription.set_api_key(&TranscriptionProvider::Mistral, api_key);
+                settings
+                    .transcription
+                    .set_api_key(&TranscriptionProvider::Mistral, api_key);
             }
             settings.post_processing.processor = PostProcessor::Mistral;
             settings.save()?;
@@ -418,7 +432,9 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
             let ollama_configured = settings.post_processing.processor == PostProcessor::Ollama;
             if ollama_configured {
                 let current_model = settings
-                    .services.ollama.model
+                    .services
+                    .ollama
+                    .model
                     .as_deref()
                     .unwrap_or(ollama::DEFAULT_OLLAMA_MODEL);
                 println!();
@@ -430,7 +446,9 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
                 } else {
                     // Just verify Ollama is accessible
                     let ollama_url = settings
-                        .services.ollama.url
+                        .services
+                        .ollama
+                        .url
                         .as_deref()
                         .unwrap_or(ollama::DEFAULT_OLLAMA_URL);
                     if ollama::is_ollama_installed()

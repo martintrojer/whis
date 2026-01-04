@@ -2,8 +2,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::resample::FrameResampler;
 use super::super::vad::VadProcessor;
+use crate::resample::FrameResampler;
 
 /// Processes raw audio samples through resampling and optional VAD.
 #[derive(Clone)]
@@ -22,10 +22,7 @@ impl SampleProcessor {
     }
 
     /// Create a new sample processor with resampling and VAD.
-    pub fn with_vad(
-        resampler: Arc<Mutex<FrameResampler>>,
-        vad: Arc<Mutex<VadProcessor>>,
-    ) -> Self {
+    pub fn with_vad(resampler: Arc<Mutex<FrameResampler>>, vad: Arc<Mutex<VadProcessor>>) -> Self {
         Self {
             resampler,
             vad: Some(vad),

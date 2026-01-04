@@ -33,6 +33,7 @@
 //! - **macOS**: Uses message passing architecture to avoid `Send` issues with cpal::Stream
 //! - **Linux**: ALSA stderr suppression via safe FFI wrapper
 
+pub mod chunker;
 mod devices;
 mod encoder;
 pub mod error;
@@ -42,12 +43,13 @@ mod types;
 mod vad;
 
 // Re-export public types
+pub use chunker::{AudioChunk as ProgressiveChunk, ChunkerConfig, ProgressiveChunker};
 pub use devices::list_audio_devices;
-pub use encoder::{AudioEncoder, create_encoder};
+pub use encoder::{create_encoder, AudioEncoder};
 pub use error::AudioError;
 pub use loader::{load_audio_file, load_audio_stdin};
 pub use recorder::{AudioRecorder, AudioStreamSender, RecorderConfig, RecordingData};
 pub use types::{AudioChunk, AudioDeviceInfo, RecordingOutput};
 
 // Re-export VAD types (always available - no-op when feature disabled)
-pub use vad::{VadConfig, VadProcessor};
+pub use vad::{VadConfig, VadProcessor, VadState};

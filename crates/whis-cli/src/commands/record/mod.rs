@@ -152,16 +152,22 @@ pub fn run(
         api_key: transcription_config.api_key,
         language: transcription_config.language,
     };
-    let transcription_result =
-        runtime.block_on(pipeline::transcribe(record_result, &transcription_cfg, quiet))?;
+    let transcription_result = runtime.block_on(pipeline::transcribe(
+        record_result,
+        &transcription_cfg,
+        quiet,
+    ))?;
 
     // Phase 3: Post-process and apply presets
     let processing_cfg = pipeline::ProcessingConfig {
         enabled: config.post_process,
         preset: config.preset,
     };
-    let processed_result =
-        runtime.block_on(pipeline::process(transcription_result, &processing_cfg, quiet))?;
+    let processed_result = runtime.block_on(pipeline::process(
+        transcription_result,
+        &processing_cfg,
+        quiet,
+    ))?;
 
     // Phase 4: Output (print or clipboard)
     let output_mode = if config.print {

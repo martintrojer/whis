@@ -22,6 +22,22 @@ const DEFAULT_ONSET_FRAMES: usize = 2;
 /// Default hangover frames (~480ms trailing capture)
 const DEFAULT_HANGOVER_FRAMES: usize = 15;
 
+/// VAD state information for external queries
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VadState {
+    /// Whether speech is currently being detected
+    pub is_speaking: bool,
+    /// Whether in hangover period (continuing after silence detected)
+    pub in_hangover: bool,
+}
+
+impl VadState {
+    /// Returns true if VAD is in complete silence (not speaking, no hangover)
+    pub fn is_silence(&self) -> bool {
+        !self.is_speaking && !self.in_hangover
+    }
+}
+
 /// Voice Activity Detection processor
 ///
 /// Wraps the Silero VAD model to detect speech in real-time audio streams.
@@ -88,6 +104,28 @@ impl VadProcessor {
     /// Check if VAD is enabled
     pub fn is_enabled(&self) -> bool {
         self.is_enabled
+    }
+
+    /// Check if VAD is currently detecting complete silence
+    ///
+    /// Returns true when:
+    /// - Not speaking AND
+    /// - Hangover period is finished
+    ///
+    /// This is useful for detecting natural pauses during recording.
+    pub fn is_silence(&self) -> bool {
+        !self.is_speaking && self.hangover_counter == 0
+    }
+
+    /// Get current VAD state
+    ///
+    /// Returns information about speech detection and hangover status.
+    /// Useful for implementing VAD-aware chunking during recording.
+    pub fn state(&self) -> VadState {
+        VadState {
+            is_speaking: self.is_speaking,
+            in_hangover: self.hangover_counter > 0,
+        }
     }
 
     /// Process audio samples and return samples that contain speech.

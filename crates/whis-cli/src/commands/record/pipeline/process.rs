@@ -1,10 +1,12 @@
 //! Post-processing pipeline phase
 
 use anyhow::{Result, anyhow};
-use whis_core::{PostProcessor, Preset, Settings, ollama, post_process, DEFAULT_POST_PROCESSING_PROMPT};
+use whis_core::{
+    DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, Preset, Settings, ollama, post_process,
+};
 
-use crate::app;
 use super::super::types::{ProcessedResult, TranscriptionResult};
+use crate::app;
 
 /// Post-processing configuration
 pub struct ProcessingConfig {
@@ -23,7 +25,8 @@ pub async fn execute(
     // If post-processing is enabled OR a preset is provided, apply LLM processing
     if config.enabled || config.preset.is_some() {
         let settings = Settings::load();
-        let (processor, api_key, model, prompt) = resolve_post_processor(&config.preset, &settings)?;
+        let (processor, api_key, model, prompt) =
+            resolve_post_processor(&config.preset, &settings)?;
 
         if !quiet {
             if whis_core::verbose::is_verbose() {
@@ -47,7 +50,9 @@ fn resolve_post_processor(
     // Determine which post-processor to use
     let processor = if let Some(p) = preset {
         if let Some(post_processor_str) = &p.post_processor {
-            post_processor_str.parse().unwrap_or(settings.post_processing.processor.clone())
+            post_processor_str
+                .parse()
+                .unwrap_or(settings.post_processing.processor.clone())
         } else {
             settings.post_processing.processor.clone()
         }
@@ -88,12 +93,7 @@ fn resolve_post_processor(
                 return Err(anyhow!("Ollama model not configured"));
             }
 
-            Ok((
-                PostProcessor::Ollama,
-                ollama_url,
-                model,
-                prompt,
-            ))
+            Ok((PostProcessor::Ollama, ollama_url, model, prompt))
         }
         PostProcessor::OpenAI => {
             let api_key = settings
@@ -125,8 +125,6 @@ fn resolve_post_processor(
 
             Ok((PostProcessor::Mistral, api_key, model, prompt))
         }
-        PostProcessor::None => Err(anyhow!(
-            "Post-processing not configured. Run: whis setup"
-        )),
+        PostProcessor::None => Err(anyhow!("Post-processing not configured. Run: whis setup")),
     }
 }

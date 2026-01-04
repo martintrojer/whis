@@ -31,7 +31,11 @@ pub fn setup_cloud() -> Result<()> {
 
         if let Some(key) = settings.transcription.api_key_for(provider) {
             // Check if key is from environment variable
-            let key_source = if settings.transcription.api_keys.contains_key(provider.as_str()) {
+            let key_source = if settings
+                .transcription
+                .api_keys
+                .contains_key(provider.as_str())
+            {
                 mask_key(&key)
             } else {
                 format!("from ${}", provider.api_key_env_var())
@@ -59,7 +63,10 @@ pub fn setup_cloud() -> Result<()> {
     let mut menu_actions: Vec<MenuAction> = Vec::new();
 
     // Option 1: Use current provider (if configured)
-    if configured.iter().any(|(p, _)| *p == settings.transcription.provider) {
+    if configured
+        .iter()
+        .any(|(p, _)| *p == settings.transcription.provider)
+    {
         menu_options.push(format!(
             "Use {} (current)",
             settings.transcription.provider.display_name()
@@ -161,7 +168,10 @@ fn setup_new_provider(settings: &mut Settings, providers: &[TranscriptionProvide
 fn update_existing_key(settings: &mut Settings, providers: &[TranscriptionProvider]) -> Result<()> {
     println!("Select provider to update:");
     for (i, provider) in providers.iter().enumerate() {
-        let current_key = settings.transcription.api_key_for(provider).unwrap_or_default();
+        let current_key = settings
+            .transcription
+            .api_key_for(provider)
+            .unwrap_or_default();
         println!(
             "  {}. {} ({})",
             i + 1,
@@ -181,7 +191,12 @@ fn update_existing_key(settings: &mut Settings, providers: &[TranscriptionProvid
     println!();
     println!(
         "Current key: {}",
-        mask_key(&settings.transcription.api_key_for(&provider).unwrap_or_default())
+        mask_key(
+            &settings
+                .transcription
+                .api_key_for(&provider)
+                .unwrap_or_default()
+        )
     );
     println!("Get a new key from: {}", api_key_url(&provider));
     println!();
@@ -232,7 +247,8 @@ fn finish_setup(settings: &mut Settings, provider: &TranscriptionProvider) -> Re
         _ => {
             // For other providers, use OpenAI for post-processing if they have an OpenAI key
             if settings
-                .transcription.api_key_for(&TranscriptionProvider::OpenAI)
+                .transcription
+                .api_key_for(&TranscriptionProvider::OpenAI)
                 .is_some()
             {
                 PostProcessor::OpenAI
@@ -345,11 +361,12 @@ pub fn setup_transcription_cloud() -> Result<()> {
         println!();
 
         // Default to current method if already using OpenAI variant
-        let current_method = if settings.transcription.provider == TranscriptionProvider::OpenAIRealtime {
-            2
-        } else {
-            1
-        };
+        let current_method =
+            if settings.transcription.provider == TranscriptionProvider::OpenAIRealtime {
+                2
+            } else {
+                1
+            };
 
         let method_choice = prompt_choice_with_default("Select", 1, 2, Some(current_method))?;
         if method_choice == 2 {

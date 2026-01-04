@@ -27,10 +27,7 @@ pub struct WhisperModelInfo {
 /// Emits 'download-progress' events with { downloaded, total } during download
 /// Returns the path where the model was saved
 #[tauri::command]
-pub async fn download_whisper_model(
-    app: AppHandle,
-    model_name: String,
-) -> Result<String, String> {
+pub async fn download_whisper_model(app: AppHandle, model_name: String) -> Result<String, String> {
     // Run blocking download in a separate thread
     tauri::async_runtime::spawn_blocking(move || {
         // Try to acquire lock (non-blocking) to prevent concurrent downloads

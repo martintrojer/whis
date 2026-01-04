@@ -10,11 +10,11 @@ use anyhow::{Context, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
 
-use crate::resample::{FrameResampler, WHISPER_SAMPLE_RATE};
+use super::devices;
 use super::encoder::create_encoder;
 use super::types::{AudioChunk, RecordingOutput};
-use super::devices;
 use super::vad::{VadConfig, VadProcessor};
+use crate::resample::{FrameResampler, WHISPER_SAMPLE_RATE};
 
 use processor::SampleProcessor;
 
@@ -169,21 +169,15 @@ impl AudioRecorder {
 
         // Build stream using unified builder (no duplication!)
         let stream = match config.sample_format() {
-            cpal::SampleFormat::F32 => self.build_stream_typed::<f32>(
-                &device,
-                &stream_config,
-                samples,
-            )?,
-            cpal::SampleFormat::I16 => self.build_stream_typed::<i16>(
-                &device,
-                &stream_config,
-                samples,
-            )?,
-            cpal::SampleFormat::U16 => self.build_stream_typed::<u16>(
-                &device,
-                &stream_config,
-                samples,
-            )?,
+            cpal::SampleFormat::F32 => {
+                self.build_stream_typed::<f32>(&device, &stream_config, samples)?
+            }
+            cpal::SampleFormat::I16 => {
+                self.build_stream_typed::<i16>(&device, &stream_config, samples)?
+            }
+            cpal::SampleFormat::U16 => {
+                self.build_stream_typed::<u16>(&device, &stream_config, samples)?
+            }
             _ => anyhow::bail!("Unsupported sample format"),
         };
 
@@ -196,7 +190,10 @@ impl AudioRecorder {
     }
 
     /// Create a sample processor with the appropriate VAD configuration.
-    fn create_processor(&mut self, resampler: Arc<Mutex<FrameResampler>>) -> Result<SampleProcessor> {
+    fn create_processor(
+        &mut self,
+        resampler: Arc<Mutex<FrameResampler>>,
+    ) -> Result<SampleProcessor> {
         if self.vad_config.enabled {
             crate::verbose!("VAD enabled (threshold: {:.2})", self.vad_config.threshold);
             let vad_processor = VadProcessor::new(true, self.vad_config.threshold)
@@ -224,13 +221,7 @@ impl AudioRecorder {
         // Get the processor - clone it since it's shared with self
         let processor = self.processor.as_ref().unwrap().lock().unwrap().clone();
 
-        stream::build_stream::<T>(
-            device,
-            config,
-            samples,
-            processor,
-            self.stream_tx.clone(),
-        )
+        stream::build_stream::<T>(device, config, samples, processor, self.stream_tx.clone())
     }
 
     /// Start recording and stream samples to a channel for real-time processing.
@@ -392,7 +383,8 @@ impl RecordingData {
     /// Convert samples to MP3 using the configured encoder.
     fn samples_to_mp3(&self, samples: &[f32], suffix: &str) -> Result<Vec<u8>> {
         let encoder = create_encoder();
-        encoder.encode_samples(samples, self.sample_rate)
+        encoder
+            .encode_samples(samples, self.sample_rate)
             .with_context(|| format!("Failed to encode audio chunk '{}'", suffix))
     }
 }

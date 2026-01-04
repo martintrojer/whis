@@ -126,9 +126,10 @@ fn set_config(key: &str, value: &str) -> Result<()> {
         }
         "elevenlabs-api-key" => {
             validate_api_key(value_trimmed, "ElevenLabs")?;
-            settings
-                .transcription
-                .set_api_key(&TranscriptionProvider::ElevenLabs, value_trimmed.to_string());
+            settings.transcription.set_api_key(
+                &TranscriptionProvider::ElevenLabs,
+                value_trimmed.to_string(),
+            );
             println!("elevenlabs-api-key = {}", mask_key(value_trimmed));
         }
         "whisper-model-path" => {
@@ -159,7 +160,10 @@ fn set_config(key: &str, value: &str) -> Result<()> {
                 anyhow::bail!("Invalid post-processing prompt: cannot be empty");
             }
             settings.post_processing.prompt = Some(value_trimmed.to_string());
-            println!("post-processing-prompt = {}", truncate_prompt(value_trimmed));
+            println!(
+                "post-processing-prompt = {}",
+                truncate_prompt(value_trimmed)
+            );
         }
         "ollama-url" => {
             if value_trimmed.is_empty() {
@@ -206,11 +210,7 @@ fn get_config(key: &str) -> Result<()> {
         "provider" => println!("{}", settings.transcription.provider),
         "language" => println!(
             "{}",
-            settings
-                .transcription
-                .language
-                .as_deref()
-                .unwrap_or("auto")
+            settings.transcription.language.as_deref().unwrap_or("auto")
         ),
         "openai-api-key" => print_api_key(&settings, &TranscriptionProvider::OpenAI),
         "mistral-api-key" => print_api_key(&settings, &TranscriptionProvider::Mistral),
@@ -279,11 +279,7 @@ fn show_all_settings() -> Result<()> {
     println!("provider = {}", settings.transcription.provider);
     println!(
         "language = {}",
-        settings
-            .transcription
-            .language
-            .as_deref()
-            .unwrap_or("auto")
+        settings.transcription.language.as_deref().unwrap_or("auto")
     );
 
     for provider in TranscriptionProvider::all() {

@@ -29,8 +29,8 @@ pub mod tauri_plugin;
 
 // Re-export backend detection
 pub use backend::{
-    backend_info, detect_backend, portal_version, ShortcutBackend, ShortcutBackendInfo,
-    ShortcutCapability,
+    ShortcutBackend, ShortcutBackendInfo, ShortcutCapability, backend_info, detect_backend,
+    portal_version,
 };
 
 // Re-export portal functions

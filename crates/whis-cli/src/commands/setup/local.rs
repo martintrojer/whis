@@ -42,7 +42,13 @@ pub fn setup_local() -> Result<()> {
                 } else {
                     ""
                 };
-                println!("  {}. {} - {}{}", i + 1, model.name, model.description, status);
+                println!(
+                    "  {}. {} - {}{}",
+                    i + 1,
+                    model.name,
+                    model.description,
+                    status
+                );
             }
             println!();
 
@@ -76,7 +82,13 @@ pub fn setup_local() -> Result<()> {
                 } else {
                     ""
                 };
-                println!("  {}. {} - {}{}", i + 1, model.name, model.description, status);
+                println!(
+                    "  {}. {} - {}{}",
+                    i + 1,
+                    model.name,
+                    model.description,
+                    status
+                );
             }
             println!();
 
@@ -136,10 +148,12 @@ pub fn setup_local() -> Result<()> {
     settings.transcription.provider = provider.clone();
     match &provider {
         TranscriptionProvider::LocalParakeet => {
-            settings.transcription.local_models.parakeet_path = Some(model_path.to_string_lossy().to_string());
+            settings.transcription.local_models.parakeet_path =
+                Some(model_path.to_string_lossy().to_string());
         }
         TranscriptionProvider::LocalWhisper => {
-            settings.transcription.local_models.whisper_path = Some(model_path.to_string_lossy().to_string());
+            settings.transcription.local_models.whisper_path =
+                Some(model_path.to_string_lossy().to_string());
         }
         _ => {}
     }
@@ -230,7 +244,13 @@ pub fn setup_transcription_local() -> Result<()> {
                 } else {
                     ""
                 };
-                println!("  {}. {} - {}{}", i + 1, model.name, model.description, status);
+                println!(
+                    "  {}. {} - {}{}",
+                    i + 1,
+                    model.name,
+                    model.description,
+                    status
+                );
             }
             println!();
 
@@ -262,10 +282,12 @@ pub fn setup_transcription_local() -> Result<()> {
     settings.transcription.provider = provider.clone();
     match &provider {
         TranscriptionProvider::LocalParakeet => {
-            settings.transcription.local_models.parakeet_path = Some(model_path.to_string_lossy().to_string());
+            settings.transcription.local_models.parakeet_path =
+                Some(model_path.to_string_lossy().to_string());
         }
         TranscriptionProvider::LocalWhisper => {
-            settings.transcription.local_models.whisper_path = Some(model_path.to_string_lossy().to_string());
+            settings.transcription.local_models.whisper_path =
+                Some(model_path.to_string_lossy().to_string());
         }
         _ => {}
     }

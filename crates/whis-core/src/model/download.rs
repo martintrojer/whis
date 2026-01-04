@@ -7,11 +7,7 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 
 /// Download a model with default progress indication (prints to stderr)
-pub fn download<M: ModelType>(
-    model_type: &M,
-    model_name: &str,
-    dest: &Path,
-) -> Result<()> {
+pub fn download<M: ModelType>(model_type: &M, model_name: &str, dest: &Path) -> Result<()> {
     download_with_progress(model_type, model_name, dest, |downloaded, total| {
         let progress = if total > 0 {
             (downloaded * 100 / total) as usize
@@ -57,7 +53,11 @@ where
         fs::create_dir_all(parent).context("Failed to create models directory")?;
     }
 
-    eprintln!("Downloading {} model '{}'...", model_type.name(), model_name);
+    eprintln!(
+        "Downloading {} model '{}'...",
+        model_type.name(),
+        model_name
+    );
     eprintln!("URL: {}", url);
     eprintln!("Destination: {}", dest.display());
     eprintln!();
@@ -145,10 +145,7 @@ where
 }
 
 /// Ensure a model is available, downloading it if necessary
-pub fn ensure<M: ModelType>(
-    model_type: &M,
-    model_name: &str,
-) -> Result<()> {
+pub fn ensure<M: ModelType>(model_type: &M, model_name: &str) -> Result<()> {
     let path = model_type.default_path(model_name);
 
     if model_type.verify(&path) {

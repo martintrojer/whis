@@ -49,7 +49,12 @@ impl FfmpegEncoder {
     }
 
     /// Write samples as WAV file.
-    fn write_wav_file(&self, samples: &[i16], path: &std::path::Path, sample_rate: u32) -> Result<()> {
+    fn write_wav_file(
+        &self,
+        samples: &[i16],
+        path: &std::path::Path,
+        sample_rate: u32,
+    ) -> Result<()> {
         let spec = WavSpec {
             channels: self.channels,
             sample_rate,

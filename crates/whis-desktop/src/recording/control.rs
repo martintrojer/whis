@@ -2,8 +2,8 @@
 //!
 //! Handles starting and stopping audio recording with state management.
 
-use crate::state::{AppState, RecordingState};
 use super::config::load_transcription_config;
+use crate::state::{AppState, RecordingState};
 use tauri::AppHandle;
 use whis_core::{AudioRecorder, PostProcessor, ollama, preload_ollama};
 

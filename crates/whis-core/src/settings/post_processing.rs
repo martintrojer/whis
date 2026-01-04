@@ -30,7 +30,10 @@ impl PostProcessingSettings {
     /// Get the API key for the post-processor, falling back to environment variables.
     ///
     /// Returns None for local post-processor (Ollama uses URL instead).
-    pub fn api_key(&self, transcription_api_keys: &std::collections::HashMap<String, String>) -> Option<String> {
+    pub fn api_key(
+        &self,
+        transcription_api_keys: &std::collections::HashMap<String, String>,
+    ) -> Option<String> {
         match &self.processor {
             PostProcessor::None | PostProcessor::Ollama => None,
             PostProcessor::OpenAI => {
@@ -53,9 +56,12 @@ impl PostProcessingSettings {
     }
 
     /// Check if post-processing is enabled and properly configured.
-    pub fn is_configured(&self, transcription_api_keys: &std::collections::HashMap<String, String>) -> bool {
+    pub fn is_configured(
+        &self,
+        transcription_api_keys: &std::collections::HashMap<String, String>,
+    ) -> bool {
         match &self.processor {
-            PostProcessor::None => true, // No post-processing always valid
+            PostProcessor::None => true,   // No post-processing always valid
             PostProcessor::Ollama => true, // Ollama URL checked in services
             PostProcessor::OpenAI | PostProcessor::Mistral => {
                 self.api_key(transcription_api_keys).is_some()
@@ -64,7 +70,10 @@ impl PostProcessingSettings {
     }
 
     /// Validate post-processing settings.
-    pub fn validate(&self, transcription_api_keys: &std::collections::HashMap<String, String>) -> anyhow::Result<()> {
+    pub fn validate(
+        &self,
+        transcription_api_keys: &std::collections::HashMap<String, String>,
+    ) -> anyhow::Result<()> {
         if !self.is_configured(transcription_api_keys) {
             anyhow::bail!(
                 "Post-processor '{}' requires an API key. Please configure it.",

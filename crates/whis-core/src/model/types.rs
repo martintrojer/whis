@@ -35,10 +35,7 @@ pub trait ModelType: Send + Sync {
 
     /// Get download URL for a model by name
     fn get_url(&self, name: &str) -> Option<&'static str> {
-        self.models()
-            .iter()
-            .find(|m| m.name == name)
-            .map(|m| m.url)
+        self.models().iter().find(|m| m.name == name).map(|m| m.url)
     }
 
     /// Whether this model type needs extraction after download

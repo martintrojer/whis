@@ -53,10 +53,7 @@ pub fn is_parakeet_model_valid(state: State<'_, AppState>) -> bool {
 
 /// Download a Parakeet model with progress events
 #[tauri::command]
-pub async fn download_parakeet_model(
-    app: AppHandle,
-    model_name: String,
-) -> Result<String, String> {
+pub async fn download_parakeet_model(app: AppHandle, model_name: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         // Try to acquire lock (non-blocking) to prevent concurrent downloads
         // Lock must be acquired inside spawn_blocking to avoid Send issues

@@ -3,8 +3,8 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::time::Duration;
-use whis_core::ollama;
 use whis_core::model::{ModelType, WhisperModel};
+use whis_core::ollama;
 
 #[cfg(feature = "local-transcription")]
 use whis_core::model::ParakeetModel;
@@ -32,7 +32,8 @@ fn list_whisper_models() -> Result<()> {
     println!("Available whisper models:\n");
 
     // Calculate column widths
-    let name_width = WhisperModel.models()
+    let name_width = WhisperModel
+        .models()
         .iter()
         .map(|model| model.name.len())
         .max()
@@ -66,10 +67,7 @@ fn list_whisper_models() -> Result<()> {
     }
 
     println!();
-    println!(
-        "Models directory: {}",
-        WhisperModel.default_dir().display()
-    );
+    println!("Models directory: {}", WhisperModel.default_dir().display());
     println!();
     println!("To download a model, run: whis setup local");
 
@@ -81,7 +79,8 @@ fn list_parakeet_models() -> Result<()> {
     println!("Available Parakeet models:\n");
 
     // Calculate column widths
-    let name_width = ParakeetModel.models()
+    let name_width = ParakeetModel
+        .models()
         .iter()
         .map(|model| model.name.len())
         .max()
