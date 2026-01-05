@@ -239,18 +239,15 @@ where
 
                 match event.event_type.as_str() {
                     "Results" => {
-                        // Only collect final results
-                        if event.is_final {
-                            if let Some(channel) = event.channel {
-                                if let Some(alt) = channel.alternatives.first() {
-                                    if !alt.transcript.is_empty() {
-                                        final_transcript.push_str(&alt.transcript);
-                                        final_transcript.push(' ');
-                                    }
-                                }
-                            }
+                        // Only collect final results (ignore interim results where is_final=false)
+                        if event.is_final
+                            && let Some(channel) = event.channel
+                            && let Some(alt) = channel.alternatives.first()
+                            && !alt.transcript.is_empty()
+                        {
+                            final_transcript.push_str(&alt.transcript);
+                            final_transcript.push(' ');
                         }
-                        // Ignore interim results (is_final=false)
                     }
                     "Metadata" => {
                         // Connection metadata, ignore for now

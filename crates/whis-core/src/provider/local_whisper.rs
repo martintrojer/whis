@@ -14,6 +14,104 @@ use std::sync::{Mutex, OnceLock};
 
 use super::{TranscriptionBackend, TranscriptionRequest, TranscriptionResult, TranscriptionStage};
 
+// ============================================================================
+// stderr Suppression for GGML Vulkan Output
+// ============================================================================
+
+/// Temporarily suppresses stderr during closure execution.
+/// Used to suppress GGML Vulkan device detection lines that bypass logging callbacks.
+/// whisper-rs-sys 0.11.x (used by transcribe-rs 0.2.1) writes these directly to std::cerr.
+#[cfg(feature = "local-transcription")]
+mod stderr_suppression {
+    /// RAII guard that restores stderr when dropped
+    #[cfg(unix)]
+    pub struct StderrGuard {
+        saved_fd: i32,
+        stderr_fd: i32,
+    }
+
+    #[cfg(unix)]
+    impl Drop for StderrGuard {
+        fn drop(&mut self) {
+            unsafe {
+                libc::dup2(self.saved_fd, self.stderr_fd);
+                libc::close(self.saved_fd);
+            }
+        }
+    }
+
+    /// Suppress stderr by redirecting it to /dev/null.
+    /// Returns a guard that restores stderr when dropped.
+    #[cfg(unix)]
+    pub fn suppress() -> Option<StderrGuard> {
+        use std::os::unix::io::AsRawFd;
+
+        let stderr_fd = std::io::stderr().as_raw_fd();
+        let saved_fd = unsafe { libc::dup(stderr_fd) };
+        if saved_fd == -1 {
+            return None;
+        }
+
+        // Open /dev/null and redirect stderr to it
+        let devnull = std::fs::File::open("/dev/null").ok()?;
+        let result = unsafe { libc::dup2(devnull.as_raw_fd(), stderr_fd) };
+        if result == -1 {
+            unsafe { libc::close(saved_fd) };
+            return None;
+        }
+
+        Some(StderrGuard {
+            saved_fd,
+            stderr_fd,
+        })
+    }
+
+    // Windows implementation
+    #[cfg(windows)]
+    pub struct StderrGuard {
+        saved_handle: *mut std::ffi::c_void,
+    }
+
+    #[cfg(windows)]
+    impl Drop for StderrGuard {
+        fn drop(&mut self) {
+            const STD_ERROR_HANDLE: u32 = 0xFFFF_FFF4; // -12 as u32
+            extern "system" {
+                fn SetStdHandle(nStdHandle: u32, hHandle: *mut std::ffi::c_void) -> i32;
+            }
+            unsafe {
+                SetStdHandle(STD_ERROR_HANDLE, self.saved_handle);
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    pub fn suppress() -> Option<StderrGuard> {
+        use std::os::windows::io::AsRawHandle;
+        const STD_ERROR_HANDLE: u32 = 0xFFFF_FFF4; // -12 as u32
+
+        extern "system" {
+            fn GetStdHandle(nStdHandle: u32) -> *mut std::ffi::c_void;
+            fn SetStdHandle(nStdHandle: u32, hHandle: *mut std::ffi::c_void) -> i32;
+        }
+
+        let saved_handle = unsafe { GetStdHandle(STD_ERROR_HANDLE) };
+
+        // Open NUL device
+        let nul = std::fs::OpenOptions::new().write(true).open("NUL").ok()?;
+
+        let result = unsafe { SetStdHandle(STD_ERROR_HANDLE, nul.as_raw_handle() as *mut _) };
+        if result == 0 {
+            return None;
+        }
+
+        // Keep nul open by leaking it (will be restored when guard drops)
+        std::mem::forget(nul);
+
+        Some(StderrGuard { saved_handle })
+    }
+}
+
 /// Local Whisper transcription provider using transcribe-rs
 #[derive(Debug, Default, Clone)]
 pub struct LocalWhisperProvider;
@@ -129,9 +227,17 @@ fn get_or_load_engine(model_path: &str) -> Result<()> {
     // Create and load engine
     use transcribe_rs::TranscriptionEngine;
     let mut engine = transcribe_rs::engines::whisper::WhisperEngine::new();
+
+    // Suppress stderr during model loading to hide whisper.cpp noise.
+    // The guard automatically restores stderr when dropped (RAII pattern).
+    let _stderr_guard = stderr_suppression::suppress();
+
     engine
         .load_model(Path::new(model_path))
         .map_err(|e| anyhow::anyhow!("Failed to load whisper model: {}", e))?;
+
+    // Explicitly drop the guard to restore stderr before any subsequent logging
+    drop(_stderr_guard);
 
     crate::verbose!("Whisper model loaded successfully");
 
@@ -176,11 +282,16 @@ fn transcribe_samples(
             initial_prompt: None,
         };
 
+        // Suppress stderr during transcription to hide whisper.cpp noise
+        let _stderr_guard = stderr_suppression::suppress();
+
         // Transcribe (transcribe-rs requires Vec<f32>, not &[f32])
         let result = cached
             .engine
             .transcribe_samples(samples.to_vec(), Some(params))
             .map_err(|e| anyhow::anyhow!("Transcription failed: {}", e))?;
+
+        drop(_stderr_guard);
 
         result.text
     };

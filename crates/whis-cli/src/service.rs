@@ -11,6 +11,9 @@ use whis_core::{
     copy_to_clipboard, post_process,
 };
 
+// Type aliases to reduce complexity warnings
+type TaskHandle<T> = Arc<Mutex<Option<tokio::task::JoinHandle<T>>>>;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum ServiceState {
     Idle,
@@ -22,8 +25,8 @@ pub struct Service {
     state: Arc<Mutex<ServiceState>>,
     recorder: Arc<Mutex<Option<AudioRecorder>>>,
     // Store handles for background tasks (progressive transcription)
-    chunker_handle: Arc<Mutex<Option<tokio::task::JoinHandle<Result<(), String>>>>>,
-    transcription_handle: Arc<Mutex<Option<tokio::task::JoinHandle<Result<String>>>>>,
+    chunker_handle: TaskHandle<Result<(), String>>,
+    transcription_handle: TaskHandle<Result<String>>,
     provider: TranscriptionProvider,
     api_key: String,
     language: Option<String>,

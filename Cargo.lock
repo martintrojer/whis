@@ -7292,6 +7292,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "hound",
+ "libc",
  "minimp3",
  "mp3lame-encoder",
  "once_cell",

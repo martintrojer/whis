@@ -42,7 +42,10 @@ pub fn setup_cloud() -> Result<()> {
                 active_marker
             ));
         } else {
-            interactive::info(&format!("  - {:<10} (not configured)", provider.display_name()));
+            interactive::info(&format!(
+                "  - {:<10} (not configured)",
+                provider.display_name()
+            ));
         }
     }
 
@@ -67,7 +70,10 @@ pub fn setup_cloud() -> Result<()> {
         ));
         let current = settings.transcription.provider.clone();
         menu_actions.push(Box::new(move |s| {
-            interactive::info(&format!("Keeping {} as active provider.", current.display_name()));
+            interactive::info(&format!(
+                "Keeping {} as active provider.",
+                current.display_name()
+            ));
             finish_setup(s, &current)
         }));
     }
@@ -98,9 +104,7 @@ pub fn setup_cloud() -> Result<()> {
     if !configured.is_empty() {
         menu_options.push("Update an existing key".to_string());
         let configured_clone: Vec<_> = configured.iter().map(|(p, _)| p.clone()).collect();
-        menu_actions.push(Box::new(move |s| {
-            update_existing_key(s, &configured_clone)
-        }));
+        menu_actions.push(Box::new(move |s| update_existing_key(s, &configured_clone)));
     }
 
     // Display menu
@@ -121,7 +125,10 @@ fn setup_new_provider(settings: &mut Settings, providers: &[TranscriptionProvide
     let choice = interactive::select("Which provider to configure?", &items, Some(0))?;
     let provider = providers[choice].clone();
 
-    interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
+    interactive::info(&format!(
+        "Get your API key from: {}",
+        api_key_url(&provider)
+    ));
 
     let api_key = prompt_and_validate_key(&provider)?;
 
@@ -136,10 +143,7 @@ fn update_existing_key(settings: &mut Settings, providers: &[TranscriptionProvid
     let items: Vec<String> = providers
         .iter()
         .map(|p| {
-            let current_key = settings
-                .transcription
-                .api_key_for(p)
-                .unwrap_or_default();
+            let current_key = settings.transcription.api_key_for(p).unwrap_or_default();
             format!("{} ({})", p.display_name(), mask_key(&current_key))
         })
         .collect();
@@ -229,7 +233,10 @@ fn finish_setup(settings: &mut Settings, provider: &TranscriptionProvider) -> Re
     settings.post_processing.processor = default_post_processor.clone();
     settings.save()?;
 
-    interactive::info(&format!("Transcription configured: {}", provider.display_name()));
+    interactive::info(&format!(
+        "Transcription configured: {}",
+        provider.display_name()
+    ));
 
     // Offer post-processing configuration
     let pp_display = match &default_post_processor {
@@ -239,7 +246,9 @@ fn finish_setup(settings: &mut Settings, provider: &TranscriptionProvider) -> Re
         PostProcessor::Ollama => "Ollama",
     };
 
-    interactive::info("Post-processing cleans up transcriptions (removes filler words, fixes grammar)");
+    interactive::info(
+        "Post-processing cleans up transcriptions (removes filler words, fixes grammar)",
+    );
 
     let options = vec![
         format!("Use {} (default)", pp_display),
@@ -320,10 +329,7 @@ pub fn setup_transcription_cloud() -> Result<()> {
 
     // If OpenAI selected, ask for method (Standard vs Streaming)
     if provider == TranscriptionProvider::OpenAI {
-        let methods = vec![
-            "Standard - Progressive",
-            "Streaming - Real-time",
-        ];
+        let methods = vec!["Standard - Progressive", "Streaming - Real-time"];
 
         // Default to current method if already using OpenAI variant
         let default_method =
@@ -341,10 +347,7 @@ pub fn setup_transcription_cloud() -> Result<()> {
 
     // If Deepgram selected, ask for method (Standard vs Streaming)
     if provider == TranscriptionProvider::Deepgram {
-        let methods = vec![
-            "Standard - Progressive",
-            "Streaming - Real-time",
-        ];
+        let methods = vec!["Standard - Progressive", "Streaming - Real-time"];
 
         // Default to current method if already using Deepgram variant
         let default_method =
@@ -363,10 +366,7 @@ pub fn setup_transcription_cloud() -> Result<()> {
     // Check if API key already exists for this provider
     if let Some(existing_key) = settings.transcription.api_key_for(&provider) {
         interactive::info(&format!("Current API key: {}", mask_key(&existing_key)));
-        let keep = match interactive::select("Keep current key?", &["Yes", "No"], Some(0))? {
-            0 => true,
-            _ => false,
-        };
+        let keep = interactive::select("Keep current key?", &["Yes", "No"], Some(0))? == 0;
 
         if !keep {
             interactive::info(&format!(

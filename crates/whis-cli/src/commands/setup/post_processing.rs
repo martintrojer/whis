@@ -1,8 +1,8 @@
 //! Post-processing setup (Ollama, OpenAI, Mistral)
 
 use anyhow::{Result, anyhow};
-use whis_core::{PostProcessor, Settings, TranscriptionProvider, ollama};
 use std::io::Write;
+use whis_core::{PostProcessor, Settings, TranscriptionProvider, ollama};
 
 use super::cloud::prompt_and_validate_key;
 use super::interactive;
@@ -35,7 +35,9 @@ fn display_progress(downloaded: u64, total: u64) {
 
 /// Setup for post-processing configuration (standalone command)
 pub fn setup_post_processing() -> Result<()> {
-    interactive::info("Post-processing cleans up transcriptions (removes filler words, fixes grammar).");
+    interactive::info(
+        "Post-processing cleans up transcriptions (removes filler words, fixes grammar).",
+    );
 
     let mut settings = Settings::load();
 
@@ -156,7 +158,9 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
             // Check if Ollama is installed
             if !ollama::is_ollama_installed() {
                 interactive::ollama_not_installed();
-                interactive::info("You can run 'whis setup post-processing' later to configure Ollama.");
+                interactive::info(
+                    "You can run 'whis setup post-processing' later to configure Ollama.",
+                );
                 return Ok(());
             }
 
@@ -230,10 +234,12 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
     // Installed section (with prefix, no separator)
     if !installed.is_empty() {
         for model in &installed {
-            let is_current = current_model.map(|c| {
-                // Handle both exact match and version tag differences
-                model.name == c || model.name.starts_with(&format!("{}:", c))
-            }).unwrap_or(false);
+            let is_current = current_model
+                .map(|c| {
+                    // Handle both exact match and version tag differences
+                    model.name == c || model.name.starts_with(&format!("{}:", c))
+                })
+                .unwrap_or(false);
 
             let size = if model.size > 0 {
                 format!(" ({})", model.size_str())
@@ -287,31 +293,27 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
         } else {
             // Try prefix match (handles version tags like :latest)
             let current_base = current.split(':').next().unwrap_or(current);
-            let prefix_match = model_data
-                .iter()
-                .position(|m| {
-                    if let Some((name, _)) = m {
-                        let name_base = name.split(':').next().unwrap_or(name);
-                        name_base == current_base || name.starts_with(&format!("{}:", current))
-                    } else {
-                        false
-                    }
-                });
+            let prefix_match = model_data.iter().position(|m| {
+                if let Some((name, _)) = m {
+                    let name_base = name.split(':').next().unwrap_or(name);
+                    name_base == current_base || name.starts_with(&format!("{}:", current))
+                } else {
+                    false
+                }
+            });
 
             // Fallback to first model if no match
             prefix_match.or_else(|| model_data.iter().position(|m| m.is_some()))
         }
     } else {
         // No current model - select recommended model (qwen2.5:1.5b)
-        let recommended = model_data
-            .iter()
-            .position(|m| {
-                if let Some((name, _)) = m {
-                    name.starts_with("qwen2.5:1.5b")
-                } else {
-                    false
-                }
-            });
+        let recommended = model_data.iter().position(|m| {
+            if let Some((name, _)) = m {
+                name.starts_with("qwen2.5:1.5b")
+            } else {
+                false
+            }
+        });
 
         // Fallback to first model if recommended not found
         recommended.or_else(|| model_data.iter().position(|m| m.is_some()))
@@ -330,7 +332,7 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
             if *needs_download {
                 interactive::info(&format!("Pulling model '{}'...", model_name));
                 ollama::pull_model_with_progress(url, model_name, display_progress)?;
-                eprintln!();  // Newline after progress bar
+                eprintln!(); // Newline after progress bar
                 interactive::info(&format!("Model '{}' ready!", model_name));
             }
             // No echo needed - user already confirmed with [*]
@@ -350,7 +352,7 @@ pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<Str
                 if !ollama::has_model(url, &model_name)? {
                     interactive::info(&format!("Pulling model '{}'...", model_name));
                     ollama::pull_model_with_progress(url, &model_name, display_progress)?;
-                    eprintln!();  // Newline after progress bar
+                    eprintln!(); // Newline after progress bar
                     interactive::info(&format!("Model '{}' ready!", model_name));
                 }
 
@@ -381,7 +383,9 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
             // Check if Ollama is installed
             if !ollama::is_ollama_installed() {
                 interactive::ollama_not_installed();
-                interactive::info("You can run 'whis setup post-processing' later to configure Ollama.");
+                interactive::info(
+                    "You can run 'whis setup post-processing' later to configure Ollama.",
+                );
                 return Ok(());
             }
 
@@ -427,10 +431,7 @@ fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
     // Check if API key already exists
     if let Some(existing_key) = settings.transcription.api_key_for(&provider) {
         interactive::info(&format!("Current API key: {}", mask_key(&existing_key)));
-        let keep = match interactive::select("Keep current key?", &["Yes", "No"], Some(0))? {
-            0 => true,
-            _ => false,
-        };
+        let keep = interactive::select("Keep current key?", &["Yes", "No"], Some(0))? == 0;
 
         if !keep {
             interactive::info(&format!(
@@ -441,7 +442,10 @@ fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
             settings.transcription.set_api_key(&provider, api_key);
         }
     } else {
-        interactive::info(&format!("Get your API key from: {}", api_key_url(&provider)));
+        interactive::info(&format!(
+            "Get your API key from: {}",
+            api_key_url(&provider)
+        ));
         let api_key = prompt_and_validate_key(&provider)?;
         settings.transcription.set_api_key(&provider, api_key);
     }

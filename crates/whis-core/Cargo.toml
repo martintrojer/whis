@@ -48,6 +48,9 @@ flate2 = { version = "1.0", optional = true }
 # Temp files for Parakeet audio processing
 tempfile = { version = "3", optional = true }
 
+# stderr redirection for suppressing GGML Vulkan debug output on Unix
+libc = { version = "0.2", optional = true }
+
 [features]
 default = ["ffmpeg", "clipboard", "local-transcription", "vad", "realtime"]
 # Desktop: use FFmpeg process for audio encoding and arboard for clipboard
@@ -56,7 +59,7 @@ clipboard = ["arboard"]
 # Mobile: use embedded mp3lame encoder (no external process needed)
 embedded-encoder = ["mp3lame-encoder"]
 # Local transcription (Whisper + Parakeet via transcribe-rs)
-local-transcription = ["minimp3", "transcribe-rs", "tar", "flate2", "tempfile"]
+local-transcription = ["minimp3", "transcribe-rs", "tar", "flate2", "tempfile", "libc"]
 # Voice Activity Detection to skip silence during recording
 vad = ["voice_activity_detector"]
 # OpenAI Realtime API for streaming transcription

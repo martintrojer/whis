@@ -234,7 +234,10 @@ pub fn setup_transcription_local() -> Result<()> {
                     } else {
                         ""
                     };
-                    format!("{} - {}{}{}", model.name, model.description, installed, current)
+                    format!(
+                        "{} - {}{}{}",
+                        model.name, model.description, installed, current
+                    )
                 })
                 .collect();
 
