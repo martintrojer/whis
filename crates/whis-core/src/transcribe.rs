@@ -201,6 +201,7 @@ pub async fn batch_transcribe(
 }
 
 /// Local audio chunk (raw f32 samples instead of encoded bytes)
+#[cfg(feature = "local-transcription")]
 pub struct LocalAudioChunk {
     pub index: usize,
     pub samples: Vec<f32>,
@@ -446,6 +447,7 @@ pub async fn progressive_transcribe_cloud(
 /// * `model_path` - Path to local model directory
 /// * `chunk_rx` - Channel receiving audio chunks during recording
 /// * `progress_callback` - Optional progress reporting
+#[cfg(feature = "local-transcription")]
 pub async fn progressive_transcribe_local(
     model_path: &str,
     mut chunk_rx: tokio::sync::mpsc::UnboundedReceiver<ProgressiveChunk>,

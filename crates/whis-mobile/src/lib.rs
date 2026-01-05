@@ -1,4 +1,29 @@
+//! Whis Mobile - Voice-to-Text for Android/iOS
+//!
+//! ## Architecture
+//!
+//! ```text
+//! whis-mobile/
+//! ├── commands/           - Tauri command handlers (organized by domain)
+//! │   ├── system.rs       - Status, validation
+//! │   ├── presets.rs      - Preset CRUD
+//! │   └── recording.rs    - Audio transcription (batch + streaming)
+//! ├── recording/          - Recording business logic
+//! │   ├── config.rs       - Transcription config from Tauri store
+//! │   └── pipeline.rs     - Post-processing, clipboard, events
+//! ├── state.rs            - Application state
+//! └── lib.rs              - App entry point
+//! ```
+//!
+//! ## Feature Differences from Desktop
+//!
+//! - **No local transcription** - Mobile uses cloud providers only
+//! - **No VAD** - Voice Activity Detection requires ONNX Runtime (no Android binaries)
+//! - **No system tray** - Mobile has different navigation paradigm
+//! - **Tauri store** - Uses Tauri plugin for settings (not whis-core::Settings)
+
 mod commands;
+mod recording;
 mod state;
 
 use state::AppState;
@@ -15,9 +40,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // System commands
             commands::get_status,
-            commands::transcribe_audio,
             commands::validate_api_key,
+            // Preset commands
             commands::list_presets,
             commands::get_preset_details,
             commands::set_active_preset,
@@ -25,6 +51,13 @@ pub fn run() {
             commands::create_preset,
             commands::update_preset,
             commands::delete_preset,
+            // Recording commands (batch - legacy)
+            commands::transcribe_audio,
+            // Recording commands (progressive - matches CLI/desktop)
+            commands::start_recording,
+            commands::send_audio_chunk,
+            commands::stop_recording,
+            // Recording commands (OpenAI Realtime streaming)
             commands::transcribe_streaming_start,
             commands::transcribe_streaming_send_chunk,
             commands::transcribe_streaming_stop,
