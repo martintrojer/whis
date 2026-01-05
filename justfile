@@ -880,6 +880,10 @@ deps-mobile: _check-npm _check-tauri _check-android _init-android
 dev-mobile: deps-mobile _check-android-device
     #!/usr/bin/env bash
     set -euo pipefail
+    # Set ANDROID_NDK_ROOT for aws-lc-sys (rustls crypto backend)
+    if [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME/ndk" ]; then
+        export ANDROID_NDK_ROOT=$(find "$ANDROID_HOME/ndk" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
+    fi
     (cd crates/whis-mobile/ui && npm run build)
     # Forward port 5173 from device to host for stable dev server connection
     adb reverse tcp:5173 tcp:5173
@@ -891,6 +895,10 @@ dev-mobile: deps-mobile _check-android-device
 build-mobile: deps-mobile
     #!/usr/bin/env bash
     set -euo pipefail
+    # Set ANDROID_NDK_ROOT for aws-lc-sys (rustls crypto backend)
+    if [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME/ndk" ]; then
+        export ANDROID_NDK_ROOT=$(find "$ANDROID_HOME/ndk" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
+    fi
     (cd crates/whis-mobile/ui && npm run build)
     (cd crates/whis-mobile && cargo tauri android build)
 
@@ -913,6 +921,10 @@ fmt-mobile: _check-npm
 install-mobile: deps-mobile _check-android-device
     #!/usr/bin/env bash
     set -euo pipefail
+    # Set ANDROID_NDK_ROOT for aws-lc-sys (rustls crypto backend)
+    if [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME/ndk" ]; then
+        export ANDROID_NDK_ROOT=$(find "$ANDROID_HOME/ndk" -maxdepth 1 -type d -name "[0-9]*" | sort -V | tail -1)
+    fi
     (cd crates/whis-mobile/ui && npm run build)
     (cd crates/whis-mobile && cargo tauri android build --debug)
     APK=$(find crates/whis-mobile/gen/android/app/build -name "*.apk" -path "*debug*" | head -1)
