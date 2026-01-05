@@ -50,6 +50,13 @@ pub fn prompt_choice_with_default(
 }
 
 /// Prompt for secret input (API key, password, etc.)
+///
+/// **DEPRECATED**: Use `interactive::password()` instead. This function does not
+/// properly hide input (security vulnerability - input is visible on screen).
+#[deprecated(
+    since = "0.6.5",
+    note = "Use interactive::password() for properly hidden password input"
+)]
 pub fn prompt_secret(prompt: &str) -> Result<String> {
     // Note: Input will be visible. For true hidden input, use rpassword crate.
     print!("{}: ", prompt);
@@ -61,6 +68,13 @@ pub fn prompt_secret(prompt: &str) -> Result<String> {
 }
 
 /// Prompt for yes/no with default (Y/n or y/N format)
+///
+/// **DEPRECATED**: Use `interactive::confirm()` instead for better UX with
+/// arrow key support and visual indicators.
+#[deprecated(
+    since = "0.6.5",
+    note = "Use interactive::confirm() for interactive yes/no prompts"
+)]
 pub fn prompt_yes_no(prompt: &str, default: bool) -> Result<bool> {
     let suffix = if default { "[Y/n]" } else { "[y/N]" };
     print!("{} {}: ", prompt, suffix);

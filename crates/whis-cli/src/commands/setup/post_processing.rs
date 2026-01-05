@@ -7,7 +7,7 @@ use whis_core::{PostProcessor, Settings, TranscriptionProvider, ollama};
 use super::cloud::prompt_and_validate_key;
 use super::interactive;
 use super::provider_helpers::{PP_PROVIDERS, api_key_url};
-use crate::ui::{mask_key, prompt_choice, prompt_choice_with_default};
+use crate::ui::{mask_key, prompt_choice};
 
 /// Setup for post-processing configuration (standalone command)
 pub fn setup_post_processing() -> Result<()> {
@@ -252,126 +252,114 @@ pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> 
 /// Interactive Ollama model selection
 /// Shows installed models + recommended options, allows pulling new models
 pub fn select_ollama_model(url: &str, current_model: Option<&str>) -> Result<String> {
+    use console::style;
+
     // Get installed models from Ollama
     let installed = ollama::list_models(url).unwrap_or_default();
     let installed_names: Vec<&str> = installed.iter().map(|m| m.name.as_str()).collect();
 
-    // Build menu options
-    let mut options: Vec<(String, String, bool)> = Vec::new(); // (name, display, needs_download)
+    // Build display items and parallel model data
+    let mut items = Vec::new();
+    let mut model_data: Vec<Option<(String, bool)>> = Vec::new(); // (name, needs_download)
 
-    // Add installed models first
-    for model in &installed {
-        let is_recommended = model.name.starts_with("qwen2.5:1.5b");
-        let is_current = current_model == Some(&model.name);
-        let size = if model.size > 0 {
-            format!(" ({})", model.size_str())
-        } else {
-            String::new()
-        };
-        let markers = match (is_recommended, is_current) {
-            (true, true) => " - Recommended [current]",
-            (true, false) => " - Recommended",
-            (false, true) => " [current]",
-            (false, false) => "",
-        };
-        options.push((
-            model.name.clone(),
-            format!("{}{}{}", model.name, size, markers),
-            false,
-        ));
-    }
+    // Installed section
+    if !installed.is_empty() {
+        items.push(style("─── Installed ───").dim().to_string());
+        model_data.push(None); // Separator
 
-    // Add recommended models that aren't installed
-    println!("Select Ollama model:");
-    let has_installed = !options.is_empty();
-    if has_installed {
-        for (i, (_, display, _)) in options.iter().enumerate() {
-            println!("  {}. {}", i + 1, display);
+        for model in &installed {
+            let is_recommended = model.name.starts_with("qwen2.5:1.5b");
+            let is_current = current_model == Some(&model.name);
+            let size = if model.size > 0 {
+                format!(" ({})", model.size_str())
+            } else {
+                String::new()
+            };
+            let markers = match (is_recommended, is_current) {
+                (true, true) => style(" - Recommended [current]").green().to_string(),
+                (true, false) => " - Recommended".to_string(),
+                (false, true) => style(" [current]").green().to_string(),
+                (false, false) => String::new(),
+            };
+            items.push(format!("{}{}{}", model.name, size, markers));
+            model_data.push(Some((model.name.clone(), false)));
         }
     }
 
-    // Check which recommended models need to be added
-    let mut other_options: Vec<(String, String, bool)> = Vec::new();
-    for (name, size, desc) in ollama::OLLAMA_MODEL_OPTIONS {
-        let is_installed = installed_names
-            .iter()
-            .any(|n| n.starts_with(name.split(':').next().unwrap_or(name)));
-        if !is_installed {
-            other_options.push((
-                name.to_string(),
-                format!("{} ({}) - {} [will download]", name, size, desc),
-                true,
-            ));
+    // Recommended section (not installed)
+    let not_installed: Vec<_> = ollama::OLLAMA_MODEL_OPTIONS
+        .iter()
+        .filter(|(name, _, _)| {
+            !installed_names
+                .iter()
+                .any(|n| n.starts_with(name.split(':').next().unwrap_or(name)))
+        })
+        .collect();
+
+    if !not_installed.is_empty() {
+        items.push(style("─── Available (will download) ───").dim().to_string());
+        model_data.push(None); // Separator
+
+        for (name, size, desc) in not_installed {
+            items.push(format!("{} ({}) - {}", name, size, desc));
+            model_data.push(Some((name.to_string(), true)));
         }
     }
 
-    if !other_options.is_empty() {
-        if has_installed {
-            println!();
-            println!("Other options:");
-        }
-        for (i, (_, display, _)) in other_options.iter().enumerate() {
-            println!("  {}. {}", options.len() + i + 1, display);
-        }
-        options.extend(other_options);
-    }
+    // Custom option
+    items.push(style("─── Custom ───").dim().to_string());
+    model_data.push(None); // Separator
+    items.push("Enter custom model name".to_string());
+    model_data.push(None); // Custom trigger
 
-    // Add custom model option
-    let custom_index = options.len() + 1;
-    println!();
-    println!("  {}. Enter custom model name", custom_index);
-    println!();
-
-    // Determine default (current model or first recommended)
+    // Find default index (skip separators)
     let default = if let Some(current) = current_model {
-        options
+        model_data
             .iter()
-            .position(|(n, _, _)| n == current)
-            .map(|i| i + 1)
+            .position(|m| m.as_ref().map(|(n, _)| n.as_str()) == Some(current))
     } else {
-        Some(1)
+        // First real model (skip first separator)
+        model_data.iter().position(|m| m.is_some())
     };
 
-    let prompt = if let Some(d) = default {
-        format!("Select (1-{}) [{}]", custom_index, d)
-    } else {
-        format!("Select (1-{})", custom_index)
-    };
+    // Interactive select
+    let choice = interactive::select("Select Ollama model", &items, default)?;
 
-    let choice = prompt_choice_with_default(&prompt, 1, custom_index, default)?;
-
-    if choice == custom_index {
-        // Custom model
-        print!("Enter model name: ");
-        io::stdout().flush()?;
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        let model_name = input.trim().to_string();
-
-        if model_name.is_empty() {
-            return Err(anyhow!("Model name cannot be empty"));
+    // Handle selection
+    match &model_data[choice] {
+        Some((model_name, needs_download)) => {
+            // Selected a model from the list
+            if *needs_download {
+                println!("Pulling model '{}'...", model_name);
+                ollama::pull_model(url, model_name)?;
+            } else {
+                println!("Using model: {}", model_name);
+            }
+            Ok(model_name.clone())
         }
+        None => {
+            // Either separator or custom model
+            if items[choice].contains("custom") {
+                // Custom model input
+                let model_name = interactive::input("Enter model name (e.g., llama3.2:1b)", None)?;
 
-        // Check if model exists, pull if needed
-        if !ollama::has_model(url, &model_name)? {
-            println!("Pulling model '{}'...", model_name);
-            ollama::pull_model(url, &model_name)?;
+                if model_name.is_empty() {
+                    return Err(anyhow!("Model name cannot be empty"));
+                }
+
+                // Check if model exists, pull if needed
+                if !ollama::has_model(url, &model_name)? {
+                    println!("Pulling model '{}'...", model_name);
+                    ollama::pull_model(url, &model_name)?;
+                }
+
+                Ok(model_name)
+            } else {
+                // Separator selected - shouldn't happen with proper navigation
+                Err(anyhow!("Invalid selection"))
+            }
         }
-
-        return Ok(model_name);
     }
-
-    // Selected from list
-    let (model_name, _, needs_download) = &options[choice - 1];
-
-    if *needs_download {
-        println!("Pulling model '{}'...", model_name);
-        ollama::pull_model(url, model_name)?;
-    } else {
-        println!("Using model: {}", model_name);
-    }
-
-    Ok(model_name.clone())
 }
 
 /// Helper to set up Ollama fresh (used by wizard)
@@ -423,12 +411,17 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
     println!();
 
     // Default: cloud if came from cloud transcription, Ollama if came from local
-    let default = if prefer_cloud { 1 } else { 2 };
-    let choice = prompt_choice_with_default("Select", 1, 3, Some(default))?;
+    let options = vec![
+        "Cloud (OpenAI/Mistral) - Requires API key",
+        "Ollama (local) - Free, runs on your machine",
+        "Skip",
+    ];
+    let default = if prefer_cloud { 0 } else { 1 };
+    let choice = interactive::select("Select post-processing", &options, Some(default))?;
 
     match choice {
-        1 => setup_cloud_post_processing(&mut settings)?,
-        2 => {
+        0 => setup_cloud_post_processing(&mut settings)?,
+        1 => {
             // Check if Ollama already configured
             let ollama_configured = settings.post_processing.processor == PostProcessor::Ollama;
             if ollama_configured {
@@ -462,7 +455,7 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
                 setup_ollama_fresh(&mut settings)?;
             }
         }
-        3 => {
+        2 => {
             settings.post_processing.processor = PostProcessor::None;
         }
         _ => unreachable!(),
@@ -474,20 +467,25 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
 
 /// Setup cloud post-processing (OpenAI or Mistral)
 fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
-    println!();
-    println!("Provider:");
-    for (i, provider) in PP_PROVIDERS.iter().enumerate() {
-        let marker = if settings.transcription.api_key_for(provider).is_some() {
-            " [configured]"
-        } else {
-            ""
-        };
-        println!("  {}. {}{}", i + 1, provider.display_name(), marker);
-    }
+    use console::style;
+
     println!();
 
-    let choice = prompt_choice_with_default("Select", 1, PP_PROVIDERS.len(), Some(1))?;
-    let provider = PP_PROVIDERS[choice - 1].clone();
+    // Build provider items with [configured] marker
+    let items: Vec<String> = PP_PROVIDERS
+        .iter()
+        .map(|provider| {
+            let marker = if settings.transcription.api_key_for(provider).is_some() {
+                style(" [configured]").green().to_string()
+            } else {
+                String::new()
+            };
+            format!("{}{}", provider.display_name(), marker)
+        })
+        .collect();
+
+    let choice = interactive::select("Select provider", &items, Some(0))?;
+    let provider = PP_PROVIDERS[choice].clone();
 
     // Check if API key already exists
     if let Some(existing_key) = settings.transcription.api_key_for(&provider) {

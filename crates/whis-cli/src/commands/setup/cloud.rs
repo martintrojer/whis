@@ -8,7 +8,7 @@ use super::post_processing::configure_post_processing_options;
 use super::provider_helpers::{
     CLOUD_PROVIDERS, api_key_url, get_provider_status, provider_description,
 };
-use crate::ui::{mask_key, prompt_choice, prompt_choice_with_default};
+use crate::ui::{mask_key, prompt_choice};
 
 /// Type alias for menu action callbacks
 type MenuAction = Box<dyn FnOnce(&mut Settings) -> Result<()>>;
