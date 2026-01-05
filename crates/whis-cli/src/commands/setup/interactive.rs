@@ -3,12 +3,47 @@
 //! Provides themed, consistent prompts for the setup wizard.
 
 use anyhow::Result;
-use console::style;
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password, Select};
+use dialoguer::{
+    Input, Password, Select,
+    console::{Style, style},
+    theme::ColorfulTheme,
+};
 
-/// Get the shared theme for all prompts
+/// Get the shared theme for all prompts with minimal ASCII styling
 pub fn theme() -> ColorfulTheme {
-    ColorfulTheme::default()
+    use dialoguer::console::style;
+
+    ColorfulTheme {
+        // Use ASCII [*] for confirmed selections
+        success_prefix: style("[*]".to_string()).for_stderr(),
+        success_suffix: style("".to_string()).for_stderr(),
+
+        // Multi-select checkboxes
+        checked_item_prefix: style("[*]".to_string()).for_stderr(),
+        unchecked_item_prefix: style("[ ]".to_string()).for_stderr(),
+
+        // Single select indicators - use [ ] and [>] (both 3 chars, no shift!)
+        active_item_prefix: style("[>]".to_string()).for_stderr(),
+        inactive_item_prefix: style("[ ]".to_string()).for_stderr(),
+
+        // Prompt styling - use [?] for questions
+        prompt_prefix: style("[?]".to_string()).for_stderr(),
+        prompt_suffix: style("".to_string()).for_stderr(),
+
+        // Error indicators
+        error_prefix: style("[!]".to_string()).for_stderr(),
+
+        // Plain values - no dimming, no colors
+        values_style: Style::new(),
+
+        // Override defaults that apply colors
+        prompt_style: Style::new(),
+        active_item_style: Style::new(),
+        inactive_item_style: Style::new(),
+
+        // Use ColorfulTheme defaults for remaining fields
+        ..ColorfulTheme::default()
+    }
 }
 
 /// Select from a list of options with arrow keys
@@ -18,24 +53,13 @@ pub fn select<T: std::fmt::Display>(
     default: Option<usize>,
 ) -> Result<usize> {
     let theme = theme();
-    let mut select = Select::with_theme(&theme)
-        .with_prompt(prompt)
-        .items(items);
+    let mut select = Select::with_theme(&theme).with_prompt(prompt).items(items);
 
     if let Some(idx) = default {
         select = select.default(idx);
     }
 
     Ok(select.interact()?)
-}
-
-/// Confirm yes/no with default
-pub fn confirm(prompt: &str, default: bool) -> Result<bool> {
-    let theme = theme();
-    Ok(Confirm::with_theme(&theme)
-        .with_prompt(prompt)
-        .default(default)
-        .interact()?)
 }
 
 /// Get text input
@@ -58,24 +82,21 @@ pub fn password(prompt: &str) -> Result<String> {
         .interact()?)
 }
 
-/// Print a styled header
-pub fn header(text: &str) {
-    println!();
-    println!("{}", style(text).bold().cyan());
-    println!();
-}
-
-/// Print a success message
-pub fn success(text: &str) {
-    println!("{} {}", style("✓").green().bold(), text);
-}
-
 /// Print an error message
 pub fn error(text: &str) {
-    eprintln!("{} {}", style("✗").red().bold(), text);
+    eprintln!("{} {}", style("[!]").bold(), text);
 }
 
 /// Print an info message
 pub fn info(text: &str) {
-    println!("{} {}", style("ℹ").blue(), text);
+    println!("{} {}", style("[i]").bold(), text);
+}
+
+/// Display Ollama installation instructions
+pub fn ollama_not_installed() {
+    error("Ollama is not installed.");
+    info("Install Ollama:");
+    info("  Linux:  curl -fsSL https://ollama.com/install.sh | sh");
+    info("  macOS:  brew install ollama");
+    info("  Website: https://ollama.com/download");
 }

@@ -29,7 +29,6 @@ reqwest.workspace = true
 dirs = "6"
 crossterm = "0.29"
 dialoguer = "0.12"
-console = "0.15"
 hound = "3.5"
 
 [features]
