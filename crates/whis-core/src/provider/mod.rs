@@ -80,6 +80,8 @@ pub type ProgressCallback = Arc<dyn Fn(TranscriptionStage) + Send + Sync>;
 
 mod base;
 mod deepgram;
+#[cfg(feature = "realtime")]
+mod deepgram_realtime;
 mod elevenlabs;
 pub mod error;
 mod groq;
@@ -96,6 +98,8 @@ mod openai_realtime;
 pub const DEFAULT_TIMEOUT_SECS: u64 = 300;
 
 pub use deepgram::DeepgramProvider;
+#[cfg(feature = "realtime")]
+pub use deepgram_realtime::DeepgramRealtimeProvider;
 pub use elevenlabs::ElevenLabsProvider;
 pub use error::ProviderError;
 pub use groq::GroqProvider;
@@ -209,6 +213,8 @@ impl ProviderRegistry {
         providers.insert("mistral", Arc::new(MistralProvider));
         providers.insert("groq", Arc::new(GroqProvider));
         providers.insert("deepgram", Arc::new(DeepgramProvider));
+        #[cfg(feature = "realtime")]
+        providers.insert("deepgram-realtime", Arc::new(DeepgramRealtimeProvider));
         providers.insert("elevenlabs", Arc::new(ElevenLabsProvider));
         #[cfg(feature = "local-transcription")]
         providers.insert("local-whisper", Arc::new(LocalWhisperProvider));

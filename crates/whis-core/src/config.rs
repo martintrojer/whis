@@ -11,6 +11,8 @@ pub enum TranscriptionProvider {
     Mistral,
     Groq,
     Deepgram,
+    #[serde(rename = "deepgram-realtime")]
+    DeepgramRealtime,
     ElevenLabs,
     #[serde(rename = "local-whisper")]
     LocalWhisper,
@@ -33,6 +35,7 @@ impl TranscriptionProvider {
             TranscriptionProvider::Mistral => "mistral",
             TranscriptionProvider::Groq => "groq",
             TranscriptionProvider::Deepgram => "deepgram",
+            TranscriptionProvider::DeepgramRealtime => "deepgram-realtime",
             TranscriptionProvider::ElevenLabs => "elevenlabs",
             TranscriptionProvider::LocalWhisper => "local-whisper",
             TranscriptionProvider::LocalParakeet => "local-parakeet",
@@ -47,7 +50,9 @@ impl TranscriptionProvider {
             }
             TranscriptionProvider::Mistral => "MISTRAL_API_KEY",
             TranscriptionProvider::Groq => "GROQ_API_KEY",
-            TranscriptionProvider::Deepgram => "DEEPGRAM_API_KEY",
+            TranscriptionProvider::Deepgram | TranscriptionProvider::DeepgramRealtime => {
+                "DEEPGRAM_API_KEY"
+            }
             TranscriptionProvider::ElevenLabs => "ELEVENLABS_API_KEY",
             TranscriptionProvider::LocalWhisper => "LOCAL_WHISPER_MODEL_PATH",
             TranscriptionProvider::LocalParakeet => "LOCAL_PARAKEET_MODEL_PATH",
@@ -62,6 +67,7 @@ impl TranscriptionProvider {
             TranscriptionProvider::Mistral,
             TranscriptionProvider::Groq,
             TranscriptionProvider::Deepgram,
+            TranscriptionProvider::DeepgramRealtime,
             TranscriptionProvider::ElevenLabs,
             TranscriptionProvider::LocalWhisper,
             TranscriptionProvider::LocalParakeet,
@@ -76,6 +82,7 @@ impl TranscriptionProvider {
             TranscriptionProvider::Mistral => "Mistral",
             TranscriptionProvider::Groq => "Groq",
             TranscriptionProvider::Deepgram => "Deepgram",
+            TranscriptionProvider::DeepgramRealtime => "Deepgram Realtime",
             TranscriptionProvider::ElevenLabs => "ElevenLabs",
             TranscriptionProvider::LocalWhisper => "Local Whisper",
             TranscriptionProvider::LocalParakeet => "Local Parakeet",
@@ -117,13 +124,14 @@ impl std::str::FromStr for TranscriptionProvider {
             "mistral" => Ok(TranscriptionProvider::Mistral),
             "groq" => Ok(TranscriptionProvider::Groq),
             "deepgram" => Ok(TranscriptionProvider::Deepgram),
+            "deepgram-realtime" | "deepgramrealtime" => Ok(TranscriptionProvider::DeepgramRealtime),
             "elevenlabs" => Ok(TranscriptionProvider::ElevenLabs),
             "local-whisper" | "localwhisper" | "whisper" => Ok(TranscriptionProvider::LocalWhisper),
             "local-parakeet" | "localparakeet" | "parakeet" => {
                 Ok(TranscriptionProvider::LocalParakeet)
             }
             _ => Err(format!(
-                "Unknown provider: {}. Available: openai, openai-realtime, mistral, groq, deepgram, elevenlabs, local-whisper, local-parakeet",
+                "Unknown provider: {}. Available: openai, openai-realtime, mistral, groq, deepgram, deepgram-realtime, elevenlabs, local-whisper, local-parakeet",
                 s
             )),
         }
