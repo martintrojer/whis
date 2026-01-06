@@ -108,7 +108,7 @@ impl OpenAIRealtimeProvider {
     /// as they arrive. Returns the final transcript when the channel closes.
     async fn transcribe_stream_impl(
         api_key: &str,
-        mut audio_rx: mpsc::Receiver<Vec<f32>>,
+        mut audio_rx: mpsc::UnboundedReceiver<Vec<f32>>,
         _language: Option<String>,
     ) -> Result<String> {
         // 1. Build WebSocket request with auth headers
@@ -293,7 +293,7 @@ impl OpenAIRealtimeProvider {
     /// This is a convenience method that delegates to the trait implementation.
     pub async fn transcribe_stream(
         api_key: &str,
-        audio_rx: mpsc::Receiver<Vec<f32>>,
+        audio_rx: mpsc::UnboundedReceiver<Vec<f32>>,
         language: Option<String>,
     ) -> Result<String> {
         Self::transcribe_stream_impl(api_key, audio_rx, language).await
@@ -303,8 +303,11 @@ impl OpenAIRealtimeProvider {
 /// Collect transcripts from WebSocket messages.
 ///
 /// Two-phase approach (matching Deepgram implementation pattern):
-/// - Phase 1: During streaming, monitor for errors while audio is being sent
-/// - Phase 2: After done signal, wait for final transcript
+/// - Phase 1: During streaming, monitor for errors AND collect any early transcripts
+/// - Phase 2: After done signal, wait for final transcript (if not already received)
+///
+/// IMPORTANT: OpenAI may send the transcript event during Phase 1 if the recording
+/// is short. We must capture it to avoid losing transcripts.
 ///
 /// This function is named `collect_transcripts` to match Deepgram's pattern.
 async fn collect_transcripts<S>(
@@ -315,13 +318,23 @@ async fn collect_transcripts<S>(
 where
     S: futures_util::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
-    // Phase 1: Monitor for errors during audio streaming
+    // Store transcript if received early (during Phase 1)
+    let mut early_transcript: Option<String> = None;
+
+    // Phase 1: Monitor for errors AND collect transcripts during audio streaming
     loop {
         tokio::select! {
             // Check if main task signaled streaming is complete
             _ = &mut done_rx => {
                 if crate::verbose::is_verbose() {
                     eprintln!("[openai-realtime] Finalize sent, switching to post-finalize phase");
+                }
+                // If we already got a transcript during streaming, return it now
+                if let Some(transcript) = early_transcript {
+                    if crate::verbose::is_verbose() {
+                        eprintln!("[openai-realtime] Returning early transcript from Phase 1");
+                    }
+                    return Ok(transcript);
                 }
                 break;
             }
@@ -346,7 +359,16 @@ where
                             let _ = error_tx.send(anyhow::Error::msg(err.to_string()));
                             return Err(err);
                         }
-                        // Ignore other events during streaming (status updates, etc.)
+
+                        // Capture transcript if it arrives early (short recordings)
+                        if event.event_type == "conversation.item.input_audio_transcription.completed"
+                            && let Some(transcript) = event.transcript
+                        {
+                            if crate::verbose::is_verbose() {
+                                eprintln!("[openai-realtime] Received transcript during Phase 1 (early)");
+                            }
+                            early_transcript = Some(transcript);
+                        }
                     }
                     Some(Ok(Message::Close(frame))) => {
                         let err = anyhow!("WebSocket closed during streaming: {:?}", frame);
@@ -373,41 +395,58 @@ where
     }
 
     // Phase 2: Wait for final transcript after streaming completes
+    // Use a timeout to avoid waiting forever if something goes wrong
+    let timeout_duration = Duration::from_secs(10);
+    let deadline = tokio::time::Instant::now() + timeout_duration;
+
     loop {
-        match read.next().await {
-            Some(Ok(Message::Text(text))) => {
-                let event: RealtimeEvent =
-                    serde_json::from_str(&text).context("Failed to parse server event")?;
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        if remaining.is_zero() {
+            return Err(anyhow!("Timeout waiting for transcription in Phase 2"));
+        }
 
-                if crate::verbose::is_verbose() {
-                    eprintln!("[openai-realtime] event: {}", event.event_type);
-                }
+        tokio::select! {
+            _ = tokio::time::sleep(remaining) => {
+                return Err(anyhow!("Timeout waiting for transcription in Phase 2"));
+            }
 
-                match event.event_type.as_str() {
-                    "error" => {
-                        if let Some(err) = event.error {
-                            return Err(anyhow!("OpenAI Realtime error: {}", err.message));
+            msg = read.next() => {
+                match msg {
+                    Some(Ok(Message::Text(text))) => {
+                        let event: RealtimeEvent =
+                            serde_json::from_str(&text).context("Failed to parse server event")?;
+
+                        if crate::verbose::is_verbose() {
+                            eprintln!("[openai-realtime] event: {}", event.event_type);
+                        }
+
+                        match event.event_type.as_str() {
+                            "error" => {
+                                if let Some(err) = event.error {
+                                    return Err(anyhow!("OpenAI Realtime error: {}", err.message));
+                                }
+                            }
+                            "conversation.item.input_audio_transcription.completed" => {
+                                if let Some(transcript) = event.transcript {
+                                    return Ok(transcript);
+                                }
+                            }
+                            // Ignore other events (response.created, response.done, etc.)
+                            _ => {}
                         }
                     }
-                    "conversation.item.input_audio_transcription.completed" => {
-                        if let Some(transcript) = event.transcript {
-                            return Ok(transcript);
-                        }
+                    Some(Ok(Message::Close(_))) => {
+                        return Err(anyhow!("WebSocket closed before receiving transcription"));
                     }
-                    // Ignore other events (response.created, response.done, etc.)
-                    _ => {}
+                    Some(Err(e)) => {
+                        return Err(anyhow!("WebSocket error: {e}"));
+                    }
+                    None => {
+                        return Err(anyhow!("Connection ended before receiving transcription"));
+                    }
+                    _ => {} // Ignore Ping, Pong, Binary
                 }
             }
-            Some(Ok(Message::Close(_))) => {
-                return Err(anyhow!("WebSocket closed before receiving transcription"));
-            }
-            Some(Err(e)) => {
-                return Err(anyhow!("WebSocket error: {e}"));
-            }
-            None => {
-                return Err(anyhow!("Connection ended before receiving transcription"));
-            }
-            _ => {} // Ignore Ping, Pong, Binary
         }
     }
 }
@@ -443,7 +482,7 @@ impl RealtimeTranscriptionBackend for OpenAIRealtimeProvider {
     async fn transcribe_stream(
         &self,
         api_key: &str,
-        audio_rx: mpsc::Receiver<Vec<f32>>,
+        audio_rx: mpsc::UnboundedReceiver<Vec<f32>>,
         language: Option<String>,
     ) -> Result<String> {
         Self::transcribe_stream_impl(api_key, audio_rx, language).await

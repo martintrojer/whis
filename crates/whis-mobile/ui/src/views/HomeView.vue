@@ -26,6 +26,10 @@ let mediaRecorder: MediaRecorder | null = null
 // Audio streamer for Realtime
 let audioStreamer: AudioStreamer | null = null
 
+// Track recording start time to enforce minimum duration
+let recordingStartTime: number | null = null
+const MIN_RECORDING_DURATION_MS = 500 // Minimum 500ms recording
+
 // Provider (to determine if using streaming)
 const provider = computed(() => settingsStore.state.provider)
 
@@ -57,6 +61,7 @@ async function startRecording() {
   try {
     error.value = null
     isRecording.value = true
+    recordingStartTime = Date.now()
 
     const storeProvider = settingsStore.state.provider
     const isRealtime = storeProvider === 'openai-realtime' || storeProvider === 'deepgram-realtime'
@@ -142,20 +147,33 @@ async function startRecording() {
   }
 }
 
-function stopRecording() {
+async function stopRecording() {
+  // Enforce minimum recording duration to avoid empty/partial transcripts
+  if (recordingStartTime) {
+    const elapsed = Date.now() - recordingStartTime
+    if (elapsed < MIN_RECORDING_DURATION_MS) {
+      const remaining = MIN_RECORDING_DURATION_MS - elapsed
+      await new Promise(resolve => setTimeout(resolve, remaining))
+    }
+    recordingStartTime = null
+  }
+
   if (isProgressiveMode.value && audioStreamer) {
     // Stop progressive chunking mode
     audioStreamer.stop()
     audioStreamer = null
     isTranscribing.value = true
+    isRecording.value = false
 
-    // Signal backend to stop and get result
-    invoke('stop_recording')
-      .catch((e) => {
-        console.error('Failed to stop recording:', e)
-        error.value = String(e)
-        resetState()
-      })
+    // Signal backend to stop and get result - await to prevent race conditions
+    try {
+      await invoke('stop_recording')
+    }
+    catch (e) {
+      console.error('Failed to stop recording:', e)
+      error.value = String(e)
+      resetState()
+    }
 
     isProgressiveMode.value = false
   }
@@ -163,19 +181,27 @@ function stopRecording() {
     // Stop realtime streaming
     audioStreamer.stop()
     audioStreamer = null
+    isRecording.value = false
+    isTranscribing.value = true
 
-    // Signal backend to stop
-    invoke('transcribe_streaming_stop').catch(console.error)
+    // Signal backend to stop - await to prevent race conditions
+    try {
+      await invoke('transcribe_streaming_stop')
+    }
+    catch (e) {
+      console.error('Failed to stop streaming:', e)
+    }
 
     isStreaming.value = false
-    isTranscribing.value = true
   }
   else if (mediaRecorder && mediaRecorder.state !== 'inactive') {
     // Stop MediaRecorder (fallback)
     mediaRecorder.stop()
+    isRecording.value = false
   }
-
-  isRecording.value = false
+  else {
+    isRecording.value = false
+  }
 }
 
 function resetState() {
@@ -185,6 +211,7 @@ function resetState() {
   isStreaming.value = false
   isProgressiveMode.value = false
   mediaRecorder = null
+  recordingStartTime = null
 }
 
 async function copyLastTranscription() {

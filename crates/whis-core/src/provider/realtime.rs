@@ -65,7 +65,8 @@ pub trait RealtimeTranscriptionBackend: Send + Sync {
     /// # Arguments
     ///
     /// * `api_key` - Provider-specific API key
-    /// * `audio_rx` - Channel receiving audio chunks as f32 samples at 16kHz
+    /// * `audio_rx` - Unbounded channel receiving audio chunks as f32 samples at 16kHz.
+    ///   Unbounded channels are used to avoid dropping audio when the network is slow.
     /// * `language` - Optional language code (e.g., "en", "es")
     ///
     /// # Returns
@@ -81,7 +82,7 @@ pub trait RealtimeTranscriptionBackend: Send + Sync {
     async fn transcribe_stream(
         &self,
         api_key: &str,
-        audio_rx: mpsc::Receiver<Vec<f32>>,
+        audio_rx: mpsc::UnboundedReceiver<Vec<f32>>,
         language: Option<String>,
     ) -> Result<String>;
 

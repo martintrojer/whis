@@ -82,7 +82,7 @@ impl DeepgramRealtimeProvider {
     /// as they arrive. Returns the final transcript when the channel closes.
     async fn transcribe_stream_impl(
         api_key: &str,
-        mut audio_rx: mpsc::Receiver<Vec<f32>>,
+        mut audio_rx: mpsc::UnboundedReceiver<Vec<f32>>,
         language: Option<String>,
     ) -> Result<String> {
         // 1. Build WebSocket URL with query params
@@ -194,7 +194,7 @@ impl DeepgramRealtimeProvider {
     /// This is a convenience method that delegates to the trait implementation.
     pub async fn transcribe_stream(
         api_key: &str,
-        audio_rx: mpsc::Receiver<Vec<f32>>,
+        audio_rx: mpsc::UnboundedReceiver<Vec<f32>>,
         language: Option<String>,
     ) -> Result<String> {
         Self::transcribe_stream_impl(api_key, audio_rx, language).await
@@ -238,8 +238,9 @@ where
 }
 
 /// Timeout for waiting for final results after Finalize is sent.
-/// Deepgram docs say from_finalize is not guaranteed, so we use a short timeout.
-const POST_FINALIZE_TIMEOUT_MS: u64 = 500;
+/// Deepgram docs say from_finalize is not guaranteed, so we use a timeout.
+/// Increased from 500ms to 1500ms to handle slow networks better.
+const POST_FINALIZE_TIMEOUT_MS: u64 = 1500;
 
 /// Collect final transcripts from WebSocket messages
 ///
@@ -398,7 +399,7 @@ impl RealtimeTranscriptionBackend for DeepgramRealtimeProvider {
     async fn transcribe_stream(
         &self,
         api_key: &str,
-        audio_rx: mpsc::Receiver<Vec<f32>>,
+        audio_rx: mpsc::UnboundedReceiver<Vec<f32>>,
         language: Option<String>,
     ) -> Result<String> {
         Self::transcribe_stream_impl(api_key, audio_rx, language).await

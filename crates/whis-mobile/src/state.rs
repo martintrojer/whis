@@ -34,8 +34,8 @@ pub struct AppState {
     /// Cached transcription config (provider, API key, language)
     pub transcription_config: Arc<Mutex<Option<TranscriptionConfig>>>,
 
-    /// Channel for OpenAI Realtime streaming (bounded, separate from progressive)
-    pub realtime_audio_tx: Arc<Mutex<Option<mpsc::Sender<Vec<f32>>>>>,
+    /// Channel for realtime streaming (unbounded to avoid dropping chunks)
+    pub realtime_audio_tx: Arc<Mutex<Option<mpsc::UnboundedSender<Vec<f32>>>>>,
 }
 
 impl AppState {

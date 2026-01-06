@@ -136,8 +136,9 @@ pub async fn transcribe_streaming_start(
         *recording_state = RecordingState::Transcribing;
     }
 
-    // Create bounded channel for realtime streaming (separate from progressive)
-    let (audio_tx, audio_rx) = tokio::sync::mpsc::channel::<Vec<f32>>(64);
+    // Create unbounded channel for realtime streaming to avoid dropping chunks
+    // (bounded channels with try_send can drop audio when network is slow)
+    let (audio_tx, audio_rx) = tokio::sync::mpsc::unbounded_channel::<Vec<f32>>();
 
     // Store sender in realtime_audio_tx (not audio_tx, which is for progressive)
     {
@@ -222,10 +223,9 @@ pub async fn transcribe_streaming_send_chunk(
     let audio_tx = state.realtime_audio_tx.lock().unwrap();
 
     if let Some(tx) = audio_tx.as_ref() {
-        // Send chunk with error handling
-        // Use try_send to avoid blocking if channel is full
-        if tx.try_send(chunk).is_err() {
-            return Err("Audio channel closed or full".to_string());
+        // Use unbounded send - won't block or drop chunks
+        if tx.send(chunk).is_err() {
+            return Err("Audio channel closed".to_string());
         }
     } else {
         return Err("No active streaming transcription".to_string());
@@ -308,23 +308,33 @@ pub async fn start_recording(
         vad_aware: false, // No VAD on mobile
     };
 
-    // Spawn chunker task
+    // Spawn chunker task with error handling
     let mut chunker = ProgressiveChunker::new(chunker_config, chunk_tx);
+    let chunker_app = app.clone();
     tokio::spawn(async move {
-        let _ = chunker.consume_stream(audio_rx, None).await;
+        if let Err(e) = chunker.consume_stream(audio_rx, None).await {
+            // Log error - chunker failures are critical but rare
+            eprintln!("[whis-mobile] Chunker error: {}", e);
+            let _ = chunker_app.emit(
+                "transcription-error",
+                format!("Audio processing error: {}", e),
+            );
+        }
     });
 
     // Create oneshot channel for transcription result
     let (result_tx, result_rx) = oneshot::channel();
 
-    // Spawn transcription task
+    // Spawn transcription task with error logging
     tokio::spawn(async move {
         let result =
             progressive_transcribe_cloud(&provider, &api_key, language.as_deref(), chunk_rx, None)
                 .await
                 .map_err(|e| e.to_string());
 
-        let _ = result_tx.send(result);
+        if result_tx.send(result).is_err() {
+            eprintln!("[whis-mobile] Failed to send transcription result - receiver dropped");
+        }
     });
 
     // Store result receiver for later retrieval
