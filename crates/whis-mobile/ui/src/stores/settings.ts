@@ -12,6 +12,7 @@ const state = reactive({
   deepgram_api_key: null as string | null,
   elevenlabs_api_key: null as string | null,
   post_processor: 'none' as PostProcessor,
+  floating_bubble_enabled: false,
   loaded: false,
 })
 
@@ -31,6 +32,7 @@ async function getStore(): Promise<Store> {
         deepgram_api_key: null,
         elevenlabs_api_key: null,
         post_processor: 'none',
+        floating_bubble_enabled: false,
       },
     })
   }
@@ -51,6 +53,7 @@ async function initialize() {
     state.deepgram_api_key = (await s.get<string | null>('deepgram_api_key')) ?? null
     state.elevenlabs_api_key = (await s.get<string | null>('elevenlabs_api_key')) ?? null
     state.post_processor = (await s.get<PostProcessor>('post_processor')) || 'none'
+    state.floating_bubble_enabled = (await s.get<boolean>('floating_bubble_enabled')) ?? false
     state.loaded = true
   }
   catch (e) {
@@ -107,6 +110,12 @@ async function setPostProcessor(value: PostProcessor) {
   await s.set('post_processor', value)
 }
 
+async function setFloatingBubbleEnabled(value: boolean) {
+  state.floating_bubble_enabled = value
+  const s = await getStore()
+  await s.set('floating_bubble_enabled', value)
+}
+
 // Export reactive state and actions
 export const settingsStore = {
   // Readonly state for reading
@@ -124,4 +133,5 @@ export const settingsStore = {
   setDeepgramApiKey,
   setElevenlabsApiKey,
   setPostProcessor,
+  setFloatingBubbleEnabled,
 }

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Floating Bubble</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <div class="app">
+      <header class="header">
+        <h1>Example</h1>
+      </header>
+
+      <section class="section">
+        <div class="section-row">
+          <span class="label">Permission</span>
+          <div class="status-group">
+            <span id="permission-indicator" class="indicator"></span>
+            <span id="permission-status" class="status"></span>
+            <button id="btn-permission" class="btn-small">Request</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-row">
+          <span class="label">Bubble</span>
+          <div class="toggle-group">
+            <button id="btn-toggle-bubble" class="toggle" data-state="off">
+              <span class="toggle-option">OFF</span>
+              <span class="toggle-option">ON</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-row">
+          <span class="label">State</span>
+          <div class="segmented">
+            <button class="segment active" data-state="white">White</button>
+            <button class="segment" data-state="yellow">Yellow</button>
+            <button class="segment" data-state="red">Red</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

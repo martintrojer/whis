@@ -15,6 +15,7 @@
     "@tauri-apps/plugin-clipboard-manager": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-store": "^2",
+    "tauri-plugin-floating-bubble": "file:../../tauri-plugin-floating-bubble",
     "vue": "^3.5.25",
     "vue-router": "4.6.4"
   },

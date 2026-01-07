@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { onBubbleClick, setBubbleState } from 'tauri-plugin-floating-bubble'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { headerStore } from './stores/header'
+import { recordingStore } from './stores/recording'
 import { settingsStore } from './stores/settings'
 
 const route = useRoute()
 const loaded = computed(() => settingsStore.state.loaded)
+
+// Bubble-click event cleanup
+let unlistenBubbleClick: (() => void) | null = null
 const sidebarOpen = ref(false)
 
 const navItems = [
@@ -30,13 +36,79 @@ function closeSidebar() {
   sidebarOpen.value = false
 }
 
+/**
+ * Determine the bubble state based on recording store state.
+ */
+function getBubbleState(): string {
+  const state = recordingStore.state
+  console.log('[App.getBubbleState] isRecording:', state.isRecording, 'isTranscribing:', state.isTranscribing, 'isPostProcessing:', state.isPostProcessing)
+
+  if (state.isRecording)
+    return 'recording'
+  if (state.isTranscribing || state.isPostProcessing)
+    return 'processing'
+  return 'idle'
+}
+
+/**
+ * Update bubble visual state (safe - catches errors if plugin unavailable).
+ */
+async function updateBubbleState() {
+  const state = getBubbleState()
+  console.log('[App.updateBubbleState] Calling setBubbleState with:', state)
+  try {
+    await setBubbleState(state)
+    console.log('[App.updateBubbleState] setBubbleState succeeded for:', state)
+  }
+  catch (error) {
+    // Plugin may not be available
+    console.error('[App.updateBubbleState] setBubbleState failed:', error)
+  }
+}
+
 // Close sidebar on route change
 watch(() => route.path, () => {
   closeSidebar()
 })
 
-onMounted(() => {
-  settingsStore.initialize()
+onMounted(async () => {
+  await settingsStore.initialize()
+  await recordingStore.initialize()
+
+  // Warm up HTTP client and cloud connections in background
+  invoke('warmup_connections').catch(() => {})
+
+  // Listen for bubble-click events from the floating bubble plugin
+  try {
+    unlistenBubbleClick = await onBubbleClick(async () => {
+      await recordingStore.toggleRecording()
+      // State will be updated by the watcher below
+    })
+  }
+  catch {
+    // Plugin may not be available on this platform
+  }
+
+  // Watch all recording states to update bubble appearance
+  watch(
+    () => [
+      recordingStore.state.isRecording,
+      recordingStore.state.isTranscribing,
+      recordingStore.state.isPostProcessing,
+    ],
+    () => {
+      console.log('[App.watch] Recording state changed, triggering updateBubbleState')
+      updateBubbleState()
+    },
+    { immediate: true },
+  )
+})
+
+onUnmounted(() => {
+  if (unlistenBubbleClick) {
+    unlistenBubbleClick()
+  }
+  recordingStore.cleanup()
 })
 </script>
 

@@ -2391,6 +2391,96 @@
           "markdownDescription": "Denies the unminimize command without any pre-configured scope."
         },
         {
+          "description": "Default permissions for floating bubble plugin\n#### This default permission set includes:\n\n- `allow-show-bubble`\n- `allow-hide-bubble`\n- `allow-is-bubble-visible`\n- `allow-request-overlay-permission`\n- `allow-has-overlay-permission`\n- `allow-set-bubble-state`",
+          "type": "string",
+          "const": "floating-bubble:default",
+          "markdownDescription": "Default permissions for floating bubble plugin\n#### This default permission set includes:\n\n- `allow-show-bubble`\n- `allow-hide-bubble`\n- `allow-is-bubble-visible`\n- `allow-request-overlay-permission`\n- `allow-has-overlay-permission`\n- `allow-set-bubble-state`"
+        },
+        {
+          "description": "Enables the has_overlay_permission command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:allow-has-overlay-permission",
+          "markdownDescription": "Enables the has_overlay_permission command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the hide_bubble command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:allow-hide-bubble",
+          "markdownDescription": "Enables the hide_bubble command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the is_bubble_visible command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:allow-is-bubble-visible",
+          "markdownDescription": "Enables the is_bubble_visible command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the request_overlay_permission command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:allow-request-overlay-permission",
+          "markdownDescription": "Enables the request_overlay_permission command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_bubble_recording command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:allow-set-bubble-recording",
+          "markdownDescription": "Enables the set_bubble_recording command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_bubble_state command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:allow-set-bubble-state",
+          "markdownDescription": "Enables the set_bubble_state command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the show_bubble command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:allow-show-bubble",
+          "markdownDescription": "Enables the show_bubble command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the has_overlay_permission command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:deny-has-overlay-permission",
+          "markdownDescription": "Denies the has_overlay_permission command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the hide_bubble command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:deny-hide-bubble",
+          "markdownDescription": "Denies the hide_bubble command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the is_bubble_visible command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:deny-is-bubble-visible",
+          "markdownDescription": "Denies the is_bubble_visible command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the request_overlay_permission command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:deny-request-overlay-permission",
+          "markdownDescription": "Denies the request_overlay_permission command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_bubble_recording command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:deny-set-bubble-recording",
+          "markdownDescription": "Denies the set_bubble_recording command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_bubble_state command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:deny-set-bubble-state",
+          "markdownDescription": "Denies the set_bubble_state command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the show_bubble command without any pre-configured scope.",
+          "type": "string",
+          "const": "floating-bubble:deny-show-bubble",
+          "markdownDescription": "Denies the show_bubble command without any pre-configured scope."
+        },
+        {
           "description": "This permission set allows opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application\nas well as reveal file in directories using default file explorer\n#### This default permission set includes:\n\n- `allow-open-url`\n- `allow-reveal-item-in-dir`\n- `allow-default-urls`",
           "type": "string",
           "const": "opener:default",

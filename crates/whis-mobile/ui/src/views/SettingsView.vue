@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import type { PostProcessor, Provider, SelectOption, TranscriptionMethod } from '../types'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { computed, onMounted } from 'vue'
+import {
+  hasOverlayPermission as checkOverlayPermissionApi,
+  hideBubble as hideBubbleApi,
+  requestOverlayPermission as requestOverlayPermissionApi,
+  showBubble as showBubbleApi,
+} from 'tauri-plugin-floating-bubble'
+import { computed, onMounted, ref } from 'vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
 import ToggleSwitch from '../components/ToggleSwitch.vue'
 import { presetsStore } from '../stores/presets'
 import { settingsStore } from '../stores/settings'
+
+// Floating bubble permission state
+const hasOverlayPermission = ref(false)
+const bubbleError = ref<string | null>(null)
 
 // Provider options (ordered by recommendation)
 const providerOptions: SelectOption[] = [
@@ -141,10 +151,116 @@ const activePresetName = computed(() => {
   return active?.name ?? 'None'
 })
 
-// Load presets on mount to get active preset
-onMounted(() => {
-  presetsStore.loadPresets()
+// Floating bubble toggle
+const floatingBubbleEnabled = computed({
+  get: () => settingsStore.state.floating_bubble_enabled,
+  set: val => handleFloatingBubbleToggle(val),
 })
+
+// Check overlay permission and sync bubble state on mount
+onMounted(async () => {
+  presetsStore.loadPresets()
+  await checkOverlayPermission()
+
+  // If bubble was enabled but permission was revoked, disable it
+  if (settingsStore.state.floating_bubble_enabled && !hasOverlayPermission.value) {
+    settingsStore.setFloatingBubbleEnabled(false)
+  }
+
+  // Restore bubble state if enabled
+  if (settingsStore.state.floating_bubble_enabled && hasOverlayPermission.value) {
+    await showBubble()
+  }
+})
+
+// Check if overlay permission is granted
+async function checkOverlayPermission() {
+  try {
+    const result = await checkOverlayPermissionApi()
+    hasOverlayPermission.value = result.granted
+  }
+  catch (e) {
+    console.error('Failed to check overlay permission:', e)
+    hasOverlayPermission.value = false
+  }
+}
+
+// Handle floating bubble toggle
+async function handleFloatingBubbleToggle(enabled: boolean) {
+  bubbleError.value = null
+
+  if (enabled) {
+    // Check permission first
+    if (!hasOverlayPermission.value) {
+      // Request permission - this opens settings
+      try {
+        await requestOverlayPermissionApi()
+        // User needs to manually enable permission and return to app
+        // Don't enable yet - they need to toggle again after granting permission
+        bubbleError.value = 'Please enable "Display over other apps" permission and try again'
+        return
+      }
+      catch (e) {
+        bubbleError.value = `Failed to request permission: ${e}`
+        return
+      }
+    }
+
+    // Show bubble
+    await showBubble()
+    settingsStore.setFloatingBubbleEnabled(true)
+  }
+  else {
+    // Hide bubble
+    await hideBubble()
+    settingsStore.setFloatingBubbleEnabled(false)
+  }
+}
+
+// Show the floating bubble with Whis-specific configuration
+async function showBubble() {
+  try {
+    const bubbleConfig = {
+      size: 60,
+      startX: 0,
+      startY: 200,
+      iconResourceName: 'ic_whis_logo_idle',
+      background: '#1C1C1C',
+      states: {
+        idle: { iconResourceName: 'ic_whis_logo_idle' },
+        recording: { iconResourceName: 'ic_whis_logo_recording' },
+        processing: { iconResourceName: 'ic_whis_logo_processing' },
+      },
+    }
+    console.log('[SettingsView.showBubble] Showing bubble with config:', bubbleConfig)
+    await showBubbleApi(bubbleConfig)
+    console.log('[SettingsView.showBubble] showBubble succeeded')
+  }
+  catch (e) {
+    console.error('Failed to show bubble:', e)
+    bubbleError.value = `Failed to show bubble: ${e}`
+    settingsStore.setFloatingBubbleEnabled(false)
+  }
+}
+
+// Hide the floating bubble
+async function hideBubble() {
+  try {
+    await hideBubbleApi()
+  }
+  catch (e) {
+    console.error('Failed to hide bubble:', e)
+  }
+}
+
+// Re-check permission when app regains focus (user may have granted permission)
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+      await checkOverlayPermission()
+    }
+  })
+}
 </script>
 
 <template>
@@ -291,6 +407,26 @@ onMounted(() => {
         />
       </div>
 
+      <!-- Floating Bubble -->
+      <div class="field">
+        <label>floating bubble</label>
+        <div class="field-row">
+          <ToggleSwitch v-model="floatingBubbleEnabled" />
+          <span class="method-description">
+            {{ floatingBubbleEnabled ? 'Enabled' : 'Disabled' }}
+          </span>
+        </div>
+        <span class="hint">
+          Show a floating button over other apps for quick voice input
+        </span>
+        <span v-if="bubbleError" class="error-hint">
+          {{ bubbleError }}
+        </span>
+        <span v-if="!hasOverlayPermission && floatingBubbleEnabled" class="warning-hint">
+          Overlay permission required. Tap toggle to request.
+        </span>
+      </div>
+
       <!-- Auto-save notice -->
       <div class="auto-save-notice">
         <span class="notice-marker">[*]</span>
@@ -368,6 +504,22 @@ onMounted(() => {
   display: block;
   font-size: 13px;
   color: var(--text-weak);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.error-hint {
+  display: block;
+  font-size: 13px;
+  color: #ef4444;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.warning-hint {
+  display: block;
+  font-size: 13px;
+  color: #f59e0b;
   margin-top: 8px;
   line-height: 1.4;
 }
