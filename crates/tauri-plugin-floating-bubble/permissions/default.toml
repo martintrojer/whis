@@ -1,10 +1,10 @@
 [default]
-description = "Default permissions for the floating bubble plugin"
+description = "Default permissions for floating bubble plugin"
 permissions = [
     "allow-show-bubble",
     "allow-hide-bubble",
     "allow-is-bubble-visible",
     "allow-request-overlay-permission",
     "allow-has-overlay-permission",
-    "allow-set-bubble-recording",
+    "allow-set-bubble-state",
 ]

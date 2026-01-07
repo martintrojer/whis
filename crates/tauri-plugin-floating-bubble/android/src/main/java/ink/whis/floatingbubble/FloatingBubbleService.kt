@@ -58,7 +58,8 @@ class FloatingBubbleService : Service() {
          */
         fun setState(state: String) {
             val service = instance
-            Log.d(TAG, "setState called with: $state, instance: $service")
+            Log.d(TAG, "setState called with: '$state', instance: $service, pendingState: $pendingState")
+            Log.d(TAG, "setState - stateConfigs size: ${stateConfigs.size}, keys: ${stateConfigs.keys}")
             if (service == null) {
                 // Store for later - will be applied when service starts
                 Log.d(TAG, "Instance is null, storing pending state: $state")
@@ -66,6 +67,7 @@ class FloatingBubbleService : Service() {
                 return
             }
 
+            Log.d(TAG, "setState - posting updateState to main thread")
             Handler(Looper.getMainLooper()).post {
                 service.updateState(state)
             }
@@ -201,14 +203,16 @@ class FloatingBubbleService : Service() {
         // Apply any pending state that was set before service was ready
         val pending = pendingState
         if (pending != null) {
-            Log.d(TAG, "Applying pending state on bubble creation: $pending")
+            Log.d(TAG, "Applying pending state on bubble creation: '$pending'")
             pendingState = null
             updateState(pending)
         } else {
             // Apply initial idle state
             Log.d(TAG, "No pending state, applying initial IDLE")
             currentStateName = "idle"
+            Log.d(TAG, "createBubble - Setting initial state to 'idle'")
         }
+        Log.d(TAG, "createBubble - Initial stateConfigs size: ${Companion.stateConfigs.size}")
     }
     
     /**
@@ -322,34 +326,56 @@ class FloatingBubbleService : Service() {
      * Changes the icon based on state configuration.
      */
     private fun updateState(stateName: String) {
-        Log.d(TAG, "updateState called: $stateName, current: $currentStateName")
+        Log.d(TAG, "updateState called: '$stateName', current: '$currentStateName'")
+        Log.d(TAG, "updateState - bubbleView exists: ${bubbleView != null}")
+        Log.d(TAG, "updateState - packageName: $packageName")
+
         if (currentStateName == stateName) {
-            Log.d(TAG, "State unchanged, skipping")
+            Log.d(TAG, "State unchanged, skipping update")
             return
         }
         currentStateName = stateName
 
         // Get state configuration
         val config = Companion.stateConfigs[stateName]
-        Log.d(TAG, "State config for '$stateName': $config")
+        Log.d(TAG, "updateState - State config for '$stateName': $config")
+        Log.d(TAG, "updateState - stateConfigs keys: ${Companion.stateConfigs.keys}")
+        Log.d(TAG, "updateState - stateConfigs values: ${Companion.stateConfigs.values}")
 
         // Determine icon: state-specific icon -> default icon -> system fallback
         val iconName = config?.iconResourceName ?: Companion.defaultIconResourceName
+        Log.d(TAG, "updateState - Resolved icon name: '$iconName'")
 
         if (iconName != null) {
             // Load and set state-specific icon
             val iconResId = resources.getIdentifier(iconName, "drawable", packageName)
+            Log.d(TAG, "updateState - Looking up resource '$iconName' in package '$packageName', resId: $iconResId")
+
             if (iconResId != 0) {
                 try {
                     val iconDrawable = ContextCompat.getDrawable(this, iconResId)
+                    Log.d(TAG, "updateState - Got drawable for '$iconName': ${iconDrawable != null}")
                     bubbleView?.setImageDrawable(iconDrawable)
-                    Log.d(TAG, "Loaded state icon: $iconName (resId: $iconResId)")
+                    Log.d(TAG, "updateState - SUCCESS: Loaded and set state icon: $iconName (resId: $iconResId)")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load state icon: $iconName", e)
+                    Log.e(TAG, "updateState - FAILED: Exception loading state icon: $iconName", e)
                 }
             } else {
-                Log.w(TAG, "State icon resource not found: $iconName")
+                Log.w(TAG, "updateState - FAILED: State icon resource not found: $iconName")
+                Log.d(TAG, "updateState - Listing available drawable resources:")
+                try {
+                    val fields = R.drawable::class.java.fields
+                    for (field in fields) {
+                        if (field.name.contains("whis", ignoreCase = true)) {
+                            Log.d(TAG, "updateState - Available drawable: ${field.name}")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "updateState - Failed to list drawables", e)
+                }
             }
+        } else {
+            Log.w(TAG, "updateState - No icon name resolved for state '$stateName'")
         }
 
         // Update notification

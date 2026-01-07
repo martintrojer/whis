@@ -1,6 +1,6 @@
 ## Default Permission
 
-Default permissions for the floating bubble plugin
+Default permissions for floating bubble plugin
 
 #### This default permission set includes the following:
 
@@ -9,7 +9,7 @@ Default permissions for the floating bubble plugin
 - `allow-is-bubble-visible`
 - `allow-request-overlay-permission`
 - `allow-has-overlay-permission`
-- `allow-set-bubble-recording`
+- `allow-set-bubble-state`
 
 ## Permission Table
 
@@ -146,6 +146,32 @@ Enables the set_bubble_recording command without any pre-configured scope.
 <td>
 
 Denies the set_bubble_recording command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`floating-bubble:allow-set-bubble-state`
+
+</td>
+<td>
+
+Enables the set_bubble_state command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`floating-bubble:deny-set-bubble-state`
+
+</td>
+<td>
+
+Denies the set_bubble_state command without any pre-configured scope.
 
 </td>
 </tr>

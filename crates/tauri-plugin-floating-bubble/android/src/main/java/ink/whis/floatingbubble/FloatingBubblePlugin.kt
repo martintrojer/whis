@@ -124,6 +124,10 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
         }
 
         try {
+            Log.d(TAG, "showBubble called with args - size: ${args.size}, startX: ${args.startX}, startY: ${args.startY}")
+            Log.d(TAG, "showBubble - defaultIcon: ${args.iconResourceName}, background: ${args.background}")
+            Log.d(TAG, "showBubble - states: ${args.states}")
+
             // Pass configuration to the service via companion object
             FloatingBubbleService.bubbleSize = args.size
             FloatingBubbleService.bubbleStartX = args.startX
@@ -132,6 +136,8 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
             FloatingBubbleService.backgroundColor = Color.parseColor(args.background)
             FloatingBubbleService.stateConfigs = args.states ?: emptyMap()
 
+            Log.d(TAG, "showBubble - stateConfigs set to service: ${FloatingBubbleService.stateConfigs.size} states")
+
             // Start the floating bubble service
             val intent = Intent(activity, FloatingBubbleService::class.java)
             ContextCompat.startForegroundService(activity, intent)
@@ -139,6 +145,7 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
             isBubbleVisible = true
             invoke.resolve()
         } catch (e: Exception) {
+            Log.e(TAG, "showBubble failed: ${e.message}", e)
             invoke.reject("Failed to start bubble service: ${e.message}")
         }
     }
@@ -228,8 +235,9 @@ class FloatingBubblePlugin(private val activity: Activity) : Plugin(activity) {
         val args = invoke.parseArgs(StateOptions::class.java)
 
         try {
-            Log.d(TAG, "setBubbleState command received, state: ${args.state}")
+            Log.d(TAG, "setBubbleState command received with state: '${args.state}'")
             FloatingBubbleService.setState(args.state)
+            Log.d(TAG, "setBubbleState command completed")
             invoke.resolve()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update bubble state: ${e.message}", e)

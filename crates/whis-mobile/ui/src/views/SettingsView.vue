@@ -220,7 +220,7 @@ async function handleFloatingBubbleToggle(enabled: boolean) {
 // Show the floating bubble with Whis-specific configuration
 async function showBubble() {
   try {
-    await showBubbleApi({
+    const bubbleConfig = {
       size: 60,
       startX: 0,
       startY: 200,
@@ -231,7 +231,10 @@ async function showBubble() {
         recording: { iconResourceName: 'ic_whis_logo_recording' },
         processing: { iconResourceName: 'ic_whis_logo_processing' },
       },
-    })
+    }
+    console.log('[SettingsView.showBubble] Showing bubble with config:', bubbleConfig)
+    await showBubbleApi(bubbleConfig)
+    console.log('[SettingsView.showBubble] showBubble succeeded')
   }
   catch (e) {
     console.error('Failed to show bubble:', e)
