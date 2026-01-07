@@ -11,6 +11,13 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Floating Bubble Demo",
+        "width": 400,
+        "height": 600
+      }
+    ],
     "security": {
       "csp": null
     }

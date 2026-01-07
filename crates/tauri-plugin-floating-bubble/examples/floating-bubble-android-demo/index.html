@@ -4,50 +4,52 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="/src/styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Floating Bubble Demo</title>
+    <title>Floating Bubble</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <script type="module" src="/src/main.ts" defer></script>
   </head>
 
   <body>
-    <main class="container">
-      <h1>Floating Bubble Demo</h1>
-      <p class="subtitle">tauri-plugin-floating-bubble example</p>
+    <div class="app">
+      <header class="header">
+        <h1>Example</h1>
+      </header>
 
-      <div class="status-card">
-        <div class="status-row">
-          <span class="status-label">Overlay Permission:</span>
-          <span id="permission-status" class="status-value">Checking...</span>
+      <section class="section">
+        <div class="section-row">
+          <span class="label">Permission</span>
+          <div class="status-group">
+            <span id="permission-indicator" class="indicator"></span>
+            <span id="permission-status" class="status"></span>
+            <button id="btn-permission" class="btn-small">Request</button>
+          </div>
         </div>
-        <div class="status-row">
-          <span class="status-label">Bubble Visible:</span>
-          <span id="bubble-status" class="status-value">No</span>
+      </section>
+
+      <section class="section">
+        <div class="section-row">
+          <span class="label">Bubble</span>
+          <div class="toggle-group">
+            <button id="btn-toggle-bubble" class="toggle" data-state="off">
+              <span class="toggle-option">OFF</span>
+              <span class="toggle-option">ON</span>
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="button-group">
-        <button id="btn-permission" class="btn btn-secondary">
-          Request Permission
-        </button>
-        <button id="btn-show" class="btn btn-primary">
-          Show Bubble
-        </button>
-        <button id="btn-hide" class="btn btn-danger">
-          Hide Bubble
-        </button>
-      </div>
-
-      <div class="state-section">
-        <h3>Change Bubble State</h3>
-        <div class="state-buttons">
-          <button id="btn-state-idle" class="btn btn-state">Idle</button>
-          <button id="btn-state-recording" class="btn btn-state">Recording</button>
-          <button id="btn-state-processing" class="btn btn-state">Processing</button>
+      <section class="section">
+        <div class="section-row">
+          <span class="label">State</span>
+          <div class="segmented">
+            <button class="segment active" data-state="white">White</button>
+            <button class="segment" data-state="yellow">Yellow</button>
+            <button class="segment" data-state="red">Red</button>
+          </div>
         </div>
-      </div>
-
-      <div id="log" class="log-area">
-        <p class="log-title">Event Log:</p>
-      </div>
-    </main>
+      </section>
+    </div>
   </body>
 </html>

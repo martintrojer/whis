@@ -6,6 +6,9 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
+  // Use relative paths for Tauri/Android compatibility
+  base: "",
+
   // Resolve the local plugin symlink properly
   resolve: {
     alias: {

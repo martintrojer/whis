@@ -5,135 +5,99 @@ import {
   hasOverlayPermission,
   requestOverlayPermission,
   setBubbleState,
-  onBubbleClick,
-  type BubbleClickEvent,
 } from "tauri-plugin-floating-bubble";
 
-// DOM Elements
-let permissionStatusEl: HTMLElement | null;
-let bubbleStatusEl: HTMLElement | null;
-let logEl: HTMLElement | null;
+let bubbleVisible = false;
+let currentToggle = document.querySelector("#btn-toggle-bubble") as HTMLButtonElement;
 
-// Log helper
-function log(message: string) {
-  const time = new Date().toLocaleTimeString();
-  const entry = document.createElement("p");
-  entry.className = "log-entry";
-  entry.textContent = `[${time}] ${message}`;
-  logEl?.appendChild(entry);
-  logEl?.scrollTo(0, logEl.scrollHeight);
-}
+async function updatePermissionStatus() {
+  const statusEl = document.querySelector("#permission-status") as HTMLElement;
+  const indicatorEl = document.querySelector("#permission-indicator") as HTMLElement;
+  const btnEl = document.querySelector("#btn-permission") as HTMLButtonElement;
 
-// Update status displays
-async function updateStatus() {
   try {
     const { granted } = await hasOverlayPermission();
-    if (permissionStatusEl) {
-      permissionStatusEl.textContent = granted ? "Granted" : "Not Granted";
-      permissionStatusEl.className = `status-value ${granted ? "status-granted" : "status-denied"}`;
-    }
+    statusEl.textContent = granted ? "Granted" : "Not granted";
+    statusEl.className = `status ${granted ? "granted" : ""}`;
+    indicatorEl.className = `indicator ${granted ? "granted" : ""}`;
+    btnEl.style.display = granted ? "none" : "block";
   } catch (e) {
-    if (permissionStatusEl) {
-      permissionStatusEl.textContent = "N/A (Desktop)";
-      permissionStatusEl.className = "status-value";
-    }
+    statusEl.textContent = "N/A";
+    statusEl.className = "status";
+    indicatorEl.className = "indicator";
+    btnEl.style.display = "none";
   }
+}
 
+async function updateBubbleToggle() {
   try {
     const { visible } = await isBubbleVisible();
-    if (bubbleStatusEl) {
-      bubbleStatusEl.textContent = visible ? "Yes" : "No";
-      bubbleStatusEl.className = `status-value ${visible ? "status-granted" : ""}`;
-    }
+    bubbleVisible = visible;
+    currentToggle.dataset.state = visible ? "on" : "off";
   } catch (e) {
-    if (bubbleStatusEl) {
-      bubbleStatusEl.textContent = "N/A";
-    }
+    bubbleVisible = false;
+    currentToggle.dataset.state = "off";
   }
 }
 
-// Event handlers
 async function handleRequestPermission() {
-  log("Requesting overlay permission...");
   try {
-    const { granted } = await requestOverlayPermission();
-    log(granted ? "Permission granted!" : "Permission denied or pending");
-    await updateStatus();
+    await requestOverlayPermission();
+    await updatePermissionStatus();
   } catch (e) {
-    log(`Error: ${e}`);
+    console.error("Permission request failed:", e);
   }
 }
 
-async function handleShowBubble() {
-  log("Showing bubble...");
+async function handleToggleBubble() {
   try {
-    await showBubble({
-      size: 60,
-      startX: 0,
-      startY: 200,
-      background: "#1C1C1C",
-      states: {
-        idle: {},
-        recording: {},
-        processing: {},
-      },
-    });
-    log("Bubble shown!");
-    await updateStatus();
+    if (bubbleVisible) {
+      await hideBubble();
+      bubbleVisible = false;
+    } else {
+      await showBubble({
+        size: 60,
+        startX: 0,
+        startY: 200,
+        iconResourceName: "ic_bubble_white",
+        background: "#1C1C1C",
+        states: {
+          white: { iconResourceName: "ic_bubble_white" },
+          yellow: { iconResourceName: "ic_bubble_yellow" },
+          red: { iconResourceName: "ic_bubble_red" },
+        },
+      });
+      bubbleVisible = true;
+    }
+    currentToggle.dataset.state = bubbleVisible ? "on" : "off";
   } catch (e) {
-    log(`Error: ${e}`);
-  }
-}
-
-async function handleHideBubble() {
-  log("Hiding bubble...");
-  try {
-    await hideBubble();
-    log("Bubble hidden!");
-    await updateStatus();
-  } catch (e) {
-    log(`Error: ${e}`);
+    console.error("Toggle bubble failed:", e);
+    await updateBubbleToggle();
   }
 }
 
 async function handleSetState(state: string) {
-  log(`Setting state to: ${state}`);
   try {
     await setBubbleState(state);
-    log(`State set to: ${state}`);
   } catch (e) {
-    log(`Error: ${e}`);
+    console.error("Set state failed:", e);
   }
 }
 
-// Initialize
 window.addEventListener("DOMContentLoaded", async () => {
-  // Get DOM elements
-  permissionStatusEl = document.querySelector("#permission-status");
-  bubbleStatusEl = document.querySelector("#bubble-status");
-  logEl = document.querySelector("#log");
+  await updatePermissionStatus();
+  await updateBubbleToggle();
 
-  // Set up button handlers
   document.querySelector("#btn-permission")?.addEventListener("click", handleRequestPermission);
-  document.querySelector("#btn-show")?.addEventListener("click", handleShowBubble);
-  document.querySelector("#btn-hide")?.addEventListener("click", handleHideBubble);
+  currentToggle?.addEventListener("click", handleToggleBubble);
 
-  // State buttons
-  document.querySelector("#btn-state-idle")?.addEventListener("click", () => handleSetState("idle"));
-  document.querySelector("#btn-state-recording")?.addEventListener("click", () => handleSetState("recording"));
-  document.querySelector("#btn-state-processing")?.addEventListener("click", () => handleSetState("processing"));
-
-  // Listen for bubble click events
-  try {
-    await onBubbleClick((event: BubbleClickEvent) => {
-      log(`Bubble clicked! Action: ${event.action}`);
+  const segments = document.querySelectorAll(".segment");
+  segments.forEach((seg) => {
+    seg.addEventListener("click", () => {
+      segments.forEach((s) => s.classList.remove("active"));
+      seg.classList.add("active");
+      const state = seg.getAttribute("data-state");
+      if (state) handleSetState(state);
     });
-    log("Bubble click listener registered");
-  } catch (e) {
-    log(`Note: Click listener setup - ${e}`);
-  }
-
-  // Initial status update
-  log("App initialized");
-  await updateStatus();
+  });
 });
