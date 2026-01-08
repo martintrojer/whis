@@ -8,7 +8,11 @@ use crate::clipboard::ClipboardMethod;
 /// Settings for UI behavior and device configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiSettings {
-    /// Global keyboard shortcut (desktop only)
+    /// Shortcut mode: "system" (desktop settings) or "direct" (whis handles hotkey)
+    #[serde(default = "default_shortcut_mode")]
+    pub shortcut_mode: String,
+
+    /// Global keyboard shortcut (only used if shortcut_mode is "direct")
     pub shortcut: String,
 
     /// Clipboard method for copying text (auto, xclip, wl-copy, arboard)
@@ -38,6 +42,10 @@ fn default_chunk_duration() -> u64 {
     crate::defaults::DEFAULT_CHUNK_DURATION_SECS
 }
 
+fn default_shortcut_mode() -> String {
+    crate::defaults::DEFAULT_SHORTCUT_MODE.to_string()
+}
+
 /// Voice Activity Detection configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VadSettings {
@@ -62,6 +70,7 @@ impl Default for VadSettings {
 impl Default for UiSettings {
     fn default() -> Self {
         Self {
+            shortcut_mode: crate::defaults::DEFAULT_SHORTCUT_MODE.to_string(),
             shortcut: crate::defaults::DEFAULT_SHORTCUT.to_string(),
             #[cfg(feature = "clipboard")]
             clipboard_method: ClipboardMethod::default(),

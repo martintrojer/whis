@@ -68,7 +68,15 @@ pub const DEFAULT_POST_PROCESSOR: PostProcessor = PostProcessor::None;
 // UI DEFAULTS
 // =============================================================================
 
-/// Default keyboard shortcut for recording toggle
+/// Default shortcut mode for triggering recording
+///
+/// - "system": User configures a keyboard shortcut in desktop settings to run `whis toggle`
+/// - "direct": Whis captures the hotkey directly (requires input group membership on Linux)
+///
+/// Default is "system" because it's more reliable and requires no special permissions.
+pub const DEFAULT_SHORTCUT_MODE: &str = "system";
+
+/// Default keyboard shortcut for recording toggle (used when shortcut_mode is "direct")
 ///
 /// Cross-platform shortcut that works on Windows, macOS, and Linux.
 /// Users can customize this via `whis config shortcut <your-shortcut>`.
