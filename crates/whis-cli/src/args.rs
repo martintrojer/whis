@@ -125,6 +125,9 @@ pub enum Commands {
     /// Check service status
     Status,
 
+    /// Toggle recording state (for compositor keybindings)
+    Toggle,
+
     /// Interactive setup wizard
     Setup {
         #[command(subcommand)]

@@ -45,8 +45,9 @@ whis               # Press Enter to stop — text copied!
 # Record once
 whis
 
-# Background hotkey mode
-whis listen        # Ctrl+Alt+W toggles recording
+# Background service mode
+whis start         # Start background service
+whis toggle        # Toggle recording (bind to your compositor hotkey)
 
 # Post-process with AI (cleanup grammar/filler)
 whis --post-process
@@ -87,12 +88,17 @@ Or download binaries from [GitHub Releases](https://github.com/frankdierolf/whis
   ```
 - Linux (X11/Wayland), macOS, or Windows
 
-**For hotkey mode** (one-time setup on Linux):
+**For hotkey mode** (Linux, pick one):
+
 ```bash
-sudo usermod -aG input $USER
-echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger
-# Logout and login again
+# Option 1: Direct capture (recommended)
+sudo usermod -aG input $USER && logout
+# Then: whis start
+
+# Option 2: Compositor keybinding (no permissions needed)
+# GNOME: Settings > Keyboard > Custom Shortcuts → whis toggle
+# Sway:  bindsym Ctrl+Alt+w exec whis toggle
+# Hyprland: bind = CTRL ALT, W, exec, whis toggle
 ```
 
 ## Desktop & Mobile

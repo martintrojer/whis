@@ -30,6 +30,7 @@ fn run() -> Result<()> {
         Some(args::Commands::Stop) => commands::stop::run(),
         Some(args::Commands::Restart { hotkey }) => commands::restart::run(hotkey),
         Some(args::Commands::Status) => commands::status::run(),
+        Some(args::Commands::Toggle) => commands::toggle::run(),
         Some(args::Commands::Config {
             key,
             value,

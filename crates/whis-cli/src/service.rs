@@ -93,6 +93,7 @@ impl Service {
     /// Handle an IPC message
     async fn handle_message(&self, message: IpcMessage) -> IpcResponse {
         match message {
+            IpcMessage::Toggle => self.handle_toggle().await,
             IpcMessage::Stop => {
                 println!("Stop signal received");
                 // Return Ok response before exiting
