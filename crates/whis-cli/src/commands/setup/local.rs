@@ -1,118 +1,12 @@
 //! Local transcription setup
 
-use anyhow::{Result, anyhow};
-use whis_core::{PostProcessor, Settings, TranscriptionProvider, model, ollama};
+use anyhow::Result;
+use whis_core::{Settings, TranscriptionProvider, model};
 
 use super::interactive;
-use super::post_processing::select_ollama_model;
 
 #[cfg(feature = "local-transcription")]
 use whis_core::model::{ModelType, ParakeetModel, WhisperModel};
-
-/// Setup for fully local (on-device) transcription (full interactive wizard)
-pub fn setup_local() -> Result<()> {
-    let items = vec![
-        "Parakeet (NVIDIA model)",
-        "Whisper - Multiple sizes (OpenAI model)",
-    ];
-
-    let engine_choice = interactive::select("Which transcription engine?", &items, Some(0))? + 1;
-
-    let (provider, model_path) = match engine_choice {
-        1 => {
-            // Parakeet setup - show available models
-            let items: Vec<String> = ParakeetModel
-                .models()
-                .iter()
-                .map(|model| {
-                    let path = ParakeetModel.default_path(model.name);
-                    let installed = if ParakeetModel.verify(&path) {
-                        " [installed]"
-                    } else {
-                        ""
-                    };
-                    format!("{} - {}{}", model.name, model.description, installed)
-                })
-                .collect();
-
-            let model_choice = interactive::select("Which Parakeet model?", &items, Some(0))?;
-            let model = &ParakeetModel.models()[model_choice];
-            let path = ParakeetModel.default_path(model.name);
-            if !ParakeetModel.verify(&path) {
-                interactive::info(&format!("Downloading {}...", model.name));
-                model::download::download(&ParakeetModel, model.name, &path)?;
-            }
-            (TranscriptionProvider::LocalParakeet, path)
-        }
-        2 => {
-            // Whisper setup - show available models
-            let items: Vec<String> = WhisperModel
-                .models()
-                .iter()
-                .map(|model| {
-                    let path = WhisperModel.default_path(model.name);
-                    let installed = if WhisperModel.verify(&path) {
-                        " [installed]"
-                    } else {
-                        ""
-                    };
-                    format!("{} - {}{}", model.name, model.description, installed)
-                })
-                .collect();
-
-            let model_choice = interactive::select("Which Whisper model?", &items, Some(2))?;
-            let model = &WhisperModel.models()[model_choice];
-
-            let path = WhisperModel.default_path(model.name);
-            if !WhisperModel.verify(&path) {
-                interactive::info(&format!("Downloading {}...", model.name));
-                model::download::download(&WhisperModel, model.name, &path)?;
-            }
-            (TranscriptionProvider::LocalWhisper, path)
-        }
-        _ => unreachable!(),
-    };
-
-    let ollama_url = ollama::DEFAULT_OLLAMA_URL;
-
-    // Check if Ollama is installed
-    if !ollama::is_ollama_installed() {
-        interactive::ollama_not_installed();
-        return Err(anyhow!("Please install Ollama and run setup again"));
-    }
-
-    // Start Ollama if not running
-    ollama::ensure_ollama_running(ollama_url)?;
-
-    // Let user select model (shows installed + recommended options)
-    let ollama_model = select_ollama_model(ollama_url, None)?;
-
-    let mut settings = Settings::load();
-    settings.transcription.provider = provider.clone();
-    match &provider {
-        TranscriptionProvider::LocalParakeet => {
-            settings.transcription.local_models.parakeet_path =
-                Some(model_path.to_string_lossy().to_string());
-        }
-        TranscriptionProvider::LocalWhisper => {
-            settings.transcription.local_models.whisper_path =
-                Some(model_path.to_string_lossy().to_string());
-        }
-        _ => {}
-    }
-    settings.post_processing.processor = PostProcessor::Ollama;
-    settings.services.ollama.url = Some(ollama_url.to_string());
-    settings.services.ollama.model = Some(ollama_model.clone());
-    settings.save()?;
-
-    interactive::info(&format!(
-        "Configuration saved! Transcription: {}, Post-processing: Ollama ({})",
-        provider.display_name(),
-        ollama_model
-    ));
-
-    Ok(())
-}
 
 /// Streamlined local transcription setup (no post-processing config)
 /// Used by the unified wizard

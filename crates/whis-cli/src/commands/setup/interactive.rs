@@ -89,7 +89,7 @@ pub fn error(text: &str) {
 
 /// Print an info message
 pub fn info(text: &str) {
-    println!("{} {}", style("[i]").bold(), text);
+    println!("{} {}", style("[i]").for_stderr(), text);
 }
 
 /// Display Ollama installation instructions

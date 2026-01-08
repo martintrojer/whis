@@ -1,6 +1,6 @@
 //! Provider-related constants and helpers for setup
 
-use whis_core::{Settings, TranscriptionProvider};
+use whis_core::TranscriptionProvider;
 
 /// Cloud providers for transcription (excludes local providers)
 /// Note: OpenAIRealtime is excluded - it's selected via method choice in cloud.rs
@@ -46,25 +46,4 @@ pub fn api_key_url(provider: &TranscriptionProvider) -> &'static str {
         TranscriptionProvider::ElevenLabs => "https://elevenlabs.io/app/settings/api-keys",
         _ => "",
     }
-}
-
-/// Get configured and unconfigured cloud providers
-pub fn get_provider_status(
-    settings: &Settings,
-) -> (
-    Vec<(TranscriptionProvider, String)>,
-    Vec<TranscriptionProvider>,
-) {
-    let mut configured = Vec::new();
-    let mut unconfigured = Vec::new();
-
-    for provider in CLOUD_PROVIDERS {
-        if let Some(key) = settings.transcription.api_key_for(provider) {
-            configured.push((provider.clone(), key));
-        } else {
-            unconfigured.push(provider.clone());
-        }
-    }
-
-    (configured, unconfigured)
 }

@@ -7,7 +7,6 @@ use whis_core::{PostProcessor, Settings, TranscriptionProvider, ollama};
 use super::cloud::prompt_and_validate_key;
 use super::interactive;
 use super::provider_helpers::{PP_PROVIDERS, api_key_url};
-use crate::ui::mask_key;
 
 /// Display a progress bar for ollama model pulls (with bracket notation prefix)
 fn display_progress(downloaded: u64, total: u64) {
@@ -31,193 +30,6 @@ fn display_progress(downloaded: u64, total: u64) {
     eprint!("] {}%", progress);
 
     std::io::stderr().flush().ok();
-}
-
-/// Setup for post-processing configuration (standalone command)
-pub fn setup_post_processing() -> Result<()> {
-    interactive::info(
-        "Post-processing cleans up transcriptions (removes filler words, fixes grammar).",
-    );
-
-    let mut settings = Settings::load();
-
-    // Show current status
-    interactive::info(&format!(
-        "Current post-processor: {}",
-        match settings.post_processing.processor {
-            PostProcessor::None => "None (disabled)".to_string(),
-            PostProcessor::OpenAI => "OpenAI".to_string(),
-            PostProcessor::Mistral => "Mistral".to_string(),
-            PostProcessor::Ollama => format!(
-                "Ollama ({})",
-                settings
-                    .services
-                    .ollama
-                    .model
-                    .as_deref()
-                    .unwrap_or(ollama::DEFAULT_OLLAMA_MODEL)
-            ),
-        }
-    ));
-
-    // Choose post-processor type
-    let items = vec!["OpenAI", "Mistral", "Ollama", "None"];
-    let choice = interactive::select("Which post-processor?", &items, Some(0))? + 1;
-
-    match choice {
-        1 => {
-            // OpenAI setup
-            if settings
-                .transcription
-                .api_key_for(&TranscriptionProvider::OpenAI)
-                .is_none()
-            {
-                interactive::info("OpenAI API key not configured.");
-                interactive::info("Get your API key from: https://platform.openai.com/api-keys");
-                let api_key = prompt_and_validate_key(&TranscriptionProvider::OpenAI)?;
-                settings
-                    .transcription
-                    .set_api_key(&TranscriptionProvider::OpenAI, api_key);
-            }
-
-            settings.post_processing.processor = PostProcessor::OpenAI;
-            settings.save()?;
-
-            interactive::info("Setup complete!");
-            interactive::info("  Post-processor: OpenAI");
-        }
-        2 => {
-            // Mistral setup
-            if settings
-                .transcription
-                .api_key_for(&TranscriptionProvider::Mistral)
-                .is_none()
-            {
-                interactive::info("Mistral API key not configured.");
-                interactive::info("Get your API key from: https://console.mistral.ai/api-keys");
-                let api_key = prompt_and_validate_key(&TranscriptionProvider::Mistral)?;
-                settings
-                    .transcription
-                    .set_api_key(&TranscriptionProvider::Mistral, api_key);
-            }
-
-            settings.post_processing.processor = PostProcessor::Mistral;
-            settings.save()?;
-
-            interactive::info("Setup complete!");
-            interactive::info("  Post-processor: Mistral");
-        }
-        3 => {
-            // Ollama setup
-            let ollama_url = ollama::DEFAULT_OLLAMA_URL;
-
-            // Check if Ollama is installed
-            if !ollama::is_ollama_installed() {
-                interactive::ollama_not_installed();
-                return Err(anyhow!("Please install Ollama and run setup again"));
-            }
-
-            // Start Ollama if not running
-            ollama::ensure_ollama_running(ollama_url)?;
-
-            // Select model
-            let model = select_ollama_model(ollama_url, settings.services.ollama.model.as_deref())?;
-
-            settings.post_processing.processor = PostProcessor::Ollama;
-            settings.services.ollama.url = Some(ollama_url.to_string());
-            settings.services.ollama.model = Some(model.clone());
-            settings.save()?;
-
-            interactive::info("Setup complete!");
-            interactive::info(&format!("  Post-processor: Ollama ({})", model));
-        }
-        4 => {
-            // Disable post-processing
-            settings.post_processing.processor = PostProcessor::None;
-            settings.save()?;
-
-            interactive::info("Post-processing disabled.");
-        }
-        _ => unreachable!(),
-    }
-
-    Ok(())
-}
-
-/// Configure post-processing options (used within cloud setup flow)
-pub fn configure_post_processing_options(settings: &mut Settings) -> Result<()> {
-    let items = vec!["OpenAI", "Mistral", "Ollama", "None"];
-
-    let choice = interactive::select("Which post-processor?", &items, Some(0))? + 1;
-
-    match choice {
-        1 => {
-            // OpenAI
-            if settings
-                .transcription
-                .api_key_for(&TranscriptionProvider::OpenAI)
-                .is_none()
-            {
-                interactive::info("OpenAI API key not configured.");
-                interactive::info("Get your API key from: https://platform.openai.com/api-keys");
-                let api_key = prompt_and_validate_key(&TranscriptionProvider::OpenAI)?;
-                settings
-                    .transcription
-                    .set_api_key(&TranscriptionProvider::OpenAI, api_key);
-            }
-            settings.post_processing.processor = PostProcessor::OpenAI;
-            settings.save()?;
-        }
-        2 => {
-            // Mistral
-            if settings
-                .transcription
-                .api_key_for(&TranscriptionProvider::Mistral)
-                .is_none()
-            {
-                interactive::info("Mistral API key not configured.");
-                interactive::info("Get your API key from: https://console.mistral.ai/api-keys");
-                let api_key = prompt_and_validate_key(&TranscriptionProvider::Mistral)?;
-                settings
-                    .transcription
-                    .set_api_key(&TranscriptionProvider::Mistral, api_key);
-            }
-            settings.post_processing.processor = PostProcessor::Mistral;
-            settings.save()?;
-        }
-        3 => {
-            // Ollama setup
-            let ollama_url = ollama::DEFAULT_OLLAMA_URL;
-
-            // Check if Ollama is installed
-            if !ollama::is_ollama_installed() {
-                interactive::ollama_not_installed();
-                interactive::info(
-                    "You can run 'whis setup post-processing' later to configure Ollama.",
-                );
-                return Ok(());
-            }
-
-            // Start Ollama if not running
-            ollama::ensure_ollama_running(ollama_url)?;
-
-            // Select model
-            let model = select_ollama_model(ollama_url, settings.services.ollama.model.as_deref())?;
-
-            settings.post_processing.processor = PostProcessor::Ollama;
-            settings.services.ollama.url = Some(ollama_url.to_string());
-            settings.services.ollama.model = Some(model);
-            settings.save()?;
-        }
-        4 => {
-            // Disable
-            settings.post_processing.processor = PostProcessor::None;
-            settings.save()?;
-        }
-        _ => unreachable!(),
-    }
-
-    Ok(())
 }
 
 /// Interactive Ollama model selection
@@ -429,8 +241,7 @@ fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
     let provider = PP_PROVIDERS[choice].clone();
 
     // Check if API key already exists
-    if let Some(existing_key) = settings.transcription.api_key_for(&provider) {
-        interactive::info(&format!("Current API key: {}", mask_key(&existing_key)));
+    if let Some(_existing_key) = settings.transcription.api_key_for(&provider) {
         let keep = interactive::select("Keep current key?", &["Yes", "No"], Some(0))? == 0;
 
         if !keep {
