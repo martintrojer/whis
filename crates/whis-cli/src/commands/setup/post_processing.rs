@@ -224,20 +224,21 @@ pub fn setup_post_processing_step(prefer_cloud: bool) -> Result<()> {
 
 /// Setup cloud post-processing (OpenAI or Mistral)
 fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
-    // Build provider items with [configured] marker
-    let items: Vec<String> = PP_PROVIDERS
+    // Build provider items: with markers for selection, clean for confirmation
+    let (items, clean_items): (Vec<String>, Vec<String>) = PP_PROVIDERS
         .iter()
         .map(|provider| {
+            let base = provider.display_name().to_string();
             let marker = if settings.transcription.api_key_for(provider).is_some() {
                 " [configured]"
             } else {
                 ""
             };
-            format!("{}{}", provider.display_name(), marker)
+            (format!("{}{}", base, marker), base)
         })
-        .collect();
+        .unzip();
 
-    let choice = interactive::select("Which provider?", &items, Some(0))?;
+    let choice = interactive::select_clean("Which provider?", &items, &clean_items, Some(0))?;
     let provider = PP_PROVIDERS[choice].clone();
 
     // Check if API key already exists

@@ -49,12 +49,17 @@ pub fn prompt_and_validate_key(provider: &TranscriptionProvider) -> Result<Strin
 pub fn setup_transcription_cloud() -> Result<()> {
     let mut settings = Settings::load();
 
-    // Build provider display items with [configured] marker
-    let items: Vec<String> = CLOUD_PROVIDERS
+    // Build provider display items: with markers for selection, just name for confirmation
+    let (items, clean_items): (Vec<String>, Vec<String>) = CLOUD_PROVIDERS
         .iter()
         .map(|provider| {
+            let display = format!(
+                "{:<10} - {}",
+                provider.display_name(),
+                provider_description(provider)
+            );
             // Check if this provider or its realtime variant is configured
-            let configured = if settings.transcription.api_key_for(provider).is_some()
+            let marker = if settings.transcription.api_key_for(provider).is_some()
                 || (*provider == TranscriptionProvider::OpenAI
                     && settings.transcription.provider == TranscriptionProvider::OpenAIRealtime)
                 || (*provider == TranscriptionProvider::Deepgram
@@ -64,14 +69,9 @@ pub fn setup_transcription_cloud() -> Result<()> {
             } else {
                 ""
             };
-            format!(
-                "{:<10} - {}{}",
-                provider.display_name(),
-                provider_description(provider),
-                configured
-            )
+            (format!("{}{}", display, marker), provider.display_name().to_string())
         })
-        .collect();
+        .unzip();
 
     // Default to current provider if configured, otherwise first
     // Treat realtime variants same as base provider for default selection
@@ -83,7 +83,7 @@ pub fn setup_transcription_cloud() -> Result<()> {
                 && settings.transcription.provider == TranscriptionProvider::DeepgramRealtime)
     });
 
-    let choice = interactive::select("Which provider?", &items, default)?;
+    let choice = interactive::select_clean("Which provider?", &items, &clean_items, default)?;
     let mut provider = CLOUD_PROVIDERS[choice].clone();
 
     // If OpenAI selected, ask for method (Standard vs Streaming)

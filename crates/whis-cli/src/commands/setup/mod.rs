@@ -51,10 +51,11 @@ fn setup_wizard() -> Result<()> {
 
 /// Setup shortcut mode (system or direct)
 fn setup_shortcut_step() -> Result<()> {
-    let items = vec!["System shortcut", "Direct capture"];
-    let choice = interactive::select("Recording trigger?", &items, Some(0))?;
-
     let mut settings = Settings::load();
+
+    let items = vec!["System shortcut", "Direct capture"];
+    let default = if settings.ui.shortcut_mode == "direct" { 1 } else { 0 };
+    let choice = interactive::select("Recording trigger?", &items, Some(default))?;
 
     match choice {
         0 => {

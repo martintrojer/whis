@@ -62,6 +62,34 @@ pub fn select<T: std::fmt::Display>(
     Ok(select.interact()?)
 }
 
+/// Select with separate display and confirmation labels.
+///
+/// Shows `items` during selection (with markers like [configured]),
+/// but confirms with `clean_items[idx]` (without markers).
+pub fn select_clean(
+    prompt: &str,
+    items: &[impl AsRef<str>],
+    clean_items: &[impl AsRef<str>],
+    default: Option<usize>,
+) -> Result<usize> {
+    let theme = theme();
+    let mut select = Select::with_theme(&theme)
+        .with_prompt(prompt)
+        .items(&items.iter().map(|s| s.as_ref()).collect::<Vec<_>>())
+        .report(false); // Disable auto-confirmation
+
+    if let Some(idx) = default {
+        select = select.default(idx);
+    }
+
+    let idx = select.interact()?;
+
+    // Print clean confirmation manually
+    eprintln!("{} {}  {}", style("[*]"), prompt, clean_items[idx].as_ref());
+
+    Ok(idx)
+}
+
 /// Get text input
 pub fn input(prompt: &str, default: Option<&str>) -> Result<String> {
     let theme = theme();
