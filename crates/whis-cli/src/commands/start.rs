@@ -1,16 +1,8 @@
 use crate::{app, hotkey, ipc, service};
 use anyhow::Result;
+use whis_core::Settings;
 
-/// Guard to clean up PID and socket files on exit
-struct CleanupGuard;
-
-impl Drop for CleanupGuard {
-    fn drop(&mut self) {
-        ipc::remove_pid_file();
-    }
-}
-
-pub fn run(hotkey_str: String) -> Result<()> {
+pub fn run() -> Result<()> {
     // Check if FFmpeg is available
     app::ensure_ffmpeg_installed()?;
 
@@ -21,34 +13,60 @@ pub fn run(hotkey_str: String) -> Result<()> {
         std::process::exit(1);
     }
 
-    // Load transcription configuration (provider + API key)
+    // Load settings and transcription configuration
+    let settings = Settings::load();
     let config = app::load_transcription_config()?;
-
-    // Write PID file with hotkey information
-    ipc::write_pid_file_with_hotkey(&hotkey_str)?;
-
-    // Set up cleanup on exit
-    let _cleanup = CleanupGuard;
-
-    // Setup hotkey listener
-    // This handles platform differences internally
-    println!("Registering hotkey: {}", hotkey_str);
-    let (hotkey_rx, _guard) = hotkey::setup(&hotkey_str)?;
 
     // Create Tokio runtime
     let runtime = tokio::runtime::Runtime::new()?;
 
-    runtime.block_on(async {
-        // Create service
-        let service = service::Service::new(config)?;
+    // Based on shortcut_mode, decide how to run
+    match settings.ui.shortcut_mode.as_str() {
+        "direct" => {
+            // Try to set up hotkey via evdev/rdev
+            let shortcut = &settings.ui.shortcut;
+            match hotkey::setup(shortcut) {
+                Ok((hotkey_rx, _guard)) => {
+                    println!("Listening. Press {} to record. Ctrl+C to stop.", shortcut);
 
-        // Run service loop
-        tokio::select! {
-            result = service.run(Some(hotkey_rx)) => result,
-            _ = tokio::signal::ctrl_c() => {
-                println!("\nShutting down...");
-                Ok(())
+                    runtime.block_on(async {
+                        let service = service::Service::new(config)?;
+                        tokio::select! {
+                            result = service.run(Some(hotkey_rx)) => result,
+                            _ = tokio::signal::ctrl_c() => {
+                                println!("\nShutting down...");
+                                Ok(())
+                            }
+                        }
+                    })
+                }
+                Err(e) => {
+                    eprintln!("Error: Could not set up hotkey: {}", e);
+                    eprintln!();
+                    eprintln!("To use direct hotkey capture, run:");
+                    eprintln!("  sudo usermod -aG input $USER");
+                    eprintln!("Then logout and login again.");
+                    eprintln!();
+                    eprintln!("Or switch to system mode:");
+                    eprintln!("  whis config shortcut-mode system");
+                    std::process::exit(1);
+                }
             }
         }
-    })
+        _ => {
+            // "system" mode (or any other value) - IPC only
+            println!("Listening. Press your configured shortcut to record. Ctrl+C to stop.");
+
+            runtime.block_on(async {
+                let service = service::Service::new(config)?;
+                tokio::select! {
+                    result = service.run(None) => result,
+                    _ = tokio::signal::ctrl_c() => {
+                        println!("\nShutting down...");
+                        Ok(())
+                    }
+                }
+            })
+        }
+    }
 }

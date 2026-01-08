@@ -319,16 +319,14 @@ async fn progressive_record_and_transcribe(
     } else {
         // Interactive mode
         if !quiet {
-            let hotkey = &settings.ui.shortcut;
-            println!("Press Enter or {} to stop", hotkey);
+            println!("Press Enter to stop");
             print!("Recording...");
             use std::io::Write;
             std::io::stdout().flush()?;
         }
 
-        // Wait for user to stop (blocking operation, run in spawn_blocking)
-        let hotkey = settings.ui.shortcut.clone();
-        tokio::task::spawn_blocking(move || app::wait_for_stop(&hotkey)).await??;
+        // Wait for user to stop (blocking operation)
+        tokio::task::spawn_blocking(app::wait_for_stop).await??;
 
         if !quiet && whis_core::verbose::is_verbose() {
             println!();

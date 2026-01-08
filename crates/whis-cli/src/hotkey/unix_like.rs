@@ -184,6 +184,7 @@ where
 
                     if ctrl_ok && shift_ok && alt_ok && super_ok && key_ok {
                         on_press();
+                        return None; // Consume the hotkey
                     }
                 }
                 EventType::KeyRelease(key) => {
@@ -192,8 +193,7 @@ where
                 }
                 _ => {}
             }
-            // Return Some(event) to pass the event through, None to consume it
-            Some(event)
+            Some(event) // Pass other keys through
         };
 
         if let Err(e) = grab(callback) {

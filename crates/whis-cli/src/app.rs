@@ -34,6 +34,10 @@ pub fn ensure_ffmpeg_installed() -> Result<()> {
 }
 
 pub fn load_transcription_config() -> Result<TranscriptionConfig> {
+    // Check if settings file exists (fresh install detection)
+    let settings_path = Settings::path();
+    let is_fresh_install = !settings_path.exists();
+
     let settings = Settings::load();
     let provider = settings.transcription.provider.clone();
     let language = settings.transcription.language.clone();
@@ -81,14 +85,24 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
             match settings.transcription.api_key_for(&provider) {
                 Some(key) => key,
                 None => {
-                    eprintln!("Error: No {} API key configured.", provider.display_name());
-                    eprintln!("(Required for {} transcription)", provider.display_name());
-                    eprintln!("\nSet your key with:");
-                    eprintln!("  whis config --{}-api-key YOUR_KEY\n", provider.as_str());
-                    eprintln!(
-                        "Or set the {} environment variable.",
-                        provider.api_key_env_var()
-                    );
+                    if is_fresh_install {
+                        // Fresh install: suggest running setup
+                        eprintln!("Error: No transcription provider configured.");
+                        eprintln!("\nRun 'whis setup' to get started.");
+                    } else {
+                        // Configured but missing key for current provider
+                        eprintln!("Error: No {} API key configured.", provider.display_name());
+                        eprintln!("(Required for {} transcription)", provider.display_name());
+                        eprintln!("\nSet your key with:");
+                        eprintln!(
+                            "  whis config {}-api-key YOUR_KEY\n",
+                            provider.as_str().to_lowercase().replace('_', "-")
+                        );
+                        eprintln!(
+                            "Or set the {} environment variable.",
+                            provider.api_key_env_var()
+                        );
+                    }
                     std::process::exit(1);
                 }
             }
@@ -102,27 +116,17 @@ pub fn load_transcription_config() -> Result<TranscriptionConfig> {
     })
 }
 
-/// Wait for user to stop recording via Enter key or global hotkey.
-/// In TTY mode: accepts either Enter or hotkey.
-/// In non-TTY mode (e.g., AI assistant shell): only hotkey works.
-pub fn wait_for_stop(hotkey_str: &str) -> Result<()> {
-    use crate::hotkey;
-
+/// Wait for user to stop recording via Enter key.
+/// In TTY mode: waits for Enter key press.
+/// In non-TTY mode: blocks indefinitely (use --duration for timed recording).
+pub fn wait_for_stop() -> Result<()> {
     std::io::stdout().flush()?;
 
-    // Set up global hotkey listener
-    let (hotkey_rx, _guard) = hotkey::setup(hotkey_str)?;
-
     if std::io::stdin().is_terminal() {
-        // TTY mode: accept Enter OR hotkey
+        // TTY mode: wait for Enter key
         enable_raw_mode()?;
 
         loop {
-            // Check for hotkey (non-blocking)
-            if hotkey_rx.try_recv().is_ok() {
-                break;
-            }
-
             // Check for Enter key with timeout (50ms polling)
             if event::poll(Duration::from_millis(50))?
                 && let Event::Key(key_event) = event::read()?
@@ -134,8 +138,11 @@ pub fn wait_for_stop(hotkey_str: &str) -> Result<()> {
 
         disable_raw_mode()?;
     } else {
-        // Non-TTY mode: only hotkey works (blocks until pressed)
-        hotkey_rx.recv()?;
+        // Non-TTY mode: wait indefinitely
+        // Use --duration for timed recording in non-interactive environments
+        loop {
+            thread::sleep(Duration::from_secs(3600));
+        }
     }
 
     Ok(())

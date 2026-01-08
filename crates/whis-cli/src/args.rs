@@ -105,22 +105,14 @@ pub struct Cli {
 #[derive(Subcommand)]
 #[allow(clippy::large_enum_variant)]
 pub enum Commands {
-    /// Start the background service that listens for hotkey triggers
-    Start {
-        /// Hotkey to trigger recording (e.g., "ctrl+alt+w" or "cmd+option+w" on macOS)
-        #[arg(short = 'k', long, default_value = "ctrl+alt+w")]
-        hotkey: String,
-    },
+    /// Start the background service (uses shortcut_mode from settings)
+    Start,
 
     /// Stop the background service
     Stop,
 
-    /// Restart the background service (preserves hotkey if not specified)
-    Restart {
-        /// Hotkey to trigger recording (if not specified, preserves current hotkey or uses default)
-        #[arg(short = 'k', long)]
-        hotkey: Option<String>,
-    },
+    /// Restart the background service
+    Restart,
 
     /// Check service status
     Status,
@@ -129,10 +121,7 @@ pub enum Commands {
     Toggle,
 
     /// Interactive setup wizard
-    Setup {
-        #[command(subcommand)]
-        mode: Option<SetupMode>,
-    },
+    Setup,
 
     /// Configure settings (git-style interface)
     Config {
@@ -162,21 +151,6 @@ pub enum Commands {
         #[command(subcommand)]
         action: Option<ModelAction>,
     },
-}
-
-#[derive(Subcommand)]
-pub enum SetupMode {
-    /// Setup for cloud providers (OpenAI, Mistral, Groq, etc.)
-    #[command(hide = true)]
-    Cloud,
-
-    /// Setup for fully local (on-device) transcription and post-processing
-    #[command(hide = true)]
-    Local,
-
-    /// Configure post-processing (Ollama model selection, cleanup settings)
-    #[command(hide = true)]
-    PostProcessing,
 }
 
 #[derive(Subcommand)]

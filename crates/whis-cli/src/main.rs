@@ -26,9 +26,9 @@ fn run() -> Result<()> {
     whis_core::set_verbose(cli.verbose);
 
     match cli.command {
-        Some(args::Commands::Start { hotkey }) => commands::start::run(hotkey),
+        Some(args::Commands::Start) => commands::start::run(),
         Some(args::Commands::Stop) => commands::stop::run(),
-        Some(args::Commands::Restart { hotkey }) => commands::restart::run(hotkey),
+        Some(args::Commands::Restart) => commands::restart::run(),
         Some(args::Commands::Status) => commands::status::run(),
         Some(args::Commands::Toggle) => commands::toggle::run(),
         Some(args::Commands::Config {
@@ -38,7 +38,7 @@ fn run() -> Result<()> {
             path,
         }) => commands::config::run(key, value, list, path),
         Some(args::Commands::Preset { action }) => commands::preset::run(action),
-        Some(args::Commands::Setup { mode }) => commands::setup::run(mode),
+        Some(args::Commands::Setup) => commands::setup::run(),
         Some(args::Commands::Model { action }) => commands::model::run(action),
         None => {
             // Determine input source from CLI arguments

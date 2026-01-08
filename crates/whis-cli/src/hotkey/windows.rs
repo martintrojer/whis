@@ -201,3 +201,17 @@ fn convert_to_global_hotkey_format(s: &str) -> Result<String> {
 
     Ok(result.join("+"))
 }
+
+/// Validate a hotkey string and return normalized form if valid
+pub fn validate(hotkey_str: &str) -> Result<String> {
+    // Try to convert to global-hotkey format (validates syntax)
+    let converted = convert_to_global_hotkey_format(hotkey_str)?;
+
+    // Try to parse as HotKey to validate it's a valid combination
+    let _: HotKey = converted
+        .parse()
+        .map_err(|e| anyhow::anyhow!("Invalid hotkey '{}': {:?}", hotkey_str, e))?;
+
+    // Return a normalized form
+    Ok(converted)
+}

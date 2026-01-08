@@ -59,10 +59,6 @@ impl Service {
             whis_core::whisper_set_keep_loaded(true);
         }
 
-        // Show startup message with shortcut hint
-        let settings = Settings::load();
-        println!("Press {} to record. Ctrl+C to stop.", settings.ui.shortcut);
-
         loop {
             // Check for incoming IPC connections (non-blocking)
             if let Some(mut conn) = ipc_server.try_accept()? {

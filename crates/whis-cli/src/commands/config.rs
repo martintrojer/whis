@@ -18,6 +18,8 @@ const VALID_KEYS: &[&str] = &[
     "post-processing-prompt",
     "ollama-url",
     "ollama-model",
+    "shortcut-mode",
+    "shortcut",
     "vad",
     "vad-threshold",
     "chunk-size",
@@ -207,6 +209,21 @@ fn set_config(key: &str, value: &str) -> Result<()> {
             settings.ui.chunk_duration_secs = size;
             println!("chunk-size = {}s", size);
         }
+        "shortcut-mode" => {
+            let mode = value_trimmed.to_lowercase();
+            if mode != "system" && mode != "direct" {
+                anyhow::bail!("Invalid shortcut mode. Use 'system' or 'direct'");
+            }
+            settings.ui.shortcut_mode = mode.clone();
+            println!("shortcut-mode = {}", mode);
+        }
+        "shortcut" => {
+            if value_trimmed.is_empty() {
+                anyhow::bail!("Invalid shortcut: cannot be empty");
+            }
+            settings.ui.shortcut = value_trimmed.to_string();
+            println!("shortcut = {}", value_trimmed);
+        }
         _ => unreachable!("Key validation should prevent this"),
     }
 
@@ -267,6 +284,8 @@ fn get_config(key: &str) -> Result<()> {
         "vad" => println!("{}", settings.ui.vad.enabled),
         "vad-threshold" => println!("{:.2}", settings.ui.vad.threshold),
         "chunk-size" => println!("{}s", settings.ui.chunk_duration_secs),
+        "shortcut-mode" => println!("{}", settings.ui.shortcut_mode),
+        "shortcut" => println!("{}", settings.ui.shortcut),
         _ => unreachable!("Key validation should prevent this"),
     }
 
@@ -351,6 +370,11 @@ fn show_all_settings() -> Result<()> {
     println!();
     println!("[Audio Chunking]");
     println!("chunk-size = {}s", settings.ui.chunk_duration_secs);
+
+    println!();
+    println!("[Shortcuts]");
+    println!("shortcut-mode = {}", settings.ui.shortcut_mode);
+    println!("shortcut = {}", settings.ui.shortcut);
 
     println!();
     println!("[Presets]");

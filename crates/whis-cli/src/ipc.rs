@@ -35,20 +35,6 @@ fn socket_name() -> String {
     "whis".to_string()
 }
 
-/// Get the PID file path
-pub fn pid_file_path() -> PathBuf {
-    #[cfg(unix)]
-    {
-        let runtime_dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_string());
-        PathBuf::from(runtime_dir).join("whis.pid")
-    }
-    #[cfg(windows)]
-    {
-        let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(local_app_data).join("whis").join("whis.pid")
-    }
-}
-
 /// IPC Server for the background service
 pub struct IpcServer {
     listener: LocalSocketListener,
@@ -222,46 +208,12 @@ pub fn is_service_running() -> bool {
         }
         Err(_) => {
             // Can't connect - service is not running
-            // On Unix, clean up stale socket and PID files
+            // On Unix, clean up stale socket file
             #[cfg(unix)]
             {
                 let _ = std::fs::remove_file(&socket_path);
             }
-            remove_pid_file();
             false
         }
     }
-}
-
-/// Write PID file with hotkey information
-pub fn write_pid_file_with_hotkey(hotkey: &str) -> Result<()> {
-    let path = pid_file_path();
-
-    // Ensure parent directory exists (needed for Windows)
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).ok();
-    }
-
-    let pid = std::process::id();
-    let content = format!("{}|{}", pid, hotkey);
-    std::fs::write(&path, content).context("Failed to write PID file")?;
-    Ok(())
-}
-
-/// Read hotkey from PID file
-pub fn read_hotkey_from_pid_file() -> Result<String> {
-    let path = pid_file_path();
-    let content = std::fs::read_to_string(&path).context("Failed to read PID file")?;
-
-    if let Some((_, hotkey)) = content.split_once('|') {
-        Ok(hotkey.to_string())
-    } else {
-        anyhow::bail!("PID file does not contain hotkey information")
-    }
-}
-
-/// Remove PID file
-pub fn remove_pid_file() {
-    let path = pid_file_path();
-    let _ = std::fs::remove_file(path);
 }
