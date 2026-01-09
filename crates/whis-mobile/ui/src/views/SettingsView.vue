@@ -232,9 +232,7 @@ async function showBubble() {
         processing: { iconResourceName: 'ic_whis_logo_processing' },
       },
     }
-    console.log('[SettingsView.showBubble] Showing bubble with config:', bubbleConfig)
     await showBubbleApi(bubbleConfig)
-    console.log('[SettingsView.showBubble] showBubble succeeded')
   }
   catch (e) {
     console.error('Failed to show bubble:', e)

@@ -4,7 +4,6 @@
 //! This mirrors the pattern in whis-desktop's recording/pipeline.rs.
 
 use tauri::Emitter;
-use tauri_plugin_clipboard_manager::ClipboardExt;
 use whis_core::preset::Preset;
 use whis_core::{PostProcessor, post_process};
 
@@ -111,17 +110,4 @@ pub async fn apply_post_processing(
             text // Return original on error
         }
     }
-}
-
-/// Copy text to clipboard and emit completion event.
-pub fn finish_transcription(app: &tauri::AppHandle, text: &str) -> Result<(), String> {
-    // Copy to clipboard
-    app.clipboard()
-        .write_text(text)
-        .map_err(|e| format!("Clipboard error: {}", e))?;
-
-    // Emit completion event
-    let _ = app.emit("transcription-complete", text.to_string());
-
-    Ok(())
 }

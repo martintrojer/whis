@@ -41,7 +41,6 @@ function closeSidebar() {
  */
 function getBubbleState(): string {
   const state = recordingStore.state
-  console.log('[App.getBubbleState] isRecording:', state.isRecording, 'isTranscribing:', state.isTranscribing, 'isPostProcessing:', state.isPostProcessing)
 
   if (state.isRecording)
     return 'recording'
@@ -55,10 +54,8 @@ function getBubbleState(): string {
  */
 async function updateBubbleState() {
   const state = getBubbleState()
-  console.log('[App.updateBubbleState] Calling setBubbleState with:', state)
   try {
     await setBubbleState(state)
-    console.log('[App.updateBubbleState] setBubbleState succeeded for:', state)
   }
   catch (error) {
     // Plugin may not be available
@@ -97,7 +94,6 @@ onMounted(async () => {
       recordingStore.state.isPostProcessing,
     ],
     () => {
-      console.log('[App.watch] Recording state changed, triggering updateBubbleState')
       updateBubbleState()
     },
     { immediate: true },

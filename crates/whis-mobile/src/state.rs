@@ -29,6 +29,7 @@ pub struct AppState {
     pub audio_tx: Arc<Mutex<Option<mpsc::UnboundedSender<Vec<f32>>>>>,
 
     /// Receiver for progressive transcription result
+    #[allow(clippy::type_complexity)]
     pub transcription_rx: Arc<Mutex<Option<oneshot::Receiver<Result<String, String>>>>>,
 
     /// Cached transcription config (provider, API key, language)

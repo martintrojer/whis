@@ -61,11 +61,3 @@ pub fn load_transcription_config(
 
     Ok(config)
 }
-
-/// Clear the cached transcription config.
-///
-/// Call this when settings change (provider, API key, language).
-pub fn clear_transcription_config(state: &AppState) {
-    let mut config_guard = state.transcription_config.lock().unwrap();
-    *config_guard = None;
-}

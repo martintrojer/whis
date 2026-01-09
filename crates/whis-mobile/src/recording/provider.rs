@@ -50,6 +50,7 @@ pub fn validate_api_key_format(key: &str, provider: &str) -> bool {
 ///
 /// Returns `true` for providers that can use WebSocket-based
 /// realtime transcription.
+#[allow(dead_code)]
 pub fn supports_realtime_streaming(provider: &str) -> bool {
     matches!(
         provider,
