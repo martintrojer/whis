@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, anyhow};
 use whis_core::defaults::{DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL};
+use whis_core::settings::CliShortcutMode;
 use whis_core::{PostProcessor, Preset, Settings, TranscriptionProvider};
 
 use crate::ui::mask_key;
@@ -20,8 +21,8 @@ const VALID_KEYS: &[&str] = &[
     "ollama-url",
     "ollama-model",
     "microphone-device",
-    "shortcut-mode",
-    "shortcut",
+    "cli-shortcut-mode",
+    "shortcut-key",
     "vad",
     "vad-threshold",
     "chunk-size",
@@ -220,20 +221,19 @@ fn set_config(key: &str, value: &str) -> Result<()> {
             settings.ui.chunk_duration_secs = size;
             println!("chunk-size = {}s", size);
         }
-        "shortcut-mode" => {
-            let mode = value_trimmed.to_lowercase();
-            if mode != "system" && mode != "direct" {
-                anyhow::bail!("Invalid shortcut mode. Use 'system' or 'direct'");
-            }
-            settings.ui.shortcut_mode = mode.clone();
-            println!("shortcut-mode = {}", mode);
+        "cli-shortcut-mode" => {
+            let mode: CliShortcutMode = value_trimmed
+                .parse()
+                .map_err(|e: String| anyhow!("{}", e))?;
+            settings.ui.cli_shortcut_mode = mode;
+            println!("cli-shortcut-mode = {}", mode);
         }
-        "shortcut" => {
+        "shortcut-key" => {
             if value_trimmed.is_empty() {
-                anyhow::bail!("Invalid shortcut: cannot be empty");
+                anyhow::bail!("Invalid shortcut key: cannot be empty");
             }
-            settings.ui.shortcut = value_trimmed.to_string();
-            println!("shortcut = {}", value_trimmed);
+            settings.ui.shortcut_key = value_trimmed.to_string();
+            println!("shortcut-key = {}", value_trimmed);
         }
         _ => unreachable!("Key validation should prevent this"),
     }
@@ -302,8 +302,8 @@ fn get_config(key: &str) -> Result<()> {
         "vad" => println!("{}", settings.ui.vad.enabled),
         "vad-threshold" => println!("{:.2}", settings.ui.vad.threshold),
         "chunk-size" => println!("{}s", settings.ui.chunk_duration_secs),
-        "shortcut-mode" => println!("{}", settings.ui.shortcut_mode),
-        "shortcut" => println!("{}", settings.ui.shortcut),
+        "cli-shortcut-mode" => println!("{}", settings.ui.cli_shortcut_mode),
+        "shortcut-key" => println!("{}", settings.ui.shortcut_key),
         _ => unreachable!("Key validation should prevent this"),
     }
 
@@ -399,8 +399,8 @@ fn show_all_settings() -> Result<()> {
 
     println!();
     println!("[Shortcuts]");
-    println!("shortcut-mode = {}", settings.ui.shortcut_mode);
-    println!("shortcut = {}", settings.ui.shortcut);
+    println!("cli-shortcut-mode = {}", settings.ui.cli_shortcut_mode);
+    println!("shortcut-key = {}", settings.ui.shortcut_key);
 
     println!();
     println!("[Presets]");

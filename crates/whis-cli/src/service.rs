@@ -368,7 +368,7 @@ impl Service {
         };
 
         // Copy to clipboard (blocking operation)
-        let clipboard_method = settings.ui.clipboard_method.clone();
+        let clipboard_method = settings.ui.clipboard_backend.clone();
         tokio::task::spawn_blocking(move || copy_to_clipboard(&final_text, clipboard_method))
             .await
             .context("Failed to join task")??;

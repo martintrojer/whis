@@ -154,7 +154,7 @@ function displayKey(key: string): string {
 
 const displayShortcut = computed(() => {
   const portalShortcut = settingsStore.state.portalShortcut
-  const currentShortcut = settingsStore.state.ui.shortcut
+  const currentShortcut = settingsStore.state.ui.shortcut_key
 
   if (portalShortcut) {
     let shortcut = portalShortcut

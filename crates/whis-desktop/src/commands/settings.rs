@@ -50,7 +50,7 @@ pub async fn save_settings(
                     != settings.transcription.local_models.whisper_path
                 || current.transcription.local_models.parakeet_path
                     != settings.transcription.local_models.parakeet_path,
-            current.ui.shortcut != settings.ui.shortcut,
+            current.ui.shortcut_key != settings.ui.shortcut_key,
         )
     };
 
@@ -67,7 +67,7 @@ pub async fn save_settings(
 
     // Only update shortcut if it actually changed
     let needs_restart = if shortcut_changed {
-        crate::shortcuts::update_shortcut(&app, &settings.ui.shortcut).map_err(|e| e.to_string())?
+        crate::shortcuts::update_shortcut(&app, &settings.ui.shortcut_key).map_err(|e| e.to_string())?
     } else {
         false
     };

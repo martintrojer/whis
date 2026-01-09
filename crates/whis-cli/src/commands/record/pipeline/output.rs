@@ -26,7 +26,7 @@ pub fn output(result: ProcessedResult, mode: OutputMode, quiet: bool) -> Result<
         OutputMode::Clipboard => {
             // Copy to clipboard using configured method
             let settings = Settings::load();
-            copy_to_clipboard(text, settings.ui.clipboard_method)?;
+            copy_to_clipboard(text, settings.ui.clipboard_backend)?;
 
             if !quiet {
                 // Only show confirmation if not in quiet mode

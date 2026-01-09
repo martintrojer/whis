@@ -39,6 +39,7 @@ mod post_processing;
 mod provider_helpers;
 
 use anyhow::Result;
+use whis_core::settings::CliShortcutMode;
 use whis_core::{Settings, TranscriptionProvider};
 
 use crate::hotkey;
@@ -90,7 +91,7 @@ fn setup_shortcut_step() -> Result<()> {
     let mut settings = Settings::load();
 
     let items = vec!["System shortcut", "Direct capture"];
-    let default = if settings.ui.shortcut_mode == "direct" {
+    let default = if settings.ui.cli_shortcut_mode == CliShortcutMode::Direct {
         1
     } else {
         0
@@ -100,23 +101,23 @@ fn setup_shortcut_step() -> Result<()> {
     match choice {
         0 => {
             // System mode
-            settings.ui.shortcut_mode = "system".to_string();
+            settings.ui.cli_shortcut_mode = CliShortcutMode::System;
             settings.save()?;
 
             interactive::info("Add a shortcut in desktop settings: whis toggle");
         }
         1 => {
             // Direct capture mode
-            settings.ui.shortcut_mode = "direct".to_string();
+            settings.ui.cli_shortcut_mode = CliShortcutMode::Direct;
 
             // Get and validate hotkey
-            let default_shortcut = &settings.ui.shortcut;
+            let default_shortcut = &settings.ui.shortcut_key;
             let normalized = loop {
                 let input = interactive::input("Hotkey?", Some(default_shortcut))?;
 
                 match hotkey::validate(&input) {
                     Ok(normalized) => {
-                        settings.ui.shortcut = input;
+                        settings.ui.shortcut_key = input;
                         settings.save()?;
                         break normalized;
                     }

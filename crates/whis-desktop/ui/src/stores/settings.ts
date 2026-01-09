@@ -7,7 +7,7 @@ interface Defaults {
   provider: Provider
   ollama_url: string
   ollama_model: string
-  shortcut: string
+  shortcut_key: string
   vad_enabled: boolean
   vad_threshold: number
 }
@@ -41,7 +41,7 @@ let defaults: Defaults = {
   provider: 'deepgram',
   ollama_url: 'http://localhost:11434',
   ollama_model: 'qwen2.5:1.5b',
-  shortcut: 'Ctrl+Alt+W',
+  shortcut_key: 'Ctrl+Alt+W',
   vad_enabled: false,
   vad_threshold: 0.5,
 }
@@ -69,9 +69,10 @@ function getDefaultSettings(): Settings {
       },
     },
     ui: {
-      shortcut: defaults.shortcut,
-      clipboard_method: 'auto',
+      shortcut_key: defaults.shortcut_key,
+      clipboard_backend: 'auto',
       microphone_device: null,
+      chunk_duration_secs: 90,
       vad: {
         enabled: defaults.vad_enabled,
         threshold: defaults.vad_threshold,
@@ -170,9 +171,10 @@ async function load() {
       },
     }
     state.ui = {
-      shortcut: settings.ui.shortcut || defaults.shortcut,
-      clipboard_method: settings.ui.clipboard_method,
+      shortcut_key: settings.ui.shortcut_key || defaults.shortcut_key,
+      clipboard_backend: settings.ui.clipboard_backend,
       microphone_device: settings.ui.microphone_device,
+      chunk_duration_secs: Math.max(10, Math.min(300, settings.ui.chunk_duration_secs ?? 90)),
       vad: {
         enabled: settings.ui.vad.enabled ?? defaults.vad_enabled,
         threshold: settings.ui.vad.threshold ?? defaults.vad_threshold,
@@ -352,8 +354,8 @@ function setPostProcessingPrompt(value: string | null) {
   state.post_processing.prompt = value
 }
 
-function setShortcut(value: string) {
-  state.ui.shortcut = value
+function setShortcutKey(value: string) {
+  state.ui.shortcut_key = value
 }
 
 function setPortalShortcut(value: string | null) {
@@ -370,6 +372,11 @@ function setBubbleEnabled(value: boolean) {
 
 function setBubblePosition(value: BubblePosition) {
   state.ui.bubble.position = value
+}
+
+function setChunkDuration(value: number) {
+  // Clamp to valid range (10-300 seconds)
+  state.ui.chunk_duration_secs = Math.max(10, Math.min(300, value))
 }
 
 // Download state management - Whisper
@@ -453,11 +460,12 @@ export const settingsStore = {
   setOllamaUrl,
   setOllamaModel,
   setPostProcessingPrompt,
-  setShortcut,
+  setShortcutKey,
   setPortalShortcut,
   setMicrophoneDevice,
   setBubbleEnabled,
   setBubblePosition,
+  setChunkDuration,
 
   // Download state management
   startWhisperDownload,

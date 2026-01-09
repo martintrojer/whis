@@ -8,7 +8,7 @@ const isRecording = ref(false)
 const status = ref('')
 const needsRestart = ref(false)
 const toggleCommand = ref('whis-desktop --toggle')
-const localShortcut = ref(settingsStore.state.ui.shortcut)
+const localShortcut = ref(settingsStore.state.ui.shortcut_key)
 
 // Computed properties from store
 const backendInfo = computed(() => settingsStore.state.backendInfo ?? null)
@@ -35,7 +35,7 @@ function displayKey(key: string): string {
 }
 
 onMounted(async () => {
-  localShortcut.value = settingsStore.state.ui.shortcut
+  localShortcut.value = settingsStore.state.ui.shortcut_key
   try {
     toggleCommand.value = await invoke<string>('get_toggle_command')
   }
@@ -94,7 +94,7 @@ async function resetAndRestart() {
 
 async function saveShortcut() {
   try {
-    settingsStore.setShortcut(localShortcut.value)
+    settingsStore.setShortcutKey(localShortcut.value)
     const restartNeeded = await settingsStore.save()
     if (restartNeeded) {
       needsRestart.value = true
