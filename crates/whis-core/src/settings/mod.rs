@@ -44,7 +44,7 @@ mod ui;
 pub use post_processing::PostProcessingSettings;
 pub use services::{OllamaConfig, ServicesSettings};
 pub use transcription::{LocalModelsConfig, TranscriptionSettings};
-pub use ui::{BubblePosition, BubbleSettings, UiSettings, VadSettings};
+pub use ui::{BubblePosition, BubbleSettings, CliShortcutMode, UiSettings, VadSettings};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

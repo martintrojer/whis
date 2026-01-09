@@ -48,9 +48,10 @@ export interface Settings {
     }
   }
   ui: {
-    shortcut: string
-    clipboard_method: string
+    shortcut_key: string
+    clipboard_backend: string
     microphone_device: string | null
+    chunk_duration_secs: number
     vad: {
       enabled: boolean
       threshold: number
