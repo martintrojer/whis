@@ -12,6 +12,7 @@ export type Provider
     | 'mistral'
     | 'groq'
     | 'deepgram'
+    | 'deepgram-realtime'
     | 'elevenlabs'
     | 'local-whisper'
     | 'local-parakeet'
@@ -21,6 +22,9 @@ export type TranscriptionMethod = 'standard' | 'streaming'
 
 // Text post-processing providers
 export type PostProcessor = 'none' | 'openai' | 'mistral' | 'ollama'
+
+// Bubble overlay position
+export type BubblePosition = 'none' | 'top' | 'center' | 'bottom'
 
 // All settings from the backend (nested structure)
 export interface Settings {
@@ -52,6 +56,10 @@ export interface Settings {
       threshold: number
     }
     active_preset: string | null
+    bubble: {
+      enabled: boolean
+      position: BubblePosition
+    }
   }
 }
 

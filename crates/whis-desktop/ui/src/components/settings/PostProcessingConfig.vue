@@ -90,12 +90,9 @@ function goToPresets() {
 
 <template>
   <div class="post-processing-section">
-    <!-- Toggle Row with Description -->
-    <div class="toggle-row">
-      <div class="toggle-info">
-        <label>Post-processing</label>
-        <span class="toggle-desc">Clean up with AI</span>
-      </div>
+    <!-- Toggle Row -->
+    <div class="field-row">
+      <label>Post-processing</label>
       <ToggleSwitch
         :model-value="postProcessingEnabled"
         @update:model-value="togglePostProcessing"
@@ -135,12 +132,7 @@ function goToPresets() {
     </div>
 
     <!-- Ollama Config (shown when Ollama selected) -->
-    <div v-if="postProcessingEnabled && postProcessor === 'ollama'" class="ollama-section">
-      <p class="section-label">
-        ollama
-      </p>
-      <OllamaConfig />
-    </div>
+    <OllamaConfig v-if="postProcessingEnabled && postProcessor === 'ollama'" />
   </div>
 </template>
 
@@ -151,55 +143,11 @@ function goToPresets() {
   gap: 12px;
 }
 
-/* Section Label */
-.section-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: var(--text-weak);
-  letter-spacing: 0.05em;
-  margin: 0;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-/* Ollama Section */
-.ollama-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 4px;
-}
-
-/* Toggle Row */
-.toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.toggle-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.toggle-info > label {
-  font-size: 12px;
-  color: var(--text-weak);
-}
-
-.toggle-desc {
-  font-size: 11px;
-  color: var(--text-weak);
-  opacity: 0.7;
-}
-
 /* Config section */
 .post-process-config {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .field-row {

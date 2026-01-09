@@ -90,7 +90,11 @@ fn setup_shortcut_step() -> Result<()> {
     let mut settings = Settings::load();
 
     let items = vec!["System shortcut", "Direct capture"];
-    let default = if settings.ui.shortcut_mode == "direct" { 1 } else { 0 };
+    let default = if settings.ui.shortcut_mode == "direct" {
+        1
+    } else {
+        0
+    };
     let choice = interactive::select("Recording trigger?", &items, Some(default))?;
 
     match choice {
@@ -161,10 +165,7 @@ fn setup_audio_device_step() -> Result<()> {
     let mut items: Vec<String> = vec!["System Default".to_string()];
     for device in &devices {
         // Use display_name if available, otherwise fall back to raw name
-        let name = device
-            .display_name
-            .as_ref()
-            .unwrap_or(&device.name);
+        let name = device.display_name.as_ref().unwrap_or(&device.name);
         items.push(name.to_string());
     }
 

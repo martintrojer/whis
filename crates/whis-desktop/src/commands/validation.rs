@@ -29,7 +29,10 @@ fn validate_key_format(
 
     if let Some(min_len) = min_length {
         if key.trim().len() < min_len {
-            return Err(format!("Invalid {} API key: key appears too short", provider));
+            return Err(format!(
+                "Invalid {} API key: key appears too short",
+                provider
+            ));
         }
     }
 

@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import process from 'node:process'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
@@ -14,5 +15,11 @@ export default defineConfig({
     target: ['es2021', 'chrome100', 'safari13'],
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_DEBUG,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        bubble: resolve(__dirname, 'src/bubble/index.html'),
+      },
+    },
   },
 })

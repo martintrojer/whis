@@ -81,7 +81,10 @@ pub fn setup_transcription_cloud() -> Result<()> {
             } else {
                 ""
             };
-            (format!("{}{}", display, marker), provider.display_name().to_string())
+            (
+                format!("{}{}", display, marker),
+                provider.display_name().to_string(),
+            )
         })
         .unzip();
 

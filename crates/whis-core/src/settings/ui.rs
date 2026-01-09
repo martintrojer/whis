@@ -36,6 +36,10 @@ pub struct UiSettings {
     /// Smaller = faster response, larger = better accuracy
     #[serde(default = "default_chunk_duration")]
     pub chunk_duration_secs: u64,
+
+    /// Floating bubble overlay settings (experimental)
+    #[serde(default)]
+    pub bubble: BubbleSettings,
 }
 
 fn default_chunk_duration() -> u64 {
@@ -67,6 +71,42 @@ impl Default for VadSettings {
     }
 }
 
+/// Floating bubble overlay position.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum BubblePosition {
+    /// Disabled (default)
+    #[default]
+    None,
+    /// Top of screen
+    Top,
+    /// Center of screen
+    Center,
+    /// Bottom of screen
+    Bottom,
+}
+
+/// Floating bubble overlay settings (experimental).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BubbleSettings {
+    /// Enable floating bubble overlay
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// Bubble position on screen
+    #[serde(default)]
+    pub position: BubblePosition,
+}
+
+impl Default for BubbleSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            position: BubblePosition::None,
+        }
+    }
+}
+
 impl Default for UiSettings {
     fn default() -> Self {
         Self {
@@ -78,6 +118,7 @@ impl Default for UiSettings {
             vad: VadSettings::default(),
             active_preset: None,
             chunk_duration_secs: crate::defaults::DEFAULT_CHUNK_DURATION_SECS,
+            bubble: BubbleSettings::default(),
         }
     }
 }

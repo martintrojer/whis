@@ -7,6 +7,7 @@
 //!
 //! ```text
 //! whis-desktop/
+//! ├── bubble/        - Floating bubble overlay (experimental)
 //! ├── commands/      - Tauri command handlers (30+ commands)
 //! ├── recording/     - Recording orchestration & pipeline
 //! ├── shortcuts/     - Global keyboard shortcuts (3 backends)
@@ -17,6 +18,7 @@
 //! └── main.rs        - CLI argument parsing
 //! ```
 
+pub mod bubble;
 mod commands;
 pub mod recording;
 pub mod shortcuts;
@@ -58,6 +60,11 @@ pub fn run(start_in_tray: bool) {
                     false
                 }
             };
+
+            // Initialize floating bubble window (hidden by default)
+            if let Err(e) = bubble::create_bubble_window(app.handle()) {
+                eprintln!("Bubble unavailable: {e}");
+            }
 
             // Setup global shortcuts (hybrid: Tauri plugin / Portal / CLI fallback)
             shortcuts::setup_shortcuts(app);
@@ -133,6 +140,8 @@ pub fn run(start_in_tray: bool) {
             commands::pull_ollama_model,
             commands::start_ollama,
             commands::check_ollama_status,
+            // Bubble commands
+            commands::bubble_toggle_recording,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

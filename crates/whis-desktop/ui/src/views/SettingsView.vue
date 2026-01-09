@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TranscriptionMode } from '../components/settings/ModeCards.vue'
-import type { PostProcessor, Provider, SelectOption, TranscriptionMethod } from '../types'
+import type { BubblePosition, PostProcessor, Provider, SelectOption } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 import { computed, onMounted, ref, watch } from 'vue'
 import AppSelect from '../components/AppSelect.vue'
@@ -25,23 +25,33 @@ const transcriptionMode = ref<TranscriptionMode>(
   isLocalProvider(provider.value) ? 'local' : 'cloud',
 )
 
-// OpenAI transcription method: standard vs streaming
-const openaiMethod = computed<TranscriptionMethod>(() => {
-  if (provider.value === 'openai-realtime')
-    return 'streaming'
-  return 'standard'
-})
-
-// Whether to show OpenAI method toggle (cloud mode + OpenAI selected)
-const showOpenAIMethod = computed(() =>
-  transcriptionMode.value === 'cloud'
-  && (provider.value === 'openai' || provider.value === 'openai-realtime'),
+// Streaming mode (for OpenAI and DeepGram)
+const isStreaming = computed(() =>
+  provider.value === 'openai-realtime' || provider.value === 'deepgram-realtime',
 )
 
-// Normalize provider for dropdown display (openai-realtime shows as openai)
+// Whether to show streaming toggle (cloud mode + provider that supports streaming)
+const showStreamingToggle = computed(() =>
+  transcriptionMode.value === 'cloud'
+  && (provider.value === 'openai' || provider.value === 'openai-realtime'
+    || provider.value === 'deepgram' || provider.value === 'deepgram-realtime'),
+)
+
+// Normalize provider for dropdown display (realtime variants show as base provider)
 const displayProvider = computed(() => {
   if (provider.value === 'openai-realtime')
     return 'openai'
+  if (provider.value === 'deepgram-realtime')
+    return 'deepgram'
+  return provider.value
+})
+
+// Get base provider name (without -realtime suffix)
+const baseProvider = computed(() => {
+  if (provider.value === 'openai-realtime')
+    return 'openai'
+  if (provider.value === 'deepgram-realtime')
+    return 'deepgram'
   return provider.value
 })
 
@@ -89,10 +99,13 @@ onMounted(async () => {
   }
 })
 
-// Filter providers based on streaming mode (only OpenAI supports streaming)
+// Filter providers based on streaming mode
 const filteredProviderOptions = computed(() => {
-  if (openaiMethod.value === 'streaming') {
-    return cloudProviderOptions.value.filter(p => p.value === 'openai')
+  if (isStreaming.value) {
+    // When streaming enabled, only show providers that support it
+    return cloudProviderOptions.value.filter(p =>
+      p.value === 'openai' || p.value === 'deepgram',
+    )
   }
   return cloudProviderOptions.value
 })
@@ -142,10 +155,16 @@ function handleProviderUpdate(value: string | null) {
   if (!value)
     return
 
-  // If OpenAI selected and we're already in streaming mode, keep streaming
-  if (value === 'openai' && openaiMethod.value === 'streaming') {
-    // Already on openai-realtime, no change needed
-    return
+  // If selecting a provider that supports streaming and we're in streaming mode, use realtime variant
+  if (isStreaming.value) {
+    if (value === 'openai') {
+      settingsStore.setProvider('openai-realtime')
+      return
+    }
+    if (value === 'deepgram') {
+      settingsStore.setProvider('deepgram-realtime')
+      return
+    }
   }
 
   const newProvider = value as Provider
@@ -161,17 +180,19 @@ function handleApiKeyUpdate(providerKey: string, value: string) {
   settingsStore.setApiKey(providerKey, value)
 }
 
-function handleOpenAIMethodChange(method: TranscriptionMethod) {
-  const newProvider = method === 'standard' ? 'openai' : 'openai-realtime'
-  settingsStore.setProvider(newProvider)
-  // Keep post-processor as openai (both methods use same API)
-  if (postProcessor.value !== 'none' && postProcessor.value !== 'ollama') {
-    settingsStore.setPostProcessor('openai')
-  }
-}
-
 function handleStreamingToggle(enabled: boolean) {
-  handleOpenAIMethodChange(enabled ? 'streaming' : 'standard')
+  // Toggle between standard and realtime variant of current provider
+  const base = baseProvider.value
+  if (base === 'openai') {
+    settingsStore.setProvider(enabled ? 'openai-realtime' : 'openai')
+    // Keep post-processor as openai (both methods use same API)
+    if (postProcessor.value !== 'none' && postProcessor.value !== 'ollama') {
+      settingsStore.setPostProcessor('openai')
+    }
+  }
+  else if (base === 'deepgram') {
+    settingsStore.setProvider(enabled ? 'deepgram-realtime' : 'deepgram')
+  }
 }
 
 function handleLanguageChange(value: string | null) {
@@ -219,6 +240,69 @@ const microphoneOptions = computed<SelectOption[]>(() => {
 function handleMicrophoneChange(value: string | null) {
   settingsStore.setMicrophoneDevice(value)
 }
+
+// Model path settings (for local mode)
+const isParakeet = computed(() => provider.value === 'local-parakeet')
+const parakeetModelPath = computed(() => settingsStore.state.transcription.local_models.parakeet_path)
+const whisperModelPath = computed(() => settingsStore.state.transcription.local_models.whisper_path)
+const currentModelPath = computed(() =>
+  isParakeet.value ? parakeetModelPath.value : whisperModelPath.value,
+)
+const modelPathPlaceholder = computed(() =>
+  isParakeet.value ? '/path/to/parakeet-model-dir' : '/path/to/model.bin',
+)
+const modelPathUnlocked = ref(false)
+
+function handleModelPathChange(event: Event) {
+  const value = (event.target as HTMLInputElement).value || null
+  if (isParakeet.value) {
+    settingsStore.setParakeetModelPath(value)
+  }
+  else {
+    settingsStore.setWhisperModelPath(value)
+  }
+}
+
+// Config file path
+const configPath = '~/.config/whis/settings.json'
+const configPathCopied = ref(false)
+
+async function copyConfigPath() {
+  try {
+    await navigator.clipboard.writeText(configPath)
+    configPathCopied.value = true
+    setTimeout(() => {
+      configPathCopied.value = false
+    }, 2000)
+  }
+  catch (error) {
+    console.error('Failed to copy path:', error)
+  }
+}
+
+// Bubble settings
+const bubbleEnabled = computed(() => settingsStore.state.ui.bubble.enabled)
+const bubblePosition = computed(() => settingsStore.state.ui.bubble.position)
+
+const bubblePositionOptions: SelectOption[] = [
+  { value: 'top', label: 'Top' },
+  { value: 'center', label: 'Center' },
+  { value: 'bottom', label: 'Bottom' },
+]
+
+function handleBubbleEnabledChange(value: boolean) {
+  settingsStore.setBubbleEnabled(value)
+  // When enabling, set default position if none
+  if (value && bubblePosition.value === 'none') {
+    settingsStore.setBubblePosition('center')
+  }
+}
+
+function handleBubblePositionChange(value: string | null) {
+  if (value) {
+    settingsStore.setBubblePosition(value as BubblePosition)
+  }
+}
 </script>
 
 <template>
@@ -257,28 +341,54 @@ function handleMicrophoneChange(value: string | null) {
           :provider="provider"
         />
 
-        <!-- Transcription Section -->
+        <!-- Cloud: Service selector -->
+        <div v-if="transcriptionMode === 'cloud'" class="field-row">
+          <label>Service</label>
+          <AppSelect
+            :model-value="displayProvider"
+            :options="filteredProviderOptions"
+            @update:model-value="handleProviderUpdate"
+          />
+        </div>
+
+        <!-- Cloud: Streaming toggle (OpenAI and DeepGram) -->
+        <div v-if="showStreamingToggle" class="field-row">
+          <label>Streaming</label>
+          <ToggleSwitch
+            :model-value="isStreaming"
+            @update:model-value="handleStreamingToggle"
+          />
+        </div>
+
+        <!-- Post-Processing Section -->
         <div class="settings-section">
           <p class="section-label">
-            transcription
+            post-processing
+          </p>
+          <PostProcessingConfig />
+        </div>
+
+        <!-- Miscellaneous Section -->
+        <div class="settings-section">
+          <p class="section-label">
+            miscellaneous
           </p>
 
-          <!-- Provider (only in cloud mode) -->
-          <div v-if="transcriptionMode === 'cloud'" class="field-row">
-            <label>Service</label>
-            <AppSelect
-              :model-value="displayProvider"
-              :options="filteredProviderOptions"
-              @update:model-value="handleProviderUpdate"
+          <!-- Bubble -->
+          <div class="field-row">
+            <label>Bubble</label>
+            <ToggleSwitch
+              :model-value="bubbleEnabled"
+              @update:model-value="handleBubbleEnabledChange"
             />
           </div>
 
-          <!-- Streaming toggle (only for OpenAI in cloud mode) -->
-          <div v-if="showOpenAIMethod" class="field-row">
-            <label>Streaming</label>
-            <ToggleSwitch
-              :model-value="openaiMethod === 'streaming'"
-              @update:model-value="handleStreamingToggle"
+          <div v-if="bubbleEnabled" class="field-row">
+            <label>Bubble Position</label>
+            <AppSelect
+              :model-value="bubblePosition === 'none' ? 'center' : bubblePosition"
+              :options="bubblePositionOptions"
+              @update:model-value="handleBubblePositionChange"
             />
           </div>
 
@@ -303,14 +413,51 @@ function handleMicrophoneChange(value: string | null) {
               @update:model-value="handleMicrophoneChange"
             />
           </div>
-        </div>
 
-        <!-- Post-Processing Section -->
-        <div class="settings-section">
-          <p class="section-label">
-            post-processing
-          </p>
-          <PostProcessingConfig />
+          <!-- Model Path (only when local mode) -->
+          <div v-if="transcriptionMode === 'local'" class="field-row">
+            <label>Model Path</label>
+            <div class="locked-input" :class="{ locked: !modelPathUnlocked }">
+              <input
+                type="text"
+                class="text-input"
+                :value="currentModelPath"
+                :placeholder="modelPathPlaceholder"
+                :disabled="!modelPathUnlocked"
+                spellcheck="false"
+                @input="handleModelPathChange"
+              >
+              <button
+                class="lock-btn"
+                :title="modelPathUnlocked ? 'Lock' : 'Unlock to edit'"
+                @click="modelPathUnlocked = !modelPathUnlocked"
+              >
+                {{ modelPathUnlocked ? '[-]' : '[=]' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Config File Path -->
+          <div class="field-row">
+            <label>Config File</label>
+            <div class="locked-input locked">
+              <input
+                type="text"
+                class="text-input"
+                :value="configPath"
+                disabled
+                readonly
+                spellcheck="false"
+              >
+              <button
+                class="lock-btn"
+                :title="configPathCopied ? 'Copied!' : 'Copy path'"
+                @click="copyConfigPath"
+              >
+                {{ configPathCopied ? '[ok]' : '[cp]' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -333,7 +480,7 @@ function handleMicrophoneChange(value: string | null) {
 
           <div class="help-section">
             <h3>streaming</h3>
-            <p>OpenAI-only feature. When enabled, audio streams to OpenAI during recording for lower latency. When disabled, audio is uploaded after recording (works with files too).</p>
+            <p>Available for OpenAI and Deepgram. When enabled, audio streams during recording for lower latency. When disabled, audio is uploaded after recording (works with files too).</p>
           </div>
 
           <div class="help-section">
@@ -343,7 +490,7 @@ function handleMicrophoneChange(value: string | null) {
 
           <div class="help-section">
             <h3>local transcription</h3>
-            <p><strong>Local Whisper:</strong> Run models on your device (75MB-3GB). Fully offline. Larger models = better accuracy, slower processing.</p>
+            <p><strong>Parakeet:</strong> Fast English-only model. <strong>Whisper:</strong> Multi-language models (75MB-3GB). Fully offline. Larger models = better accuracy, slower processing.</p>
           </div>
 
           <div class="help-section">
@@ -372,6 +519,26 @@ function handleMicrophoneChange(value: string | null) {
                 <li>Click "ping" below to test connection</li>
               </ol>
             </div>
+          </div>
+
+          <div class="help-section">
+            <h3>bubble</h3>
+            <p>Shows a floating indicator during recording. Choose position (top/center/bottom) or disable completely.</p>
+          </div>
+
+          <div class="help-section">
+            <h3>microphone</h3>
+            <p>Select which audio input device to use. "System Default" uses your system's current default microphone.</p>
+          </div>
+
+          <div class="help-section">
+            <h3>model path</h3>
+            <p>Override the default model location. Only change this if you've downloaded models to a custom directory. Leave empty to use the default location.</p>
+          </div>
+
+          <div class="help-section">
+            <h3>config file</h3>
+            <p>Settings are stored locally at this path. You can backup or edit this file directly if needed.</p>
           </div>
         </div>
       </div>
@@ -416,13 +583,6 @@ function handleMicrophoneChange(value: string | null) {
 
 .field-row :deep(.custom-select) {
   flex: 1;
-}
-
-/* Settings layout for panel positioning */
-.settings-section {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
 }
 
 .settings-layout {
@@ -555,5 +715,56 @@ function handleMicrophoneChange(value: string | null) {
 
 .help-steps a:hover {
   text-decoration: underline;
+}
+
+/* Text Input */
+.text-input {
+  padding: 10px 12px;
+  background: var(--bg-weak);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--text);
+  transition: border-color 0.15s ease;
+  min-width: 0;
+  flex: 1;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.text-input::placeholder {
+  color: var(--text-weak);
+}
+
+/* Locked Input */
+.locked-input {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  align-items: center;
+}
+
+.locked-input.locked .text-input {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lock-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 4px;
+  color: var(--text-weak);
+  transition: color 0.15s;
+}
+
+.lock-btn:hover {
+  color: var(--accent);
 }
 </style>

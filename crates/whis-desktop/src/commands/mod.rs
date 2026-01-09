@@ -19,9 +19,11 @@
 //! │   └── mod.rs         - Public API
 //! ├── presets.rs         - Preset CRUD
 //! ├── ollama.rs          - Ollama integration
+//! ├── bubble.rs          - Bubble overlay commands
 //! └── mod.rs             - Public API (this file)
 //! ```
 
+pub mod bubble;
 pub mod models;
 pub mod ollama;
 pub mod presets;
@@ -56,3 +58,6 @@ pub use presets::*;
 
 // Ollama commands
 pub use ollama::*;
+
+// Bubble commands
+pub use bubble::*;

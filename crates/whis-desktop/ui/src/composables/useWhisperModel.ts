@@ -5,12 +5,12 @@ import { listen } from '@tauri-apps/api/event'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { settingsStore } from '../stores/settings'
 
-// Model sizes for display
+// Model sizes for display (rounded to nearest 50 MB)
 const MODEL_SIZES: Record<string, string> = {
-  tiny: '~75 MB',
-  base: '~142 MB',
-  small: '~466 MB',
-  medium: '~1.5 GB',
+  tiny: '100 MB',
+  base: '150 MB',
+  small: '450 MB',
+  medium: '1.5 GB',
 }
 
 /**

@@ -9,7 +9,7 @@ use std::rc::Rc;
 use anyhow::{Context, Result};
 use libpulse_binding::{
     callbacks::ListResult,
-    context::{self, introspect::SourceInfo, Context as PulseContext, FlagSet},
+    context::{self, Context as PulseContext, FlagSet, introspect::SourceInfo},
     mainloop::standard::{IterateResult, Mainloop},
     proplist::Proplist,
 };
@@ -95,17 +95,14 @@ pub fn list_pulse_devices() -> Result<Vec<AudioDeviceInfo>> {
         let default_source_clone = default_source.clone();
 
         let introspector = context.borrow().introspect();
-        introspector.get_source_info_list(move |result| {
-            match result {
-                ListResult::Item(info) => {
-                    if let Some(device) = source_info_to_device(info, &default_source_clone.borrow())
-                    {
-                        devices_clone.borrow_mut().push(device);
-                    }
+        introspector.get_source_info_list(move |result| match result {
+            ListResult::Item(info) => {
+                if let Some(device) = source_info_to_device(info, &default_source_clone.borrow()) {
+                    devices_clone.borrow_mut().push(device);
                 }
-                ListResult::End | ListResult::Error => {
-                    *done_clone.borrow_mut() = true;
-                }
+            }
+            ListResult::End | ListResult::Error => {
+                *done_clone.borrow_mut() = true;
             }
         });
 

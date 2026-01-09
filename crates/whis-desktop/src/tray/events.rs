@@ -3,21 +3,15 @@
 //! Handles tray menu clicks and tray icon interactions.
 //! Platform-specific behavior for left-click on Linux vs macOS.
 
-use super::menu::update_tray;
-use crate::{
-    recording,
-    state::{AppState, RecordingState},
-};
+use crate::recording;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 /// Handle tray menu item clicks
 pub fn handle_menu_event(app: AppHandle, event_id: &str) {
     match event_id {
         "record" => {
-            let app_clone = app.clone();
-            tauri::async_runtime::spawn(async move {
-                toggle_recording(app_clone);
-            });
+            // Use unified toggle_recording that handles tray + bubble
+            recording::toggle_recording(app);
         }
         "settings" => {
             open_settings_window(app);
@@ -37,52 +31,14 @@ pub fn handle_tray_icon_event(app: AppHandle, event: tauri::tray::TrayIconEvent)
     if let TrayIconEvent::Click { button, .. } = event
         && button == tauri::tray::MouseButton::Left
     {
-        tauri::async_runtime::spawn(async move {
-            toggle_recording(app);
-        });
+        // Use unified toggle_recording that handles tray + bubble
+        recording::toggle_recording(app);
     }
 }
 
 #[cfg(target_os = "macos")]
 pub fn handle_tray_icon_event(_app: AppHandle, _event: tauri::tray::TrayIconEvent) {
     // On macOS, menu shows on left-click so we don't handle icon events
-}
-
-/// Toggle recording with tray UI updates
-/// Wraps the core recording logic and handles tray icon/menu updates
-fn toggle_recording(app: AppHandle) {
-    let state = app.state::<AppState>();
-    let current_state = *state.state.lock().unwrap();
-
-    match current_state {
-        RecordingState::Idle => {
-            // Start recording
-            if let Err(e) = recording::start_recording_sync(&app, &state) {
-                eprintln!("Failed to start recording: {e}");
-            } else {
-                update_tray(&app, RecordingState::Recording);
-            }
-        }
-        RecordingState::Recording => {
-            // Stop recording and transcribe
-            let app_clone = app.clone();
-            tauri::async_runtime::spawn(async move {
-                // Update tray to transcribing
-                update_tray(&app_clone, RecordingState::Transcribing);
-
-                // Run transcription pipeline
-                if let Err(e) = recording::stop_and_transcribe(&app_clone).await {
-                    eprintln!("Failed to transcribe: {e}");
-                }
-
-                // Update tray back to idle
-                update_tray(&app_clone, RecordingState::Idle);
-            });
-        }
-        RecordingState::Transcribing => {
-            // Already transcribing, ignore
-        }
-    }
 }
 
 /// Open or focus the settings window

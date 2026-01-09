@@ -9,7 +9,7 @@
 //!   ├── Transcription  - Provider, API keys, local models
 //!   ├── PostProcessing - LLM processor, prompts
 //!   ├── Services       - Ollama, external services
-//!   └── UI             - Shortcut, clipboard, microphone, VAD, presets
+//!   └── UI             - Shortcut, clipboard, microphone, VAD, presets, bubble
 //! ```
 //!
 //! # Usage
@@ -44,7 +44,7 @@ mod ui;
 pub use post_processing::PostProcessingSettings;
 pub use services::{OllamaConfig, ServicesSettings};
 pub use transcription::{LocalModelsConfig, TranscriptionSettings};
-pub use ui::{UiSettings, VadSettings};
+pub use ui::{BubblePosition, BubbleSettings, UiSettings, VadSettings};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

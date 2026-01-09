@@ -271,12 +271,12 @@ fn setup_cloud_post_processing(settings: &mut Settings) -> Result<()> {
 
     // Default to current processor if it matches a PP provider
     let default = match settings.post_processing.processor {
-        PostProcessor::OpenAI => {
-            PP_PROVIDERS.iter().position(|p| *p == TranscriptionProvider::OpenAI)
-        }
-        PostProcessor::Mistral => {
-            PP_PROVIDERS.iter().position(|p| *p == TranscriptionProvider::Mistral)
-        }
+        PostProcessor::OpenAI => PP_PROVIDERS
+            .iter()
+            .position(|p| *p == TranscriptionProvider::OpenAI),
+        PostProcessor::Mistral => PP_PROVIDERS
+            .iter()
+            .position(|p| *p == TranscriptionProvider::Mistral),
         _ => Some(0),
     };
 

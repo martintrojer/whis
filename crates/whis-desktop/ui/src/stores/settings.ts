@@ -1,4 +1,4 @@
-import type { BackendInfo, PostProcessor, Provider, Settings } from '../types'
+import type { BackendInfo, BubblePosition, PostProcessor, Provider, Settings } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 import { reactive, readonly, watch } from 'vue'
 
@@ -77,6 +77,10 @@ function getDefaultSettings(): Settings {
         threshold: defaults.vad_threshold,
       },
       active_preset: null,
+      bubble: {
+        enabled: false,
+        position: 'none' as BubblePosition,
+      },
     },
   }
 }
@@ -174,6 +178,10 @@ async function load() {
         threshold: settings.ui.vad.threshold ?? defaults.vad_threshold,
       },
       active_preset: settings.ui.active_preset,
+      bubble: {
+        enabled: settings.ui.bubble?.enabled ?? false,
+        position: settings.ui.bubble?.position ?? 'none',
+      },
     }
   }
   catch (e) {
@@ -356,6 +364,14 @@ function setMicrophoneDevice(value: string | null) {
   state.ui.microphone_device = value
 }
 
+function setBubbleEnabled(value: boolean) {
+  state.ui.bubble.enabled = value
+}
+
+function setBubblePosition(value: BubblePosition) {
+  state.ui.bubble.position = value
+}
+
 // Download state management - Whisper
 function startWhisperDownload(model: string) {
   state.whisperDownload.active = true
@@ -440,6 +456,8 @@ export const settingsStore = {
   setShortcut,
   setPortalShortcut,
   setMicrophoneDevice,
+  setBubbleEnabled,
+  setBubblePosition,
 
   // Download state management
   startWhisperDownload,

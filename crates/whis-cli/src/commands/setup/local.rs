@@ -35,14 +35,22 @@ pub fn setup_transcription_local() -> Result<()> {
         (
             format!(
                 "Parakeet{}",
-                if current_engine == Some(1) { " [current]" } else { "" }
+                if current_engine == Some(1) {
+                    " [current]"
+                } else {
+                    ""
+                }
             ),
             "Parakeet".to_string(),
         ),
         (
             format!(
                 "Whisper{}",
-                if current_engine == Some(2) { " [current]" } else { "" }
+                if current_engine == Some(2) {
+                    " [current]"
+                } else {
+                    ""
+                }
             ),
             "Whisper".to_string(),
         ),
@@ -51,8 +59,12 @@ pub fn setup_transcription_local() -> Result<()> {
     .unzip();
 
     let default = current_engine.map(|e| e - 1).unwrap_or(0);
-    let engine_choice =
-        interactive::select_clean("Which transcription engine?", &items, &clean_items, Some(default))? + 1;
+    let engine_choice = interactive::select_clean(
+        "Which transcription engine?",
+        &items,
+        &clean_items,
+        Some(default),
+    )? + 1;
 
     let (provider, model_path) = match engine_choice {
         1 => {
@@ -88,7 +100,10 @@ pub fn setup_transcription_local() -> Result<()> {
                     } else {
                         ""
                     };
-                    (format!("{}{}{}", model.name, installed, current), model.name.to_string())
+                    (
+                        format!("{}{}{}", model.name, installed, current),
+                        model.name.to_string(),
+                    )
                 })
                 .unzip();
 
@@ -97,8 +112,12 @@ pub fn setup_transcription_local() -> Result<()> {
                 .and_then(|name| ParakeetModel.models().iter().position(|m| m.name == name))
                 .unwrap_or(0);
 
-            let model_choice =
-                interactive::select_clean("Which Parakeet model?", &items, &clean_items, Some(default_idx))?;
+            let model_choice = interactive::select_clean(
+                "Which Parakeet model?",
+                &items,
+                &clean_items,
+                Some(default_idx),
+            )?;
             let model = &ParakeetModel.models()[model_choice];
 
             let path = ParakeetModel.default_path(model.name);
@@ -141,7 +160,10 @@ pub fn setup_transcription_local() -> Result<()> {
                         ""
                     };
                     (
-                        format!("{} - {}{}{}", model.name, model.description, installed, current),
+                        format!(
+                            "{} - {}{}{}",
+                            model.name, model.description, installed, current
+                        ),
                         model.name.to_string(),
                     )
                 })
@@ -152,8 +174,12 @@ pub fn setup_transcription_local() -> Result<()> {
                 .and_then(|name| WhisperModel.models().iter().position(|m| m.name == name))
                 .unwrap_or(2);
 
-            let model_choice =
-                interactive::select_clean("Which Whisper model?", &items, &clean_items, Some(default_idx))?;
+            let model_choice = interactive::select_clean(
+                "Which Whisper model?",
+                &items,
+                &clean_items,
+                Some(default_idx),
+            )?;
             let model = &WhisperModel.models()[model_choice];
 
             let path = WhisperModel.default_path(model.name);

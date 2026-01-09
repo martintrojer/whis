@@ -9,6 +9,11 @@ use crate::state::AppState;
 use tauri::{AppHandle, Emitter, Manager, State};
 use whis_core::model::{ModelType, ParakeetModel};
 
+/// Round to nearest 50 MB for cleaner display
+fn round_to_50(mb: u64) -> u64 {
+    ((mb + 25) / 50) * 50
+}
+
 /// Parakeet model info for frontend
 #[derive(serde::Serialize)]
 pub struct ParakeetModelInfo {
@@ -30,7 +35,7 @@ pub fn get_parakeet_models() -> Vec<ParakeetModelInfo> {
             ParakeetModelInfo {
                 name: model.name.to_string(),
                 description: model.description.to_string(),
-                size: format!("~{} MB", model.size_mb.unwrap_or(0)),
+                size: format!("{} MB", round_to_50(model.size_mb.unwrap_or(0))),
                 installed: ParakeetModel.verify(&path),
                 path: path.to_string_lossy().to_string(),
             }
