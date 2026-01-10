@@ -10,7 +10,7 @@ use tauri::{Emitter, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_store::StoreExt;
 use whis_core::config::TranscriptionProvider;
-use whis_core::{DeepgramRealtimeProvider, OpenAIRealtimeProvider};
+use whis_core::{DeepgramRealtimeProvider, OpenAIRealtimeProvider, error, warn};
 
 // ========== Batch Transcription ==========
 
@@ -314,7 +314,7 @@ pub async fn start_recording(
     tokio::spawn(async move {
         if let Err(e) = chunker.consume_stream(audio_rx, None).await {
             // Log error - chunker failures are critical but rare
-            eprintln!("[whis-mobile] Chunker error: {}", e);
+            error!("Chunker error: {}", e);
             let _ = chunker_app.emit(
                 "transcription-error",
                 format!("Audio processing error: {}", e),
@@ -333,7 +333,7 @@ pub async fn start_recording(
                 .map_err(|e| e.to_string());
 
         if result_tx.send(result).is_err() {
-            eprintln!("[whis-mobile] Failed to send transcription result - receiver dropped");
+            warn!("Failed to send transcription result - receiver dropped");
         }
     });
 

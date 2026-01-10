@@ -11,7 +11,7 @@ use crate::state::{AppState, RecordingState};
 use tauri::{AppHandle, Emitter, Manager};
 use whis_core::{
     DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, RecordingOutput, batch_transcribe,
-    copy_to_clipboard, ollama, post_process, preload_ollama, transcribe_audio,
+    copy_to_clipboard, ollama, post_process, preload_ollama, transcribe_audio, warn,
 };
 
 /// Stop recording and run the full transcription pipeline (progressive mode)
@@ -109,7 +109,7 @@ async fn do_progressive_transcription(app: &AppHandle, state: &AppState) -> Resu
 
             if let Err(e) = ollama_result {
                 let warning = format!("Ollama: {e}");
-                eprintln!("Post-processing warning: {warning}");
+                warn!("Post-processing: {warning}");
                 let _ = app.emit("post-process-warning", &warning);
                 copy_to_clipboard(&transcription, clipboard_method).map_err(|e| e.to_string())?;
                 println!(
@@ -143,7 +143,7 @@ async fn do_progressive_transcription(app: &AppHandle, state: &AppState) -> Resu
             Ok(processed) => processed,
             Err(e) => {
                 let warning = e.to_string();
-                eprintln!("Post-processing warning: {warning}");
+                warn!("Post-processing: {warning}");
                 let _ = app.emit("post-process-warning", &warning);
                 transcription
             }
@@ -265,7 +265,7 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
 
             if let Err(e) = ollama_result {
                 let warning = format!("Ollama: {e}");
-                eprintln!("Post-processing warning: {warning}");
+                warn!("Post-processing: {warning}");
                 let _ = app.emit("post-process-warning", &warning);
                 // Skip post-processing, return raw transcription
                 copy_to_clipboard(&transcription, clipboard_method).map_err(|e| e.to_string())?;
@@ -291,7 +291,7 @@ async fn do_transcription(app: &AppHandle, state: &AppState) -> Result<(), Strin
             Ok(processed) => processed,
             Err(e) => {
                 let warning = e.to_string();
-                eprintln!("Post-processing warning: {warning}");
+                warn!("Post-processing: {warning}");
                 let _ = app.emit("post-process-warning", &warning);
                 transcription
             }

@@ -1,3 +1,4 @@
+<!-- LocalWhisperConfig: Local model configuration (Whisper/Parakeet model selection and download) -->
 <script setup lang="ts">
 import type { Provider, SelectOption } from '../../types'
 import { computed } from 'vue'

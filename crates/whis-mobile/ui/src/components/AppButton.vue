@@ -1,3 +1,4 @@
+<!-- AppButton: Button with variant styling. Props: variant (primary|secondary|link), disabled, type -->
 <script setup lang="ts">
 defineProps<{
   variant?: 'primary' | 'secondary' | 'link'

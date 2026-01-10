@@ -27,6 +27,7 @@ pub use pipeline::stop_and_transcribe;
 use crate::state::{AppState, RecordingState};
 use crate::{bubble, tray};
 use tauri::{AppHandle, Manager};
+use whis_core::error;
 
 /// Toggle recording state (start if idle, stop if recording)
 /// Called from global shortcuts, tray menu, and IPC
@@ -38,7 +39,7 @@ pub fn toggle_recording(app: AppHandle) {
         RecordingState::Idle => {
             // Start recording
             if let Err(e) = start_recording_sync(&app, &state) {
-                eprintln!("Failed to start recording: {e}");
+                error!("Failed to start recording: {e}");
             } else {
                 // Update UI (tray and bubble)
                 tray::menu::update_tray(&app, RecordingState::Recording);
@@ -55,7 +56,7 @@ pub fn toggle_recording(app: AppHandle) {
 
                 // Run transcription pipeline
                 if let Err(e) = stop_and_transcribe(&app_clone).await {
-                    eprintln!("Failed to transcribe: {e}");
+                    error!("Failed to transcribe: {e}");
                 }
 
                 // Update UI back to idle

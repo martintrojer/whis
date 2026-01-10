@@ -1,3 +1,4 @@
+<!-- ToggleSwitch: On/off toggle switch. Props: modelValue (boolean) -->
 <script setup lang="ts">
 defineProps<{
   modelValue: boolean

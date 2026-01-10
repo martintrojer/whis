@@ -1,3 +1,4 @@
+<!-- PostProcessingConfig: LLM post-processor settings (processor type, preset selection) -->
 <script setup lang="ts">
 import type { PostProcessor, SelectOption } from '../../types'
 import { invoke } from '@tauri-apps/api/core'

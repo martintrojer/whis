@@ -1,3 +1,4 @@
+<!-- IconCheck: Checkmark icon -->
 <template>
   <svg
     width="16"

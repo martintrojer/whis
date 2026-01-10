@@ -27,7 +27,7 @@ pub mod tray;
 mod window;
 
 use tauri::{Emitter, Manager};
-use whis_core::Settings;
+use whis_core::{warn, Settings};
 
 pub fn run(start_in_tray: bool) {
     tauri::Builder::default()
@@ -56,14 +56,14 @@ pub fn run(start_in_tray: bool) {
             let _tray_available = match tray::setup_tray(app) {
                 Ok(_) => true,
                 Err(e) => {
-                    eprintln!("Tray unavailable: {e}. Running in window mode.");
+                    warn!("Tray unavailable: {e}. Running in window mode.");
                     false
                 }
             };
 
             // Initialize floating bubble window (hidden by default)
             if let Err(e) = bubble::create_bubble_window(app.handle()) {
-                eprintln!("Bubble unavailable: {e}");
+                warn!("Bubble unavailable: {e}");
             }
 
             // Setup global shortcuts (hybrid: Tauri plugin / Portal / CLI fallback)

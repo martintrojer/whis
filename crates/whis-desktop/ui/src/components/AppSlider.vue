@@ -1,3 +1,4 @@
+<!-- AppSlider: Range slider with value display. Props: modelValue, min, max, step, unit, disabled -->
 <script setup lang="ts">
 import { computed } from 'vue'
 

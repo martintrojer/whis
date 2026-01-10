@@ -1,3 +1,31 @@
+//! Transcription provider configuration.
+//!
+//! Defines the available speech-to-text providers that whis can use.
+//! Each provider has different characteristics:
+//!
+//! # Cloud Providers (require API key)
+//!
+//! - **OpenAI** - Whisper API, reliable and accurate
+//! - **OpenAI Realtime** - WebSocket streaming for live transcription
+//! - **Deepgram** - Fast, good for long recordings
+//! - **Deepgram Realtime** - WebSocket streaming
+//! - **Mistral** - EU-based alternative
+//! - **Groq** - Fast inference
+//! - **ElevenLabs** - High quality
+//!
+//! # Local Providers (no API key, require model download)
+//!
+//! - **LocalWhisper** - Run Whisper locally via ONNX
+//! - **LocalParakeet** - NVIDIA's Parakeet model locally
+//!
+//! # Helper Methods
+//!
+//! - `as_str()` - Get provider identifier string
+//! - `display_name()` - Human-readable name
+//! - `api_key_env_var()` - Environment variable for API key
+//! - `requires_api_key()` - Whether cloud API key is needed
+//! - `is_local()` - Whether provider runs locally
+
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

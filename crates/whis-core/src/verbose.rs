@@ -1,7 +1,22 @@
-//! Verbose logging support for debugging whis operations.
+//! Logging macros for consistent output across whis crates.
 //!
-//! Use `set_verbose(true)` to enable verbose output, then use `verbose!()` macro
-//! to print debug information.
+//! # Macros
+//!
+//! - `verbose!()` - Debug info, only shown when verbose mode enabled
+//! - `info!()` - General information messages
+//! - `warn!()` - Warning messages
+//! - `error!()` - Error messages
+//!
+//! # Usage
+//!
+//! ```ignore
+//! use whis_core::{verbose, info, warn, error};
+//!
+//! verbose!("Debug details: {}", value);  // Only if set_verbose(true)
+//! info!("Processing file: {}", path);
+//! warn!("Deprecated option used");
+//! error!("Failed to connect: {}", err);
+//! ```
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -24,5 +39,29 @@ macro_rules! verbose {
         if $crate::verbose::is_verbose() {
             eprintln!("[verbose] {}", format!($($arg)*));
         }
+    };
+}
+
+/// Log an info message (always printed)
+#[macro_export]
+macro_rules! info {
+    ($($arg:tt)*) => {
+        eprintln!("[info] {}", format!($($arg)*));
+    };
+}
+
+/// Log a warning message (always printed)
+#[macro_export]
+macro_rules! warn {
+    ($($arg:tt)*) => {
+        eprintln!("[warn] {}", format!($($arg)*));
+    };
+}
+
+/// Log an error message (always printed)
+#[macro_export]
+macro_rules! error {
+    ($($arg:tt)*) => {
+        eprintln!("[error] {}", format!($($arg)*));
     };
 }

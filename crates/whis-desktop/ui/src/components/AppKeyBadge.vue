@@ -1,3 +1,4 @@
+<!-- AppKeyBadge: Keyboard key display badge. Props: placeholder (dimmed style) -->
 <script setup lang="ts">
 defineProps<{
   placeholder?: boolean

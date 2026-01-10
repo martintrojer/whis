@@ -1,3 +1,4 @@
+<!-- NoticeCard: Info or warning notice box. Props: marker ([!],[*],[i]), variant (default|warning) -->
 <script setup lang="ts">
 defineProps<{
   marker?: string // [!], [*], [i]

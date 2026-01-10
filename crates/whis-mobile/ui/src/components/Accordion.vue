@@ -1,3 +1,4 @@
+<!-- Accordion: Collapsible content container. Only one item expanded at a time -->
 <script setup lang="ts">
 import { provide, ref } from 'vue'
 

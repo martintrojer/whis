@@ -1,3 +1,4 @@
+<!-- AccordionItem: Expandable section within Accordion. Props: title, v-model:expanded -->
 <script setup lang="ts">
 defineProps<{
   title: string

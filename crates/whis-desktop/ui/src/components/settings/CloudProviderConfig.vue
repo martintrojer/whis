@@ -1,3 +1,4 @@
+<!-- CloudProviderConfig: API key input and validation for cloud transcription providers -->
 <script setup lang="ts">
 import type { CloudProviderInfo, Provider } from '../../types'
 import { computed, ref } from 'vue'

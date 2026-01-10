@@ -1,3 +1,4 @@
+<!-- SystemShortcutConfig: Shows current system shortcut and how to configure it -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { displayKey } from '../utils/keys.js'

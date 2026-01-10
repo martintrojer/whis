@@ -1,3 +1,4 @@
+<!-- TabPanel: Tab navigation with content slots. Props: tabs, v-model:selected -->
 <script setup lang="ts">
 defineProps<{
   tabs: { value: string, label: string }[]

@@ -1,3 +1,4 @@
+<!-- IconCopy: Clipboard copy icon -->
 <template>
   <svg
     width="16"

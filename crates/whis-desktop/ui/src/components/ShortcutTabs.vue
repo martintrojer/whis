@@ -1,3 +1,4 @@
+<!-- ShortcutTabs: Tab switcher with title and description. Props: tabs (Tab[]), modelValue (active tab id) -->
 <script setup lang="ts">
 export interface Tab {
   id: string

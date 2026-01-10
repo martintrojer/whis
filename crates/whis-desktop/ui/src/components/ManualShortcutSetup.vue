@@ -1,3 +1,4 @@
+<!-- ManualShortcutSetup: Instructions for setting up shortcuts in window managers (Sway, Hyprland, etc.) -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import CommandBlock from './CommandBlock.vue'

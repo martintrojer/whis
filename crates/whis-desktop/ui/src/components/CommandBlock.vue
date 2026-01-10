@@ -1,3 +1,4 @@
+<!-- CommandBlock: Copyable command display. Props: command, segments (highlighted parts), copyable -->
 <script setup lang="ts">
 import { ref } from 'vue'
 

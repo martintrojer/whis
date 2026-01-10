@@ -1,3 +1,42 @@
+//! Post-processing presets for transcript cleanup.
+//!
+//! Presets define how transcripts are processed by the LLM post-processor.
+//! Each preset contains a system prompt that guides the LLM's cleanup behavior.
+//!
+//! # Built-in Presets
+//!
+//! - **default** - Basic cleanup (grammar, filler words)
+//! - **ai-prompt** - Clean for use as AI assistant input
+//! - **email** - Format as an email
+//!
+//! # User Presets
+//!
+//! Stored in `~/.config/whis/presets/*.json`. User presets override built-ins
+//! if they share the same name.
+//!
+//! # File Format
+//!
+//! ```json
+//! {
+//!   "description": "What this preset does",
+//!   "prompt": "System prompt for the LLM",
+//!   "post_processor": "openai",  // optional override
+//!   "model": "gpt-4"             // optional override
+//! }
+//! ```
+//!
+//! # Usage
+//!
+//! ```ignore
+//! use whis_core::preset::Preset;
+//!
+//! // Load by name (user file takes precedence)
+//! let (preset, source) = Preset::load("email")?;
+//!
+//! // List all available
+//! let all = Preset::list_all();
+//! ```
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;

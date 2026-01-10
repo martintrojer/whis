@@ -1,3 +1,4 @@
+<!-- AppSelect: Custom dropdown select. Props: modelValue, options (SelectOption[]), disabled -->
 <script setup lang="ts">
 import type { SelectOption } from '../types'
 import { computed, onMounted, onUnmounted, ref } from 'vue'

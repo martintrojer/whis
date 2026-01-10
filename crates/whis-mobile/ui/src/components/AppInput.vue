@@ -1,3 +1,4 @@
+<!-- AppInput: Text input with v-model. Props: modelValue, type (text|password), placeholder, disabled -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 

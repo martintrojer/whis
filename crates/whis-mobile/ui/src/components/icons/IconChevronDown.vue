@@ -1,3 +1,4 @@
+<!-- IconChevronDown: Downward chevron icon -->
 <template>
   <svg
     width="16"

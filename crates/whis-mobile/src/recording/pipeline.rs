@@ -5,7 +5,7 @@
 
 use tauri::Emitter;
 use whis_core::preset::Preset;
-use whis_core::{PostProcessor, post_process};
+use whis_core::{PostProcessor, error, post_process, warn};
 
 use crate::commands::presets::get_presets_dir;
 
@@ -64,14 +64,14 @@ pub async fn apply_post_processing(
             let presets_dir = match get_presets_dir(app) {
                 Ok(dir) => dir,
                 Err(e) => {
-                    eprintln!("Failed to get presets dir: {}", e);
+                    error!("Failed to get presets dir: {}", e);
                     return text;
                 }
             };
             match Preset::load_from(&name, &presets_dir) {
                 Ok((preset, _)) => preset,
                 Err(e) => {
-                    eprintln!("Failed to load preset '{}': {}", name, e);
+                    error!("Failed to load preset '{}': {}", name, e);
                     return text;
                 }
             }
@@ -93,10 +93,7 @@ pub async fn apply_post_processing(
     let api_key = match api_key {
         Some(key) if !key.is_empty() => key,
         _ => {
-            eprintln!(
-                "Post-processing: No API key configured for {}",
-                post_processor
-            );
+            warn!("Post-processing: No API key configured for {}", post_processor);
             return text;
         }
     };
@@ -105,7 +102,7 @@ pub async fn apply_post_processing(
     match post_process(&text, &post_processor, &api_key, &preset.prompt, None).await {
         Ok(processed) => processed,
         Err(e) => {
-            eprintln!("Post-processing failed: {}", e);
+            error!("Post-processing failed: {}", e);
             let _ = app.emit("post-process-warning", e.to_string());
             text // Return original on error
         }

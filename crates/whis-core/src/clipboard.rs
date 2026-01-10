@@ -1,3 +1,32 @@
+//! Cross-platform clipboard access with multiple backends.
+//!
+//! Linux clipboard is fragmented across X11, Wayland, and Flatpak environments.
+//! This module auto-detects the best method or allows manual override.
+//!
+//! # Backends
+//!
+//! - **xclip** - X11 (most reliable on X11 desktops)
+//! - **wl-copy** - Wayland via wl-clipboard (required for Flatpak on GNOME)
+//! - **arboard** - Cross-platform Rust library (works on macOS, Windows)
+//!
+//! # Auto-Detection Logic
+//!
+//! 1. Flatpak sandbox detected → wl-copy (GNOME doesn't support wlr-data-control)
+//! 2. X11 session → xclip (arboard can fail silently)
+//! 3. Wayland → arboard
+//!
+//! # Usage
+//!
+//! ```ignore
+//! use whis_core::clipboard::{copy_to_clipboard, ClipboardMethod};
+//!
+//! // Auto-detect best method
+//! copy_to_clipboard("Hello", ClipboardMethod::Auto)?;
+//!
+//! // Force specific backend
+//! copy_to_clipboard("Hello", ClipboardMethod::Xclip)?;
+//! ```
+
 use anyhow::{Context, Result};
 use arboard::Clipboard;
 use serde::{Deserialize, Serialize};

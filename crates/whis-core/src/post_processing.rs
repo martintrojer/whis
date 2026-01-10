@@ -1,3 +1,29 @@
+//! LLM-based transcript cleanup and post-processing.
+//!
+//! After transcription, raw text often contains filler words (um, uh), grammar issues,
+//! and run-on sentences. This module sends transcripts to an LLM for cleanup.
+//!
+//! # Supported Providers
+//!
+//! - **OpenAI** - GPT models via chat completions API
+//! - **Mistral** - Mistral models via chat completions API
+//! - **Ollama** - Local LLMs (no API key required, just server URL)
+//! - **None** - Pass through without processing
+//!
+//! # Usage
+//!
+//! ```ignore
+//! use whis_core::post_processing::{post_process, PostProcessor};
+//!
+//! let cleaned = post_process(
+//!     "um so like I was thinking...",
+//!     &PostProcessor::OpenAI,
+//!     "sk-...",
+//!     "Clean up this transcript",
+//!     None,
+//! ).await?;
+//! ```
+
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::fmt;

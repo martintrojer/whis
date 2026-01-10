@@ -1,3 +1,4 @@
+<!-- CommandCopy: Copyable command display with highlighted segments. Props: segments -->
 <script setup lang="ts">
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { computed, ref } from 'vue'

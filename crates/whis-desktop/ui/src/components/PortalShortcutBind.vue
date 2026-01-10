@@ -1,3 +1,4 @@
+<!-- PortalShortcutBind: XDG Desktop Portal shortcut binding (GNOME, KDE) -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import { displayKey, parsePortalShortcut } from '../utils/keys.js'

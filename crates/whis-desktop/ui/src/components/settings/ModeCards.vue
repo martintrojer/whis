@@ -1,3 +1,4 @@
+<!-- ModeCards: Cloud vs Local transcription mode selector -->
 <script setup lang="ts">
 import type { CardOption } from './CardSelector.vue'
 import CardSelector from './CardSelector.vue'

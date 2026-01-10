@@ -1,3 +1,4 @@
+<!-- OllamaConfig: Local Ollama server configuration (URL, model selection, status) -->
 <script setup lang="ts">
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import type { SelectOption } from '../../types'

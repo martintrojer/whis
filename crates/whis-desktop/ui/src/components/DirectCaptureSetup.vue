@@ -1,3 +1,4 @@
+<!-- DirectCaptureSetup: Setup instructions for RdevGrab direct keyboard capture on Linux -->
 <script setup lang="ts">
 import type { CommandSegment } from './CommandBlock.vue'
 import CommandBlock from './CommandBlock.vue'

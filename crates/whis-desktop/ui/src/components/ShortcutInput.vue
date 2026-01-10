@@ -1,3 +1,4 @@
+<!-- ShortcutInput: Keyboard shortcut capture input. Click to record keys. Props: modelValue, disabled, readonly -->
 <script setup lang="ts">
 import { useKeyboardCapture } from '../composables/useKeyboardCapture'
 
