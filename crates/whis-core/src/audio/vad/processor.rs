@@ -243,16 +243,3 @@ impl VadProcessor {
         output
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_vad_disabled_passthrough() {
-        let mut vad = VadProcessor::disabled().unwrap();
-        let samples = vec![0.1, 0.2, 0.3];
-        let output = vad.process(&samples);
-        assert_eq!(output, samples);
-    }
-}

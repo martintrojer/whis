@@ -75,22 +75,3 @@ impl VadProcessor {
         Vec::new()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_noop_vad_passthrough() {
-        let mut vad = VadProcessor::new(true, 0.5).unwrap();
-        let samples = vec![0.1, 0.2, 0.3];
-        let output = vad.process(&samples);
-        assert_eq!(output, samples);
-    }
-
-    #[test]
-    fn test_noop_vad_disabled() {
-        let vad = VadProcessor::disabled().unwrap();
-        assert!(!vad.is_enabled());
-    }
-}

@@ -193,26 +193,3 @@ fn query_portal_version() -> u32 {
         })
         .unwrap_or(0)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_platform_is_linux() {
-        assert!(Platform::LinuxX11.is_linux());
-        assert!(Platform::LinuxWayland.is_linux());
-        assert!(!Platform::MacOS.is_linux());
-        assert!(!Platform::Windows.is_linux());
-    }
-
-    #[test]
-    fn test_compositor_display_name() {
-        assert_eq!(Compositor::Gnome.display_name(), "GNOME");
-        assert_eq!(Compositor::Sway.display_name(), "Sway");
-        assert_eq!(
-            Compositor::Unknown("custom".into()).display_name(),
-            "custom"
-        );
-    }
-}

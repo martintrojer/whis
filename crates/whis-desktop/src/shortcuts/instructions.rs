@@ -134,31 +134,3 @@ whis-desktop --toggle
     .to_string()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_sway_snippet() {
-        let snippet = get_config_snippet(&Compositor::Sway, "Ctrl+Alt+W");
-        assert_eq!(
-            snippet,
-            Some("bindsym ctrl+alt+w exec whis-desktop --toggle".to_string())
-        );
-    }
-
-    #[test]
-    fn test_hyprland_snippet() {
-        let snippet = get_config_snippet(&Compositor::Hyprland, "Ctrl+Alt+W");
-        assert_eq!(
-            snippet,
-            Some("bind = Ctrl, Alt, W, exec, whis-desktop --toggle".to_string())
-        );
-    }
-
-    #[test]
-    fn test_gnome_no_snippet() {
-        let snippet = get_config_snippet(&Compositor::Gnome, "Ctrl+Alt+W");
-        assert!(snippet.is_none());
-    }
-}

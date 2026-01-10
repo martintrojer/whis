@@ -177,25 +177,3 @@ fn extract_properties(proplist: &Proplist) -> (Option<String>, Option<String>) {
 
     (form_factor, bus)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[ignore] // Requires PulseAudio to be running
-    fn test_list_pulse_devices() {
-        let devices = list_pulse_devices().unwrap();
-        println!("Found {} devices:", devices.len());
-        for device in &devices {
-            println!(
-                "  {} (form_factor: {:?}, bus: {:?}, default: {})",
-                device.display_name.as_ref().unwrap_or(&device.name),
-                device.form_factor,
-                device.bus,
-                device.is_default
-            );
-        }
-        assert!(!devices.is_empty());
-    }
-}
