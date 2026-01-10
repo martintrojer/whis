@@ -32,8 +32,8 @@ pub struct TranscriptionSettings {
 impl Default for TranscriptionSettings {
     fn default() -> Self {
         Self {
-            provider: crate::defaults::DEFAULT_PROVIDER,
-            language: crate::defaults::DEFAULT_LANGUAGE.map(String::from),
+            provider: crate::configuration::DEFAULT_PROVIDER,
+            language: crate::configuration::DEFAULT_LANGUAGE.map(String::from),
             api_keys: HashMap::new(),
             local_models: LocalModelsConfig::default(),
         }

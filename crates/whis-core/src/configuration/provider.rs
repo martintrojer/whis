@@ -50,7 +50,7 @@ pub enum TranscriptionProvider {
 
 impl Default for TranscriptionProvider {
     fn default() -> Self {
-        crate::defaults::DEFAULT_PROVIDER
+        super::DEFAULT_PROVIDER
     }
 }
 

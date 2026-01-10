@@ -51,7 +51,7 @@ pub enum PostProcessor {
 
 impl Default for PostProcessor {
     fn default() -> Self {
-        crate::defaults::DEFAULT_POST_PROCESSOR
+        crate::configuration::DEFAULT_POST_PROCESSOR
     }
 }
 
@@ -198,7 +198,7 @@ async fn post_process_mistral(
         .ok_or_else(|| anyhow!("No response from Mistral"))
 }
 
-use crate::ollama::{DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL};
+use super::ollama::{DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL};
 
 /// Ollama API response structure
 #[derive(Debug, Deserialize)]

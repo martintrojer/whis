@@ -159,7 +159,7 @@ pub struct UiSettings {
 }
 
 fn default_chunk_duration() -> u64 {
-    crate::defaults::DEFAULT_CHUNK_DURATION_SECS
+    crate::configuration::DEFAULT_CHUNK_DURATION_SECS
 }
 
 /// Voice Activity Detection configuration.
@@ -190,8 +190,8 @@ pub struct VadSettings {
 impl Default for VadSettings {
     fn default() -> Self {
         Self {
-            enabled: crate::defaults::DEFAULT_VAD_ENABLED,
-            threshold: crate::defaults::DEFAULT_VAD_THRESHOLD,
+            enabled: crate::configuration::DEFAULT_VAD_ENABLED,
+            threshold: crate::configuration::DEFAULT_VAD_THRESHOLD,
         }
     }
 }
@@ -239,13 +239,13 @@ impl Default for UiSettings {
     fn default() -> Self {
         Self {
             cli_shortcut_mode: CliShortcutMode::default(),
-            shortcut_key: crate::defaults::DEFAULT_SHORTCUT.to_string(),
+            shortcut_key: crate::configuration::DEFAULT_SHORTCUT.to_string(),
             #[cfg(feature = "clipboard")]
             clipboard_backend: ClipboardMethod::default(),
             microphone_device: None,
             vad: VadSettings::default(),
             active_preset: None,
-            chunk_duration_secs: crate::defaults::DEFAULT_CHUNK_DURATION_SECS,
+            chunk_duration_secs: crate::configuration::DEFAULT_CHUNK_DURATION_SECS,
             bubble: BubbleSettings::default(),
         }
     }

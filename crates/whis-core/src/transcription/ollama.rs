@@ -9,11 +9,8 @@ use std::time::Duration;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 use std::time::Instant;
 
-/// Default Ollama server URL
-pub const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
-
-/// Default model for post-processing
-pub const DEFAULT_OLLAMA_MODEL: &str = "qwen2.5:1.5b";
+// Re-export from configuration for backward compatibility
+pub use crate::configuration::{DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL};
 
 /// Alternative models for post-processing (name, size, description)
 pub const OLLAMA_MODEL_OPTIONS: &[(&str, &str, &str)] = &[

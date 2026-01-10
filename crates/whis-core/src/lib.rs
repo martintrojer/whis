@@ -1,39 +1,51 @@
+// Domain modules (organized by concern)
 pub mod audio;
+pub mod configuration;
+pub mod provider;
+pub mod settings;
+pub mod transcription;
+
+// Model management
+pub mod model;
+
+// Utility modules (cross-cutting concerns)
 #[cfg(feature = "clipboard")]
 pub mod clipboard;
-pub mod config;
-pub mod defaults;
 pub mod error;
 #[cfg(feature = "hotkey")]
 pub mod hotkey;
 pub mod http;
-pub mod model;
-pub mod ollama;
-pub mod ollama_manager;
 pub mod platform;
-pub mod post_processing;
-pub mod preset;
-pub mod provider;
 pub mod resample;
-pub mod settings;
 pub mod state;
-pub mod transcribe;
 pub mod verbose;
-pub mod warmup;
 
+// Re-export audio types
 pub use audio::{
     AudioChunk, AudioDeviceInfo, AudioRecorder, ChunkerConfig, ProgressiveChunk,
     ProgressiveChunker, RecordingData, RecordingOutput, VadConfig, list_audio_devices,
     load_audio_file, load_audio_stdin,
 };
-#[cfg(feature = "clipboard")]
-pub use clipboard::{ClipboardMethod, copy_to_clipboard};
-pub use config::TranscriptionProvider;
-pub use error::{AudioError, ProviderError, Result, WhisError};
-pub use http::{get_http_client, is_http_client_ready, warmup_http_client};
-pub use ollama_manager::{clear_warmup_cache, preload_ollama};
-pub use post_processing::{DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, post_process};
-pub use preset::{Preset, PresetSource};
+
+// Re-export configuration types
+pub use configuration::{Preset, PresetSource, TranscriptionProvider};
+pub use configuration::{
+    DEFAULT_LANGUAGE, DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL, DEFAULT_POST_PROCESSOR,
+    DEFAULT_PROVIDER, DEFAULT_SHORTCUT, DEFAULT_SHORTCUT_MODE, DEFAULT_VAD_ENABLED,
+    DEFAULT_VAD_THRESHOLD,
+};
+
+// Re-export transcription types
+pub use transcription::{
+    ChunkTranscription, DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, WarmupConfig,
+    batch_transcribe, clear_warmup_cache, post_process, preload_ollama,
+    progressive_transcribe_cloud, transcribe_audio, transcribe_audio_async,
+    transcribe_audio_with_format, transcribe_audio_with_progress, warmup_configured,
+};
+#[cfg(feature = "local-transcription")]
+pub use transcription::{LocalAudioChunk, progressive_transcribe_local};
+
+// Re-export provider types
 #[cfg(feature = "realtime")]
 pub use provider::DeepgramRealtimeProvider;
 #[cfg(feature = "realtime")]
@@ -55,23 +67,71 @@ pub use provider::{RealtimeTranscriptionBackend, get_realtime_backend};
 pub use provider::{parakeet_set_keep_loaded, unload_parakeet};
 #[cfg(feature = "local-transcription")]
 pub use provider::{whisper_preload_model, whisper_set_keep_loaded, whisper_unload_model};
+
+// Re-export other utility types
+#[cfg(feature = "clipboard")]
+pub use clipboard::{ClipboardMethod, copy_to_clipboard};
+pub use error::{AudioError, ProviderError, Result, WhisError};
+pub use http::{get_http_client, is_http_client_ready, warmup_http_client};
 pub use settings::Settings;
 pub use state::RecordingState;
-pub use transcribe::{
-    ChunkTranscription, batch_transcribe, progressive_transcribe_cloud, transcribe_audio,
-    transcribe_audio_async, transcribe_audio_with_format, transcribe_audio_with_progress,
-};
-#[cfg(feature = "local-transcription")]
-pub use transcribe::{LocalAudioChunk, progressive_transcribe_local};
 pub use verbose::set_verbose;
-pub use warmup::{WarmupConfig, warmup_configured};
 
-// Re-export defaults for convenience
-pub use defaults::{
-    DEFAULT_LANGUAGE, DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL, DEFAULT_POST_PROCESSOR,
-    DEFAULT_PROVIDER, DEFAULT_SHORTCUT, DEFAULT_SHORTCUT_MODE, DEFAULT_VAD_ENABLED,
-    DEFAULT_VAD_THRESHOLD,
-};
 #[cfg(feature = "hotkey")]
 pub use hotkey::{Hotkey, HotkeyParseError, key_to_string, lock_or_recover, parse_key};
 pub use platform::{Compositor, Platform, PlatformInfo, detect_platform, is_flatpak};
+
+
+// Legacy module aliases for backward compatibility
+#[doc(hidden)]
+pub mod config {
+    pub use crate::configuration::TranscriptionProvider;
+}
+
+#[doc(hidden)]
+pub mod defaults {
+    pub use crate::configuration::{
+        DEFAULT_LANGUAGE, DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL, DEFAULT_POST_PROCESSOR,
+        DEFAULT_PROVIDER, DEFAULT_SHORTCUT, DEFAULT_SHORTCUT_MODE, DEFAULT_VAD_ENABLED,
+        DEFAULT_VAD_THRESHOLD,
+    };
+}
+
+#[doc(hidden)]
+pub mod preset {
+    pub use crate::configuration::{Preset, PresetSource};
+}
+
+#[doc(hidden)]
+pub mod post_processing {
+    pub use crate::transcription::{DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, post_process};
+}
+
+#[doc(hidden)]
+pub mod transcribe {
+    pub use crate::transcription::{
+        ChunkTranscription, batch_transcribe, progressive_transcribe_cloud, transcribe_audio,
+        transcribe_audio_async, transcribe_audio_with_format, transcribe_audio_with_progress,
+    };
+    #[cfg(feature = "local-transcription")]
+    pub use crate::transcription::{LocalAudioChunk, progressive_transcribe_local};
+}
+
+#[doc(hidden)]
+pub mod ollama {
+    pub use crate::transcription::{
+        DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL, OLLAMA_MODEL_OPTIONS, OllamaModel,
+        ensure_ollama_ready, ensure_ollama_running, has_model, is_ollama_installed,
+        is_ollama_running, list_models, pull_model, pull_model_with_progress,
+    };
+}
+
+#[doc(hidden)]
+pub mod ollama_manager {
+    pub use crate::transcription::{clear_warmup_cache, preload_ollama};
+}
+
+#[doc(hidden)]
+pub mod warmup {
+    pub use crate::transcription::{WarmupConfig, warmup_configured};
+}

@@ -25,8 +25,8 @@ pub struct OllamaConfig {
 impl Default for OllamaConfig {
     fn default() -> Self {
         Self {
-            url: Some(crate::defaults::DEFAULT_OLLAMA_URL.to_string()),
-            model: Some(crate::defaults::DEFAULT_OLLAMA_MODEL.to_string()),
+            url: Some(crate::configuration::DEFAULT_OLLAMA_URL.to_string()),
+            model: Some(crate::configuration::DEFAULT_OLLAMA_MODEL.to_string()),
         }
     }
 }

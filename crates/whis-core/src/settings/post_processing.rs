@@ -20,8 +20,8 @@ pub struct PostProcessingSettings {
 impl Default for PostProcessingSettings {
     fn default() -> Self {
         Self {
-            processor: crate::defaults::DEFAULT_POST_PROCESSOR,
-            prompt: Some(crate::post_processing::DEFAULT_POST_PROCESSING_PROMPT.to_string()),
+            processor: crate::configuration::DEFAULT_POST_PROCESSOR,
+            prompt: Some(crate::transcription::DEFAULT_POST_PROCESSING_PROMPT.to_string()),
         }
     }
 }

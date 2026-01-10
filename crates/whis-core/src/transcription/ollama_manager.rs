@@ -64,13 +64,13 @@ pub fn preload_ollama(server_url: &str, model: &str) {
         crate::verbose!("Preloading Ollama model '{}' in background...", model);
 
         // Step 1: Ensure Ollama is running (localhost only)
-        if let Err(e) = crate::ollama::ensure_ollama_running(&server_url) {
+        if let Err(e) = super::ollama::ensure_ollama_running(&server_url) {
             crate::verbose!("Ollama preload: server startup failed: {}", e);
             return;
         }
 
         // Step 2: Check if model exists (skip pull during preload)
-        match crate::ollama::has_model(&server_url, &model) {
+        match super::ollama::has_model(&server_url, &model) {
             Ok(true) => {
                 crate::verbose!("Ollama preload: model '{}' found, warming up...", model);
             }
