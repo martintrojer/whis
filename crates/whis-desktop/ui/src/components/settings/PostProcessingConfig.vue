@@ -11,15 +11,13 @@ import ToggleSwitch from './ToggleSwitch.vue'
 
 const router = useRouter()
 
+const postProcessingEnabled = computed(() => settingsStore.state.post_processing.enabled)
 const postProcessor = computed(() => settingsStore.state.post_processing.processor)
 const activePreset = computed(() => settingsStore.state.ui.active_preset)
 
 // Preset list for inline dropdown
 const presets = ref<string[]>([])
 const loadingPresets = ref(false)
-
-// Computed: is post-processing enabled?
-const postProcessingEnabled = computed(() => postProcessor.value !== 'none')
 
 // Options for dropdowns
 const postProcessorOptions: SelectOption[] = [
@@ -53,26 +51,8 @@ async function loadPresets() {
   }
 }
 
-// Get default post-processor based on transcription provider
-function getDefaultPostProcessor(): PostProcessor {
-  const provider = settingsStore.state.transcription.provider
-  if (provider === 'openai')
-    return 'openai'
-  if (provider === 'mistral')
-    return 'mistral'
-  if (provider === 'local-whisper' || provider === 'local-parakeet')
-    return 'ollama'
-  // Default fallback
-  return 'openai'
-}
-
 function togglePostProcessing(enable: boolean) {
-  if (enable) {
-    settingsStore.setPostProcessor(getDefaultPostProcessor())
-  }
-  else {
-    settingsStore.setPostProcessor('none')
-  }
+  settingsStore.mutableState.post_processing.enabled = enable
 }
 
 function handlePostProcessorChange(value: string | null) {

@@ -11,7 +11,7 @@ import ModeCards from '../components/settings/ModeCards.vue'
 import PostProcessingConfig from '../components/settings/PostProcessingConfig.vue'
 import ToggleSwitch from '../components/settings/ToggleSwitch.vue'
 import { settingsStore } from '../stores/settings'
-import { isLocalProvider } from '../types'
+import { isLocalProvider, normalizeProvider } from '../types'
 
 const helpOpen = ref(false)
 
@@ -39,22 +39,7 @@ const showStreamingToggle = computed(() =>
 )
 
 // Normalize provider for dropdown display (realtime variants show as base provider)
-const displayProvider = computed(() => {
-  if (provider.value === 'openai-realtime')
-    return 'openai'
-  if (provider.value === 'deepgram-realtime')
-    return 'deepgram'
-  return provider.value
-})
-
-// Get base provider name (without -realtime suffix)
-const baseProvider = computed(() => {
-  if (provider.value === 'openai-realtime')
-    return 'openai'
-  if (provider.value === 'deepgram-realtime')
-    return 'deepgram'
-  return provider.value
-})
+const baseProvider = computed(() => normalizeProvider(provider.value))
 
 // Whisper model validation (for local provider)
 const whisperModelValid = ref(false)
@@ -63,7 +48,6 @@ const whisperModelValid = ref(false)
 watch(provider, async () => {
   if (isLocalProvider(provider.value)) {
     try {
-      const { invoke } = await import('@tauri-apps/api/core')
       // Validate the model for the current local provider
       if (provider.value === 'local-whisper') {
         whisperModelValid.value = await invoke<boolean>('is_whisper_model_valid')
@@ -81,7 +65,7 @@ watch(provider, async () => {
 // Cloud provider options for dropdown (loaded from backend for correct order)
 const cloudProviderOptions = ref<SelectOption[]>([])
 
-// Load cloud providers from backend
+// Load cloud providers from backend (ordered by recommendation from whis-core)
 onMounted(async () => {
   try {
     const providers = await invoke<{ value: string, label: string }[]>('get_cloud_providers')
@@ -89,14 +73,7 @@ onMounted(async () => {
   }
   catch (error) {
     console.error('Failed to load cloud providers:', error)
-    // Fallback to hardcoded options if backend call fails
-    cloudProviderOptions.value = [
-      { value: 'deepgram', label: 'Deepgram' },
-      { value: 'openai', label: 'OpenAI' },
-      { value: 'mistral', label: 'Mistral' },
-      { value: 'groq', label: 'Groq' },
-      { value: 'elevenlabs', label: 'ElevenLabs' },
-    ]
+    // No fallback - backend should always work
   }
 })
 
@@ -353,7 +330,7 @@ function handleBubblePositionChange(value: string | null) {
         <div v-if="transcriptionMode === 'cloud'" class="field-row">
           <label>Service</label>
           <AppSelect
-            :model-value="displayProvider"
+            :model-value="baseProvider"
             :options="filteredProviderOptions"
             @update:model-value="handleProviderUpdate"
           />

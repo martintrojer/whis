@@ -41,6 +41,7 @@ export interface Settings {
     }
   }
   post_processing: {
+    enabled: boolean
     processor: PostProcessor
     prompt: string | null
   }
@@ -129,7 +130,6 @@ export interface PresetDetails {
 export interface CloudProviderInfo {
   value: Provider
   label: string
-  desc: string
   keyUrl: string
   placeholder: string
 }
@@ -137,4 +137,13 @@ export interface CloudProviderInfo {
 // Helper to check if provider is local
 export function isLocalProvider(provider: Provider): boolean {
   return provider === 'local-whisper' || provider === 'local-parakeet'
+}
+
+// Normalize provider to base variant (realtime variants → base)
+export function normalizeProvider(provider: Provider): Provider {
+  if (provider === 'openai-realtime')
+    return 'openai'
+  if (provider === 'deepgram-realtime')
+    return 'deepgram'
+  return provider
 }

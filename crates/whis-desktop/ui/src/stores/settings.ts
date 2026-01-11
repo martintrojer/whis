@@ -1,10 +1,11 @@
 import type { BackendInfo, BubblePosition, CliShortcutMode, PostProcessor, Provider, Settings } from '../types'
 import { invoke } from '@tauri-apps/api/core'
-import { reactive, readonly, watch } from 'vue'
+import { nextTick, reactive, readonly, watch } from 'vue'
 
 // Defaults fetched from backend (single source of truth: whis-core/src/defaults.rs)
 interface Defaults {
   provider: Provider
+  post_processor: PostProcessor
   ollama_url: string
   ollama_model: string
   desktop_key: string
@@ -39,6 +40,7 @@ function debounce<T extends (...args: unknown[]) => unknown>(fn: T, ms: number) 
 // These are fallback values until get_defaults() is called
 let defaults: Defaults = {
   provider: 'deepgram',
+  post_processor: 'openai',
   ollama_url: 'http://localhost:11434',
   ollama_model: 'qwen2.5:1.5b',
   desktop_key: 'Ctrl+Alt+W',
@@ -59,7 +61,8 @@ function getDefaultSettings(): Settings {
       },
     },
     post_processing: {
-      processor: 'none',
+      enabled: false,
+      processor: defaults.post_processor,
       prompt: null,
     },
     services: {
@@ -124,17 +127,22 @@ const state = reactive({
   },
 })
 
+// Build settings payload for save_settings command
+function buildSettingsPayload(): Settings {
+  return {
+    transcription: state.transcription,
+    post_processing: state.post_processing,
+    services: state.services,
+    shortcuts: state.shortcuts,
+    ui: state.ui,
+  }
+}
+
 // Debounced auto-save (500ms delay)
 const debouncedSave = debounce(async () => {
   try {
     await invoke<{ needs_restart: boolean }>('save_settings', {
-      settings: {
-        transcription: state.transcription,
-        post_processing: state.post_processing,
-        services: state.services,
-        shortcuts: state.shortcuts,
-        ui: state.ui,
-      },
+      settings: buildSettingsPayload(),
     })
   }
   catch (e) {
@@ -173,7 +181,8 @@ async function load() {
       },
     }
     state.post_processing = {
-      processor: settings.post_processing.processor || 'none',
+      enabled: settings.post_processing.enabled ?? false,
+      processor: settings.post_processing.processor || defaults.post_processor,
       prompt: settings.post_processing.prompt,
     }
     state.services = {
@@ -210,13 +219,7 @@ async function load() {
 async function save(): Promise<boolean> {
   try {
     const result = await invoke<{ needs_restart: boolean }>('save_settings', {
-      settings: {
-        transcription: state.transcription,
-        post_processing: state.post_processing,
-        services: state.services,
-        shortcuts: state.shortcuts,
-        ui: state.ui,
-      },
+      settings: buildSettingsPayload(),
     })
     return result.needs_restart
   }
@@ -299,6 +302,7 @@ async function initialize() {
   }
 
   state.loaded = true
+  await nextTick() // Ensure reactive updates propagate before watchers fire
 
   // Sync detected system shortcut to settings.json
   // Must be after state.loaded = true so watcher triggers auto-save
@@ -339,13 +343,7 @@ async function flush(): Promise<void> {
 
   try {
     await invoke<{ needs_restart: boolean }>('save_settings', {
-      settings: {
-        transcription: state.transcription,
-        post_processing: state.post_processing,
-        services: state.services,
-        shortcuts: state.shortcuts,
-        ui: state.ui,
-      },
+      settings: buildSettingsPayload(),
     })
   }
   catch (e) {

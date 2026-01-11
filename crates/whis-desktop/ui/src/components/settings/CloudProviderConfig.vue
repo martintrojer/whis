@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import type { CloudProviderInfo, Provider } from '../../types'
 import { computed, ref } from 'vue'
+import { normalizeProvider } from '../../types'
 
 const props = defineProps<{
   provider: Provider
@@ -21,23 +22,17 @@ const keyMasked = ref<Record<string, boolean>>({
   elevenlabs: true,
 })
 
-// Cloud provider options with metadata (ordered by recommendation)
+// Cloud provider options with metadata (ordered by recommendation from whis-core)
 const cloudProviders: CloudProviderInfo[] = [
-  { value: 'deepgram', label: 'Deepgram', desc: 'Real-time optimized', keyUrl: 'https://console.deepgram.com', placeholder: '...' },
-  { value: 'openai', label: 'OpenAI', desc: 'Industry standard, excellent accuracy', keyUrl: 'https://platform.openai.com/api-keys', placeholder: 'sk-...' },
-  { value: 'mistral', label: 'Mistral', desc: 'European AI, multilingual support', keyUrl: 'https://console.mistral.ai/api-keys', placeholder: '...' },
-  { value: 'groq', label: 'Groq', desc: 'Ultra-fast inference', keyUrl: 'https://console.groq.com/keys', placeholder: 'gsk_...' },
-  { value: 'elevenlabs', label: 'ElevenLabs', desc: 'Best for voice projects', keyUrl: 'https://elevenlabs.io/app/settings/api-keys', placeholder: '...' },
+  { value: 'deepgram', label: 'Deepgram', keyUrl: 'https://console.deepgram.com', placeholder: '...' },
+  { value: 'openai', label: 'OpenAI', keyUrl: 'https://platform.openai.com/api-keys', placeholder: 'sk-...' },
+  { value: 'mistral', label: 'Mistral', keyUrl: 'https://console.mistral.ai/api-keys', placeholder: '...' },
+  { value: 'groq', label: 'Groq', keyUrl: 'https://console.groq.com/keys', placeholder: 'gsk_...' },
+  { value: 'elevenlabs', label: 'ElevenLabs', keyUrl: 'https://elevenlabs.io/app/settings/api-keys', placeholder: '...' },
 ]
 
 // Normalize provider for API key lookup (realtime variants use base provider key)
-const normalizedProvider = computed(() => {
-  if (props.provider === 'openai-realtime')
-    return 'openai'
-  if (props.provider === 'deepgram-realtime')
-    return 'deepgram'
-  return props.provider
-})
+const normalizedProvider = computed(() => normalizeProvider(props.provider))
 
 const currentProvider = computed((): CloudProviderInfo => {
   const found = cloudProviders.find(p => p.value === normalizedProvider.value)
