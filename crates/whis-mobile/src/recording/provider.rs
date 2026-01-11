@@ -52,4 +52,3 @@ pub fn supports_realtime_streaming(provider: &str) -> bool {
         "openai" | "openai-realtime" | "deepgram" | "deepgram-realtime"
     )
 }
-

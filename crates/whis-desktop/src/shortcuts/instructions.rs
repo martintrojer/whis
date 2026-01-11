@@ -133,4 +133,3 @@ whis-desktop --toggle
 "#
     .to_string()
 }
-

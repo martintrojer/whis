@@ -40,8 +40,8 @@
 //! }
 //! ```
 
-use super::shortcuts::CliShortcutMode;
 use super::Settings;
+use super::shortcuts::CliShortcutMode;
 use crate::configuration::TranscriptionProvider;
 use crate::transcription::PostProcessor;
 use serde_json::Value;
@@ -68,37 +68,42 @@ impl Settings {
 
         // Transcription settings
         if let Some(Value::String(provider)) = map.get("provider")
-            && let Ok(p) = provider.parse::<TranscriptionProvider>() {
-                settings.transcription.provider = p;
-            }
+            && let Ok(p) = provider.parse::<TranscriptionProvider>()
+        {
+            settings.transcription.provider = p;
+        }
 
         if let Some(Value::String(lang)) = map.get("language")
-            && !lang.is_empty() {
-                settings.transcription.language = Some(lang.clone());
-            }
+            && !lang.is_empty()
+        {
+            settings.transcription.language = Some(lang.clone());
+        }
 
         // API keys
         for (store_key, provider_name) in API_KEY_MAPPINGS {
             if let Some(Value::String(key)) = map.get(*store_key)
-                && !key.is_empty() {
-                    settings
-                        .transcription
-                        .api_keys
-                        .insert(provider_name.to_string(), key.clone());
-                }
+                && !key.is_empty()
+            {
+                settings
+                    .transcription
+                    .api_keys
+                    .insert(provider_name.to_string(), key.clone());
+            }
         }
 
         // Post-processing settings
         if let Some(Value::String(processor)) = map.get("post_processor")
-            && let Ok(p) = processor.parse::<PostProcessor>() {
-                settings.post_processing.processor = p;
-            }
+            && let Ok(p) = processor.parse::<PostProcessor>()
+        {
+            settings.post_processing.processor = p;
+        }
 
         // UI settings
         if let Some(Value::String(preset)) = map.get("active_preset")
-            && !preset.is_empty() {
-                settings.ui.active_preset = Some(preset.clone());
-            }
+            && !preset.is_empty()
+        {
+            settings.ui.active_preset = Some(preset.clone());
+        }
 
         // Shortcuts settings
         if let Some(Value::String(mode)) = map.get("cli_mode")
@@ -120,20 +125,23 @@ impl Settings {
         }
 
         if let Some(threshold) = map.get("vad_threshold")
-            && let Some(t) = threshold.as_f64() {
-                settings.ui.vad.threshold = t as f32;
-            }
+            && let Some(t) = threshold.as_f64()
+        {
+            settings.ui.vad.threshold = t as f32;
+        }
 
         // Services settings
         if let Some(Value::String(url)) = map.get("ollama_url")
-            && !url.is_empty() {
-                settings.services.ollama.url = Some(url.clone());
-            }
+            && !url.is_empty()
+        {
+            settings.services.ollama.url = Some(url.clone());
+        }
 
         if let Some(Value::String(model)) = map.get("ollama_model")
-            && !model.is_empty() {
-                settings.services.ollama.model = Some(model.clone());
-            }
+            && !model.is_empty()
+        {
+            settings.services.ollama.model = Some(model.clone());
+        }
 
         settings
     }
@@ -158,9 +166,10 @@ impl Settings {
         // API keys
         for (store_key, provider_name) in API_KEY_MAPPINGS {
             if let Some(key) = self.transcription.api_keys.get(*provider_name)
-                && !key.is_empty() {
-                    map.insert(store_key.to_string(), Value::String(key.clone()));
-                }
+                && !key.is_empty()
+            {
+                map.insert(store_key.to_string(), Value::String(key.clone()));
+            }
         }
 
         // Post-processing settings
