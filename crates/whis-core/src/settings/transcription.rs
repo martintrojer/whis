@@ -66,9 +66,10 @@ impl TranscriptionSettings {
     /// 1. api_keys map
     /// 2. Environment variable
     pub fn api_key_for(&self, provider: &TranscriptionProvider) -> Option<String> {
-        // Normalize provider for API key lookup (OpenAI Realtime uses same key as OpenAI)
+        // Normalize provider for API key lookup (realtime variants share keys with base provider)
         let key_provider = match provider {
             TranscriptionProvider::OpenAIRealtime => "openai",
+            TranscriptionProvider::DeepgramRealtime => "deepgram",
             _ => provider.as_str(),
         };
 
@@ -83,9 +84,35 @@ impl TranscriptionSettings {
         std::env::var(provider.api_key_env_var()).ok()
     }
 
+    /// Check if an API key is explicitly configured in settings (not just in environment).
+    ///
+    /// Returns true only if the key exists in the api_keys HashMap.
+    /// Use this to distinguish between:
+    /// - [configured]: Key in settings.json
+    /// - [available]: Key only in environment variable
+    pub fn has_configured_api_key(&self, provider: &TranscriptionProvider) -> bool {
+        // Normalize provider (realtime variants share keys with base provider)
+        let key_provider = match provider {
+            TranscriptionProvider::OpenAIRealtime => "openai",
+            TranscriptionProvider::DeepgramRealtime => "deepgram",
+            _ => provider.as_str(),
+        };
+
+        self.api_keys
+            .get(key_provider)
+            .map(|k| !k.is_empty())
+            .unwrap_or(false)
+    }
+
     /// Set the API key for a provider.
     pub fn set_api_key(&mut self, provider: &TranscriptionProvider, key: String) {
-        self.api_keys.insert(provider.as_str().to_string(), key);
+        // Normalize provider (realtime variants share keys with base provider)
+        let key_provider = match provider {
+            TranscriptionProvider::OpenAIRealtime => "openai",
+            TranscriptionProvider::DeepgramRealtime => "deepgram",
+            _ => provider.as_str(),
+        };
+        self.api_keys.insert(key_provider.to_string(), key);
     }
 
     /// Check if an API key is configured for the current provider.

@@ -71,13 +71,15 @@ pub fn setup_transcription_cloud() -> Result<()> {
                 provider_description(provider)
             );
             // Check if this provider or its realtime variant is configured
-            let marker = if settings.transcription.api_key_for(provider).is_some()
+            let marker = if settings.transcription.has_configured_api_key(provider)
                 || (*provider == TranscriptionProvider::OpenAI
                     && settings.transcription.provider == TranscriptionProvider::OpenAIRealtime)
                 || (*provider == TranscriptionProvider::Deepgram
                     && settings.transcription.provider == TranscriptionProvider::DeepgramRealtime)
             {
                 " [configured]"
+            } else if settings.transcription.api_key_for(provider).is_some() {
+                " [available]"
             } else {
                 ""
             };
@@ -145,10 +147,18 @@ pub fn setup_transcription_cloud() -> Result<()> {
     }
 
     // Check if API key already exists for this provider
-    if let Some(_existing_key) = settings.transcription.api_key_for(&provider) {
+    if let Some(existing_key) = settings.transcription.api_key_for(&provider) {
+        let is_configured = settings.transcription.has_configured_api_key(&provider);
+
         let keep = interactive::select("Keep current key?", &["Yes", "No"], Some(0))? == 0;
 
-        if !keep {
+        if keep {
+            // If key is env-only, save it to settings
+            if !is_configured {
+                settings.transcription.set_api_key(&provider, existing_key);
+                interactive::info("API key saved to settings");
+            }
+        } else {
             interactive::info(&format!(
                 "Get your API key from: {}",
                 api_key_url(&provider)

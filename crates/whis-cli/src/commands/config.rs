@@ -351,10 +351,15 @@ fn show_all_settings() -> Result<()> {
             "{}-api-key",
             provider.to_string().to_lowercase().replace('_', "-")
         );
-        let key_status = if let Some(key) = settings.transcription.api_key_for(provider) {
-            mask_key(&key)
+        let key_status = if settings.transcription.has_configured_api_key(provider) {
+            // Key is in settings.json
+            mask_key(&settings.transcription.api_key_for(provider).unwrap())
+        } else if settings.transcription.api_key_for(provider).is_some() {
+            // Key only in environment variable
+            format!("(from ${})", provider.api_key_env_var())
         } else {
-            format!("(not set, using ${})", provider.api_key_env_var())
+            // No key at all
+            "(not set)".to_string()
         };
         println!("{} = {}", key_name, key_status);
     }

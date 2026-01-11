@@ -103,11 +103,11 @@ pub async fn check_config_readiness(
             None => (false, Some("Parakeet model not configured".to_string())),
         },
         provider => {
-            // Normalize provider for API key lookup (openai-realtime uses openai key)
-            let key_provider = if provider == "openai-realtime" {
-                "openai"
-            } else {
-                provider
+            // Normalize provider for API key lookup (realtime variants share keys)
+            let key_provider = match provider {
+                "openai-realtime" => "openai",
+                "deepgram-realtime" => "deepgram",
+                _ => provider,
             };
 
             if api_keys.get(key_provider).is_none_or(|k| k.is_empty()) {
