@@ -92,11 +92,7 @@ impl Settings {
             match serde_json::from_str(&content) {
                 Ok(settings) => return settings,
                 Err(e) => {
-                    eprintln!(
-                        "Warning: Failed to parse {}: {}",
-                        path.display(),
-                        e
-                    );
+                    eprintln!("Warning: Failed to parse {}: {}", path.display(), e);
                     eprintln!("Schema may have changed. Creating backup...");
 
                     // Create numbered backup (backup, backup.1, backup.2, etc.)

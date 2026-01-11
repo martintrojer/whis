@@ -105,7 +105,8 @@ impl TranscriptionSettings {
 
     /// Set the API key for a provider.
     pub fn set_api_key(&mut self, provider: &TranscriptionProvider, key: String) {
-        self.api_keys.insert(provider.api_key_name().to_string(), key);
+        self.api_keys
+            .insert(provider.api_key_name().to_string(), key);
     }
 
     /// Check if an API key is configured for the current provider.
