@@ -67,6 +67,9 @@ mod alsa_suppress {
 /// On Linux with PulseAudio, returns devices with rich metadata (form_factor, bus, etc.).
 /// Falls back to cpal-based enumeration on other platforms or when PulseAudio unavailable.
 ///
+/// Device names are normalized to CPAL-compatible descriptions for consistent lookup
+/// during recording (CPAL is used for actual audio capture).
+///
 /// # Returns
 /// A vector of audio device information, including device names and default status.
 ///
@@ -77,7 +80,37 @@ pub fn list_audio_devices() -> Result<Vec<AudioDeviceInfo>> {
     #[cfg(all(target_os = "linux", feature = "pulse-metadata"))]
     {
         match pulse::list_pulse_devices() {
-            Ok(devices) if !devices.is_empty() => return Ok(devices),
+            Ok(mut devices) if !devices.is_empty() => {
+                // Cross-reference with CPAL to get compatible names for device lookup.
+                // PulseAudio returns technical names (alsa_input.usb-...) but CPAL uses
+                // human-readable descriptions (USB Microphone Mono). We need CPAL names
+                // for the recorder's device lookup to work.
+                let cpal_descriptions = get_cpal_descriptions();
+
+                crate::verbose!("CPAL descriptions: {:?}", cpal_descriptions);
+
+                for device in &mut devices {
+                    crate::verbose!(
+                        "PulseAudio: name={:?}, display={:?}",
+                        device.name,
+                        device.display_name
+                    );
+
+                    // Match PulseAudio display_name to CPAL description using fuzzy matching
+                    // (names may differ by punctuation or suffixes like "(PipeWire)")
+                    if let Some(display) = &device.display_name {
+                        let normalized = normalize_for_matching(display);
+                        if let Some(cpal_name) = cpal_descriptions
+                            .iter()
+                            .find(|c| normalize_for_matching(c) == normalized)
+                        {
+                            crate::verbose!("Matched: {} -> {}", device.name, cpal_name);
+                            device.name = cpal_name.clone();
+                        }
+                    }
+                }
+                return Ok(devices);
+            }
             Ok(_) => {} // Empty result, fall through to cpal
             Err(_e) => {
                 // PulseAudio unavailable, fall through to cpal
@@ -88,6 +121,84 @@ pub fn list_audio_devices() -> Result<Vec<AudioDeviceInfo>> {
 
     // Fallback: use cpal (cross-platform, less metadata)
     list_cpal_devices()
+}
+
+/// Normalize device name for fuzzy matching.
+///
+/// Strips punctuation, parenthetical suffixes, and normalizes whitespace
+/// to allow matching between PulseAudio and CPAL device names.
+pub(crate) fn normalize_for_matching(name: &str) -> String {
+    // Remove parenthetical suffixes like "(PipeWire)" or "(currently PulseAudio)"
+    let base = name.split('(').next().unwrap_or(name);
+
+    // Keep only alphanumeric and whitespace, then normalize
+    base.chars()
+        .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+        .collect::<String>()
+        .to_lowercase()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Check if a CPAL device description matches a stored device name using fuzzy matching.
+///
+/// Returns true if the CPAL description's key words are contained in the stored name.
+/// This handles cases where:
+/// - PulseAudio technical names (alsa_input.usb-VENDOR_PRODUCT...) are stored
+/// - CPAL descriptions are human-readable (Product Name Mono)
+pub(crate) fn fuzzy_device_match(stored_name: &str, cpal_description: &str) -> bool {
+    let stored_normalized = normalize_for_matching(stored_name);
+    let cpal_normalized = normalize_for_matching(cpal_description);
+
+    // Exact match after normalization
+    if stored_normalized == cpal_normalized {
+        return true;
+    }
+
+    // Word containment: check if all significant words from CPAL description
+    // are found in the normalized stored name (handles PulseAudio technical names)
+    let cpal_words: Vec<&str> = cpal_normalized.split_whitespace().collect();
+
+    // Filter out common non-distinctive words and very short words
+    let significant_words: Vec<&str> = cpal_words
+        .iter()
+        .filter(|w| {
+            w.len() >= 3
+                && !matches!(
+                    **w,
+                    "mono" | "stereo" | "input" | "output" | "analog" | "digital" | "audio" | "usb"
+                )
+        })
+        .copied()
+        .collect();
+
+    // If we don't have enough significant words, can't make a reliable match
+    if significant_words.is_empty() {
+        return false;
+    }
+
+    // Check if all significant words from CPAL are in the normalized stored name
+    let matches = significant_words
+        .iter()
+        .filter(|w| stored_normalized.contains(*w))
+        .count();
+
+    matches == significant_words.len()
+}
+
+/// Get all CPAL device descriptions for cross-referencing with PulseAudio.
+fn get_cpal_descriptions() -> Vec<String> {
+    alsa_suppress::init();
+    let host = cpal::default_host();
+    host.input_devices()
+        .ok()
+        .map(|devices| {
+            devices
+                .filter_map(|d| d.description().ok().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// List devices using cpal (cross-platform fallback).

@@ -75,8 +75,10 @@ pub fn display_error(err: &WhisError) {
         WhisError::Audio(AudioError::DeviceNotFound(device)) => {
             eprintln!("Error: Audio device not found: {}", device);
             eprintln!();
-            eprintln!("Hint: List available devices:");
-            eprintln!("  whis --help           # See device selection options");
+            eprintln!("The configured device may have been disconnected or renamed.");
+            eprintln!();
+            eprintln!("Hint: Reconfigure your microphone:");
+            eprintln!("  whis setup            # Run setup wizard again");
         }
 
         WhisError::Audio(AudioError::RecordingFailed(msg)) => {

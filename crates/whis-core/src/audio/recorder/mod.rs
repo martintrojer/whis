@@ -5,6 +5,7 @@ mod processor;
 mod stream;
 
 pub use config::RecorderConfig;
+pub use stream::{get_stream_error_count, reset_stream_error_count};
 
 use anyhow::{Context, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
@@ -92,18 +93,33 @@ impl AudioRecorder {
     /// # Parameters
     /// - `device_name`: Name of the device to use (None = system default)
     pub fn start_recording_with_device(&mut self, device_name: Option<&str>) -> Result<()> {
+        // Reset stream error counter for new recording session
+        reset_stream_error_count();
+
         devices::init_platform();
         let host = cpal::default_host();
 
         let device = if let Some(name) = device_name {
-            // Try to find device by name
-            host.input_devices()?
-                .find(|d| {
-                    d.description()
-                        .map(|n| n.to_string() == name)
-                        .unwrap_or(false)
-                })
-                .with_context(|| format!("Audio device '{}' not found", name))?
+            // Try exact match first
+            let exact_match = host.input_devices()?.find(|d| {
+                d.description()
+                    .map(|n| n.to_string() == name)
+                    .unwrap_or(false)
+            });
+
+            if let Some(device) = exact_match {
+                device
+            } else {
+                // Fallback: fuzzy match using word containment
+                // This handles PulseAudio technical names vs CPAL human-readable names
+                host.input_devices()?
+                    .find(|d| {
+                        d.description()
+                            .map(|desc| devices::fuzzy_device_match(name, &desc.to_string()))
+                            .unwrap_or(false)
+                    })
+                    .with_context(|| format!("Audio device '{}' not found", name))?
+            }
         } else {
             // Use default device
             host.default_input_device()
@@ -283,9 +299,17 @@ impl AudioRecorder {
             self.sample_rate
         );
 
+        // Log stream error summary if there were any
+        let error_count = get_stream_error_count();
+        if error_count > 0 {
+            crate::verbose!(
+                "Recording completed with {} non-fatal audio stream errors",
+                error_count
+            );
+        }
+
         Ok(RecordingData { samples })
     }
-
 }
 
 impl Default for AudioRecorder {
