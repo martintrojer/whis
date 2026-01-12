@@ -95,7 +95,7 @@ async fn transcribe_audio_inner(
     };
 
     let result = provider_impl
-        .transcribe_async(&client, &api_key, request)
+        .transcribe_async(client, &api_key, request)
         .await
         .map_err(|e| e.to_string())?;
 

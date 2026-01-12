@@ -74,11 +74,13 @@ impl Service {
         // Create IPC server
         let ipc_server = IpcServer::new().context("Failed to create IPC server")?;
 
-        // Enable model caching for local-whisper in listen mode
-        // This keeps the model loaded between transcriptions for faster response
+        // Configure model caching for local transcription in listen mode
+        // This respects the user's model_memory settings for speed vs memory tradeoff
         #[cfg(feature = "local-transcription")]
-        if self.provider == TranscriptionProvider::LocalWhisper {
-            whis_core::whisper_set_keep_loaded(true);
+        {
+            let settings = whis_core::Settings::load();
+            let keep_loaded = settings.ui.model_memory.keep_model_loaded;
+            self.provider.set_keep_loaded(keep_loaded);
         }
 
         loop {

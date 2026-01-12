@@ -277,26 +277,30 @@ async fn progressive_record_and_transcribe(
     if let Some(dur) = mic_config.duration {
         // Timed recording
         if !quiet {
-            print!("Recording for {} seconds...", dur.as_secs());
-            use std::io::Write;
-            std::io::stdout().flush()?;
+            if whis_core::verbose::is_verbose() {
+                println!("Recording for {} seconds...", dur.as_secs());
+            } else {
+                print!("Recording for {} seconds...", dur.as_secs());
+                use std::io::Write;
+                std::io::stdout().flush()?;
+            }
         }
         tokio::time::sleep(dur).await;
     } else {
         // Interactive mode
         if !quiet {
             println!("Press Enter to stop");
-            print!("Recording...");
-            use std::io::Write;
-            std::io::stdout().flush()?;
+            if whis_core::verbose::is_verbose() {
+                println!("Recording...");
+            } else {
+                print!("Recording...");
+                use std::io::Write;
+                std::io::stdout().flush()?;
+            }
         }
 
         // Wait for user to stop (blocking operation)
         tokio::task::spawn_blocking(app::wait_for_stop).await??;
-
-        if !quiet && whis_core::verbose::is_verbose() {
-            println!();
-        }
     }
 
     // Stop recording (closes audio stream, signals chunker/realtime to finish)
@@ -347,13 +351,8 @@ fn preload_models(config: &modes::MicrophoneConfig) {
     // Preload Ollama if post-processing enabled
     if config.will_post_process {
         let settings = whis_core::Settings::load();
-        if settings.post_processing.processor == whis_core::PostProcessor::Ollama
-            && let (Some(url), Some(model)) = (
-                settings.services.ollama.url(),
-                settings.services.ollama.model(),
-            )
-        {
-            whis_core::preload_ollama(&url, &model);
+        if settings.post_processing.processor == whis_core::PostProcessor::Ollama {
+            settings.services.ollama.preload();
         }
     }
 }

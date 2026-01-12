@@ -3,7 +3,6 @@
 use anyhow::{Result, anyhow};
 use whis_core::{
     DEFAULT_POST_PROCESSING_PROMPT, PostProcessor, Preset, Settings, ollama, post_process,
-    preload_ollama,
 };
 
 use super::super::types::{ProcessedResult, TranscriptionResult};
@@ -29,11 +28,9 @@ pub async fn process(
         let (processor, api_key, model, prompt) =
             resolve_post_processor(&config.preset, &settings)?;
 
-        // Re-warm Ollama model (in case it unloaded during long recording > 5 min)
-        if processor == PostProcessor::Ollama
-            && let Some(ref model_name) = model
-        {
-            preload_ollama(&api_key, model_name);
+        // Re-warm Ollama model (in case it unloaded during long recording > keep_alive timeout)
+        if processor == PostProcessor::Ollama && model.is_some() {
+            settings.services.ollama.preload();
             // Brief pause to allow warmup to complete (runs in background thread)
             tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
