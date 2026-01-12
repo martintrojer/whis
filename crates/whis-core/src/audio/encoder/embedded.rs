@@ -1,4 +1,8 @@
-//! Embedded LAME encoder implementation for mobile platforms.
+//! Embedded LAME encoder implementation.
+//!
+//! Uses the mp3lame-encoder crate which wraps the same LAME library (libmp3lame)
+//! as FFmpeg's MP3 encoder, providing identical audio quality without requiring
+//! FFmpeg as a runtime dependency.
 
 use anyhow::{Context, Result};
 use mp3lame_encoder::{Builder, FlushNoGap, InterleavedPcm, MonoPcm};
@@ -7,14 +11,11 @@ use super::AudioEncoder;
 
 /// MP3 encoder using embedded LAME library.
 ///
-/// This encoder is designed for mobile platforms where FFmpeg is not available.
-/// It uses the mp3lame-encoder crate for encoding.
-#[allow(dead_code)] // Only constructed when embedded-encoder feature is enabled without ffmpeg
+/// Uses mp3lame-encoder crate for high-quality MP3 encoding without external dependencies.
 pub struct EmbeddedEncoder {
     channels: u16,
 }
 
-#[allow(dead_code)] // Methods only used when embedded-encoder is enabled without ffmpeg
 impl EmbeddedEncoder {
     /// Create a new embedded LAME encoder.
     ///

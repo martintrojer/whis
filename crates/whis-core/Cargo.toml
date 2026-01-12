@@ -44,7 +44,6 @@ voice_activity_detector = { version = "0.2", optional = true }
 
 # Local transcription via transcribe-rs (unified library for Whisper + Parakeet)
 transcribe-rs = { version = "0.2.1", features = ["whisper", "parakeet"], optional = true }
-minimp3 = { version = "0.6", optional = true }
 
 # Archive extraction for Parakeet model downloads
 tar = { version = "0.4", optional = true }
@@ -61,16 +60,16 @@ libc = { version = "0.2", optional = true }
 libpulse-binding = { version = "2.28", optional = true }
 
 [features]
-default = ["ffmpeg", "clipboard", "local-transcription", "vad", "realtime", "pulse-metadata"]
+default = ["embedded-encoder", "clipboard", "local-transcription", "vad", "realtime", "pulse-metadata"]
 # PulseAudio metadata for better device enumeration (Linux only, graceful fallback)
 pulse-metadata = ["libpulse-binding"]
-# Desktop: use FFmpeg process for audio encoding and arboard for clipboard
-ffmpeg = ["hound"]
+# Audio encoding: use embedded mp3lame encoder (no FFmpeg dependency)
+embedded-encoder = ["mp3lame-encoder"]
 clipboard = ["arboard"]
-# Mobile: use embedded mp3lame encoder + bundled TLS certs (no external process needed)
-embedded-encoder = ["mp3lame-encoder", "webpki-roots", "rustls"]
+# Mobile TLS: bundled Mozilla CA certs (avoids Android platform verifier JNI issues)
+mobile-tls = ["webpki-roots", "rustls"]
 # Local transcription (Whisper + Parakeet via transcribe-rs)
-local-transcription = ["minimp3", "transcribe-rs", "tar", "flate2", "tempfile", "libc"]
+local-transcription = ["transcribe-rs", "tar", "flate2", "tempfile", "libc"]
 # Voice Activity Detection to skip silence during recording
 vad = ["voice_activity_detector"]
 # OpenAI Realtime API for streaming transcription

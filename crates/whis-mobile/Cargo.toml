@@ -16,7 +16,7 @@ tauri-build = { version = "2.5", features = [] }
 [dependencies]
 # Mobile uses lightweight build without local-transcription (smaller binary)
 # Note: vad feature disabled - requires ONNX Runtime which lacks Android binaries
-whis-core = { path = "../whis-core", default-features = false, features = ["embedded-encoder", "realtime"] }
+whis-core = { path = "../whis-core", default-features = false, features = ["embedded-encoder", "mobile-tls", "realtime"] }
 anyhow.workspace = true
 tokio.workspace = true
 serde.workspace = true

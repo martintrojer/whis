@@ -1,7 +1,4 @@
-//! Audio encoding module providing MP3 encoding via FFmpeg or embedded encoder.
-
-#[cfg(feature = "ffmpeg")]
-mod ffmpeg;
+//! Audio encoding module providing MP3 encoding via embedded LAME encoder.
 
 #[cfg(feature = "embedded-encoder")]
 mod embedded;
@@ -21,25 +18,18 @@ pub trait AudioEncoder: Send + Sync {
     fn encode_samples(&self, samples: &[f32], sample_rate: u32) -> Result<Vec<u8>>;
 }
 
-/// Create the appropriate audio encoder based on available features.
+/// Create the audio encoder using embedded LAME library.
 ///
-/// Priority:
-/// 1. FFmpeg encoder (if `ffmpeg` feature enabled)
-/// 2. Embedded encoder (if `embedded-encoder` feature enabled)
-/// 3. Panic if no encoder available
+/// Uses mp3lame-encoder crate which wraps the same LAME library as FFmpeg's libmp3lame,
+/// so audio quality is identical while eliminating the FFmpeg runtime dependency.
 pub fn create_encoder() -> Box<dyn AudioEncoder> {
-    #[cfg(feature = "ffmpeg")]
+    #[cfg(feature = "embedded-encoder")]
     {
-        Box::new(ffmpeg::FfmpegEncoder::new())
+        Box::new(embedded::EmbeddedEncoder::new())
     }
 
-    #[cfg(all(feature = "embedded-encoder", not(feature = "ffmpeg")))]
+    #[cfg(not(feature = "embedded-encoder"))]
     {
-        return Box::new(embedded::EmbeddedEncoder::new());
-    }
-
-    #[cfg(not(any(feature = "ffmpeg", feature = "embedded-encoder")))]
-    {
-        panic!("No audio encoder available. Enable either 'ffmpeg' or 'embedded-encoder' feature.");
+        panic!("No audio encoder available. Enable the 'embedded-encoder' feature.");
     }
 }

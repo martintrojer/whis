@@ -131,7 +131,7 @@ impl FrameResampler {
 
 /// Resample audio to 16kHz mono for transcription.
 ///
-/// This is used by local_whisper for batch resampling of already-recorded audio.
+/// Used by file loading and local transcription for batch resampling.
 /// For real-time resampling during recording, use `FrameResampler` instead.
 ///
 /// # Arguments
@@ -141,7 +141,6 @@ impl FrameResampler {
 ///
 /// # Returns
 /// * 16kHz mono f32 samples ready for transcription
-#[cfg(feature = "local-transcription")]
 pub fn resample_to_16k(samples: &[f32], source_rate: u32, channels: u16) -> Result<Vec<f32>> {
     // Convert to mono first if stereo/multichannel
     let mono_samples = if channels > 1 {

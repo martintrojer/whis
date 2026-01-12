@@ -27,7 +27,7 @@ static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 /// Get the global HTTP client, creating it if necessary.
 ///
 /// The client is configured appropriately for the current platform:
-/// - Mobile (embedded-encoder feature): Uses bundled Mozilla CA certificates
+/// - Mobile (mobile-tls feature): Uses bundled Mozilla CA certificates
 /// - Desktop: Uses the default platform certificate verifier
 ///
 /// # Returns
@@ -80,11 +80,11 @@ pub fn is_http_client_ready() -> bool {
 
 /// Create an HTTP client configured for the current platform.
 ///
-/// On mobile (embedded-encoder feature), uses bundled Mozilla CA certificates
+/// On mobile (mobile-tls feature), uses bundled Mozilla CA certificates
 /// to avoid Android's platform verifier JNI initialization issues.
 /// On desktop, uses the default platform certificate verifier.
 fn create_http_client() -> Result<reqwest::Client> {
-    #[cfg(feature = "embedded-encoder")]
+    #[cfg(feature = "mobile-tls")]
     {
         // Mobile: Use bundled webpki-roots to avoid Android TLS issues
         // Build root certificate store from Mozilla's CA bundle
@@ -104,7 +104,7 @@ fn create_http_client() -> Result<reqwest::Client> {
             .context("Failed to create HTTP client")
     }
 
-    #[cfg(not(feature = "embedded-encoder"))]
+    #[cfg(not(feature = "mobile-tls"))]
     {
         // Desktop: Use default platform verifier
         reqwest::Client::builder()
