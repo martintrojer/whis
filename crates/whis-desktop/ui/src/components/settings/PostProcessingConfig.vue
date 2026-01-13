@@ -1,4 +1,4 @@
-<!-- PostProcessingConfig: LLM post-processor settings (processor type, shared toggle) -->
+<!-- PostProcessingConfig: Post-processor settings (service type, shared toggle) -->
 <script setup lang="ts">
 import type { PostProcessor } from '../../types'
 import { computed } from 'vue'
@@ -25,7 +25,7 @@ function handlePostProcessorChange(value: string | null) {
     <!-- Config (shown when post-processing ON) -->
     <div v-if="postProcessingEnabled" class="post-process-config">
       <div class="field-row">
-        <label>LLM</label>
+        <label>Service</label>
         <AppSelect
           :model-value="postProcessor"
           :options="POST_PROCESSOR_OPTIONS"

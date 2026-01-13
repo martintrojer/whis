@@ -39,7 +39,7 @@ interface OllamaStatusResponse {
 }
 
 // Pull state
-const pullModelName = ref('qwen2.5:1.5b')
+const pullModelName = ref('')
 const pullingModel = ref(false)
 const pullStatus = ref('')
 const pullProgress = ref<{ downloaded: number, total: number } | null>(null)
@@ -177,10 +177,13 @@ async function pullOllamaModel() {
   })
 
   try {
-    await invoke('pull_ollama_model', { url, model: pullModelName.value.trim() })
+    const modelName = pullModelName.value.trim()
+    await invoke('pull_ollama_model', { url, model: modelName })
     await loadOllamaModels()
     // Auto-select the pulled model
-    settingsStore.setOllamaModel(pullModelName.value.trim())
+    settingsStore.setOllamaModel(modelName)
+    // Clear input after successful download
+    pullModelName.value = ''
     pullStatus.value = 'Model ready!'
     setTimeout(() => pullStatus.value = '', 3000)
   }
@@ -318,27 +321,24 @@ function handleOllamaModelChange(value: string | null) {
       @update:model-value="handleOllamaModelChange"
     />
   </div>
-  <p v-if="ollamaStatus === 'connected' && ollamaModels.length > 0" class="hint ollama-hint">
-    First post-processing may be slow while model loads into memory.
-  </p>
 
   <!-- No models warning -->
   <div v-if="ollamaStatus === 'connected' && ollamaModels.length === 0" class="notice ollama-notice">
     <span class="notice-marker">[!]</span>
-    <p>No models installed. Pull a model below to get started.</p>
+    <p>No models installed. Download a model below to get started.</p>
   </div>
 
-  <!-- Pull Model UI (only if connected) -->
+  <!-- Download Model Section (only if connected) -->
   <div v-if="ollamaStatus === 'connected'" class="field-row">
-    <label>Pull model</label>
+    <label>Download</label>
     <div class="pull-model-input">
       <input
         v-model="pullModelName"
         type="text"
-        placeholder="qwen2.5:1.5b"
+        placeholder="model name"
         spellcheck="false"
         :disabled="pullingModel"
-        aria-label="Model name to pull"
+        aria-label="Model name to download"
       >
       <button
         class="btn-primary"
@@ -354,6 +354,9 @@ function handleOllamaModelChange(value: string | null) {
   </p>
   <p v-else-if="pullStatus" class="hint ollama-hint" :class="{ success: pullStatus.includes('ready'), error: !pullStatus.includes('ready') }">
     {{ pullStatus }}
+  </p>
+  <p v-else-if="ollamaStatus === 'connected'" class="hint ollama-hint">
+    e.g. llama3.2:3b
   </p>
 </template>
 

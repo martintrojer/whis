@@ -14,12 +14,14 @@ import { settingsStore } from '../stores/settings'
 import { isLocalProvider, normalizeProvider } from '../types'
 
 const helpOpen = ref(false)
+const advancedOpen = ref(false)
 
 // Settings from store
 const provider = computed(() => settingsStore.state.transcription.provider)
 const language = computed(() => settingsStore.state.transcription.language)
 const apiKeys = computed(() => settingsStore.state.transcription.api_keys)
 const postProcessor = computed(() => settingsStore.state.post_processing.processor)
+const postProcessingEnabled = computed(() => settingsStore.state.post_processing.enabled)
 
 // Transcription mode: cloud vs local
 const transcriptionMode = ref<TranscriptionMode>(
@@ -294,10 +296,11 @@ const keepModelLoaded = computed(() => settingsStore.state.ui.model_memory.keep_
 const unloadAfterMinutes = computed(() => settingsStore.state.ui.model_memory.unload_after_minutes)
 const ollamaKeepAlive = computed(() => settingsStore.state.services.ollama.keep_alive)
 
-// Disabled states for always-visible settings
+// Conditional visibility states
 const isLocalMode = computed(() => transcriptionMode.value === 'local')
-const canUnloadAfter = computed(() => isLocalMode.value && keepModelLoaded.value)
-const isOllamaPostProcessor = computed(() => postProcessor.value === 'ollama')
+const isOllamaPostProcessor = computed(() =>
+  postProcessingEnabled.value && postProcessor.value === 'ollama',
+)
 
 const unloadTimeoutOptions: SelectOption[] = [
   { value: '5', label: '5 min' },
@@ -366,85 +369,28 @@ function handleOllamaKeepAliveChange(value: string | null) {
           :provider="provider"
         />
 
-        <!-- Cloud: Service selector -->
-        <div v-if="transcriptionMode === 'cloud'" class="field-row">
-          <label>Service</label>
-          <AppSelect
-            :model-value="baseProvider"
-            :options="filteredProviderOptions"
-            @update:model-value="handleProviderUpdate"
-          />
-        </div>
-
-        <!-- Cloud: Streaming toggle (OpenAI and DeepGram) -->
-        <div v-if="showStreamingToggle" class="field-row">
-          <label>Streaming</label>
-          <ToggleSwitch
-            :model-value="isStreaming"
-            @update:model-value="handleStreamingToggle"
-          />
-        </div>
-
-        <!-- Post-Processing Section -->
+        <!-- Transcription Section -->
         <div class="settings-section">
           <p class="section-label">
-            post-processing
-          </p>
-          <PostProcessingConfig />
-        </div>
-
-        <!-- Miscellaneous Section -->
-        <div class="settings-section">
-          <p class="section-label">
-            miscellaneous
+            transcription
           </p>
 
-          <!-- Bubble -->
-          <div class="field-row">
-            <label>Bubble</label>
+          <!-- Cloud: Service selector -->
+          <div v-if="transcriptionMode === 'cloud'" class="field-row">
+            <label>Service</label>
+            <AppSelect
+              :model-value="baseProvider"
+              :options="filteredProviderOptions"
+              @update:model-value="handleProviderUpdate"
+            />
+          </div>
+
+          <!-- Cloud: Streaming toggle (OpenAI and DeepGram) -->
+          <div v-if="showStreamingToggle" class="field-row">
+            <label>Streaming</label>
             <ToggleSwitch
-              :model-value="bubbleEnabled"
-              @update:model-value="handleBubbleEnabledChange"
-            />
-          </div>
-
-          <div v-if="bubbleEnabled" class="field-row">
-            <label>Bubble Position</label>
-            <AppSelect
-              :model-value="bubblePosition === 'none' ? 'center' : bubblePosition"
-              :options="bubblePositionOptions"
-              @update:model-value="handleBubblePositionChange"
-            />
-          </div>
-
-          <!-- Model Memory (always visible, disabled when not local) -->
-          <div class="field-row">
-            <label :class="{ disabled: !isLocalMode }">Keep Model Loaded</label>
-            <ToggleSwitch
-              :model-value="keepModelLoaded"
-              :disabled="!isLocalMode"
-              @update:model-value="handleKeepModelLoadedChange"
-            />
-          </div>
-
-          <div class="field-row">
-            <label :class="{ disabled: !canUnloadAfter }">Unload After</label>
-            <AppSelect
-              :model-value="String(unloadAfterMinutes)"
-              :options="unloadTimeoutOptions"
-              :disabled="!canUnloadAfter"
-              @update:model-value="handleUnloadAfterMinutesChange"
-            />
-          </div>
-
-          <!-- Ollama Keep Alive (always visible, disabled when not using Ollama) -->
-          <div class="field-row">
-            <label :class="{ disabled: !isOllamaPostProcessor }">Ollama Memory</label>
-            <AppSelect
-              :model-value="ollamaKeepAlive"
-              :options="ollamaKeepAliveOptions"
-              :disabled="!isOllamaPostProcessor"
-              @update:model-value="handleOllamaKeepAliveChange"
+              :model-value="isStreaming"
+              @update:model-value="handleStreamingToggle"
             />
           </div>
 
@@ -469,67 +415,143 @@ function handleOllamaKeepAliveChange(value: string | null) {
               @update:model-value="handleMicrophoneChange"
             />
           </div>
+        </div>
 
-          <!-- Chunk Duration -->
+        <!-- Post-Processing Section -->
+        <div class="settings-section">
+          <p class="section-label">
+            post-processing
+          </p>
+          <PostProcessingConfig />
+        </div>
+
+        <!-- Recording Indicator Section -->
+        <div class="settings-section">
+          <p class="section-label">
+            recording indicator
+          </p>
+
           <div class="field-row">
-            <label>Chunk Size</label>
-            <AppSlider
-              :model-value="chunkDuration"
-              :min="10"
-              :max="300"
-              :step="10"
-              unit="sec"
-              aria-label="Chunk duration in seconds"
-              @update:model-value="handleChunkDurationChange"
+            <label>Show Indicator</label>
+            <ToggleSwitch
+              :model-value="bubbleEnabled"
+              @update:model-value="handleBubbleEnabledChange"
             />
           </div>
 
-          <!-- Model Path (always visible, disabled when not local mode) -->
-          <div class="field-row">
-            <label :class="{ disabled: !isLocalMode }">Model Path</label>
-            <div class="locked-input" :class="{ locked: !modelPathUnlocked, disabled: !isLocalMode }">
-              <input
-                type="text"
-                class="text-input"
-                :value="currentModelPath"
-                :placeholder="modelPathPlaceholder"
-                :disabled="!isLocalMode || !modelPathUnlocked"
-                spellcheck="false"
-                @input="handleModelPathChange"
-              >
-              <button
-                class="lock-btn"
-                :title="modelPathUnlocked ? 'Lock' : 'Unlock to edit'"
-                :disabled="!isLocalMode"
-                @click="isLocalMode && (modelPathUnlocked = !modelPathUnlocked)"
-              >
-                {{ modelPathUnlocked ? '[-]' : '[=]' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Config File Path -->
-          <div class="field-row">
-            <label>Config File</label>
-            <div class="locked-input locked">
-              <input
-                type="text"
-                class="text-input"
-                :value="configPath"
-                disabled
-                readonly
-                spellcheck="false"
-              >
-              <button
-                class="lock-btn"
-                :title="configPathCopied ? 'Copied!' : 'Copy path'"
-                @click="copyConfigPath"
-              >
-                {{ configPathCopied ? '[ok]' : '[cp]' }}
-              </button>
-            </div>
+          <div v-if="bubbleEnabled" class="field-row">
+            <label>Position</label>
+            <AppSelect
+              :model-value="bubblePosition === 'none' ? 'center' : bubblePosition"
+              :options="bubblePositionOptions"
+              @update:model-value="handleBubblePositionChange"
+            />
           </div>
         </div>
+
+        <!-- Performance Section (only when local mode or Ollama enabled) -->
+        <div v-if="isLocalMode || isOllamaPostProcessor" class="settings-section">
+          <p class="section-label">
+            performance
+          </p>
+
+          <!-- Model Memory (only in local mode) -->
+          <div v-if="isLocalMode" class="field-row">
+            <label>Keep Model in Memory</label>
+            <ToggleSwitch
+              :model-value="keepModelLoaded"
+              @update:model-value="handleKeepModelLoadedChange"
+            />
+          </div>
+
+          <div v-if="isLocalMode && keepModelLoaded" class="field-row">
+            <label>Release Model After</label>
+            <AppSelect
+              :model-value="String(unloadAfterMinutes)"
+              :options="unloadTimeoutOptions"
+              @update:model-value="handleUnloadAfterMinutesChange"
+            />
+          </div>
+
+          <!-- Ollama Keep Alive (only when using Ollama) -->
+          <div v-if="isOllamaPostProcessor" class="field-row">
+            <label>Release Ollama After</label>
+            <AppSelect
+              :model-value="ollamaKeepAlive"
+              :options="ollamaKeepAliveOptions"
+              @update:model-value="handleOllamaKeepAliveChange"
+            />
+          </div>
+        </div>
+
+        <!-- Advanced Section (collapsed by default) -->
+        <details class="settings-section advanced-section" :open="advancedOpen" @toggle="advancedOpen = ($event.target as HTMLDetailsElement).open">
+          <summary class="section-label clickable">
+            advanced
+            <span class="toggle-indicator">{{ advancedOpen ? '−' : '+' }}</span>
+          </summary>
+
+          <div class="advanced-content">
+            <!-- Transcription Interval -->
+            <div class="field-row">
+              <label>Transcription Interval</label>
+              <AppSlider
+                :model-value="chunkDuration"
+                :min="10"
+                :max="300"
+                :step="10"
+                unit="sec"
+                aria-label="Transcription interval in seconds"
+                @update:model-value="handleChunkDurationChange"
+              />
+            </div>
+
+            <!-- Model Location (only in local mode) -->
+            <div v-if="isLocalMode" class="field-row">
+              <label>Model Location</label>
+              <div class="locked-input" :class="{ locked: !modelPathUnlocked }">
+                <input
+                  type="text"
+                  class="text-input"
+                  :value="currentModelPath"
+                  :placeholder="modelPathPlaceholder"
+                  :disabled="!modelPathUnlocked"
+                  spellcheck="false"
+                  @input="handleModelPathChange"
+                >
+                <button
+                  class="lock-btn"
+                  :title="modelPathUnlocked ? 'Lock' : 'Unlock to edit'"
+                  @click="modelPathUnlocked = !modelPathUnlocked"
+                >
+                  {{ modelPathUnlocked ? '[-]' : '[=]' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Config File Path -->
+            <div class="field-row">
+              <label>Config File</label>
+              <div class="locked-input locked">
+                <input
+                  type="text"
+                  class="text-input"
+                  :value="configPath"
+                  disabled
+                  readonly
+                  spellcheck="false"
+                >
+                <button
+                  class="lock-btn"
+                  :title="configPathCopied ? 'Copied!' : 'Copy path'"
+                  @click="copyConfigPath"
+                >
+                  {{ configPathCopied ? '[ok]' : '[cp]' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
 
       <!-- Help Panel -->
@@ -593,22 +615,22 @@ function handleOllamaKeepAliveChange(value: string | null) {
           </div>
 
           <div class="help-section">
-            <h3>bubble</h3>
+            <h3>recording indicator</h3>
             <p>Shows a floating indicator during recording. Choose position (top/center/bottom) or disable completely.</p>
           </div>
 
           <div class="help-section">
-            <h3>keep model loaded</h3>
+            <h3>keep model in memory</h3>
             <p>When enabled, local transcription models stay in memory between recordings for faster response (~2GB RAM). Disable to free memory after each recording (slower startup for next recording).</p>
           </div>
 
           <div class="help-section">
-            <h3>unload after</h3>
+            <h3>release model after</h3>
             <p>Auto-unload the model after this many minutes of inactivity to free memory. "Never" keeps the model loaded until the app closes. Default: 10 minutes.</p>
           </div>
 
           <div class="help-section">
-            <h3>ollama memory</h3>
+            <h3>release ollama after</h3>
             <p>How long Ollama keeps its model in GPU memory after post-processing. "Immediate" unloads right away. "Forever" keeps it loaded until Ollama restarts. Default: 5 minutes.</p>
           </div>
 
@@ -618,12 +640,12 @@ function handleOllamaKeepAliveChange(value: string | null) {
           </div>
 
           <div class="help-section">
-            <h3>chunk size</h3>
+            <h3>transcription interval</h3>
             <p>How often audio is sent for transcription during recording. Smaller values (30-60s) feel more responsive but may reduce accuracy. Larger values (90-180s) give the model more context for better accuracy. Default: 90 seconds.</p>
           </div>
 
           <div class="help-section">
-            <h3>model path</h3>
+            <h3>model location</h3>
             <p>Override the default model location. Only change this if you've downloaded models to a custom directory. Leave empty to use the default location.</p>
           </div>
 
@@ -812,5 +834,44 @@ function handleOllamaKeepAliveChange(value: string | null) {
 .locked-input.disabled .text-input {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Advanced Section (collapsible) */
+.advanced-section {
+  border: none;
+}
+
+.advanced-section summary {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.advanced-section summary:hover {
+  color: var(--text);
+}
+
+.advanced-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-section summary::marker {
+  display: none;
+  content: '';
+}
+
+.toggle-indicator {
+  font-size: 12px;
+  color: var(--text-weak);
+  font-weight: 400;
+}
+
+.advanced-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
 }
 </style>
