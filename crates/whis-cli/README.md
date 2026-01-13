@@ -23,7 +23,7 @@ The terminal-native voice-to-text tool. Record, transcribe, paste — all from y
 
 ```bash
 cargo install whis
-whis setup cloud   # or: whis setup local
+whis setup         # Interactive wizard
 whis
 ```
 
@@ -33,15 +33,13 @@ whis
 # Record once
 whis                           # Press Enter to stop — text copied!
 
-# Hotkey mode (background)
-whis listen                    # ctrl+alt+w toggles recording
-whis listen -k "super+space"   # Custom hotkey
+# Background service (hotkey mode)
+whis start                     # Start service (ctrl+alt+w toggles recording)
 whis stop                      # Stop background service
 whis status                    # Check if running
 
-# From file or stdin
-whis -f audio.mp3
-whis --stdin --format mp3      # Read from stdin (for piping)
+# Transcribe from file
+whis -f recording.wav          # Transcribe a WAV file
 
 # Output options
 whis --print                   # Print to stdout instead of clipboard
@@ -50,18 +48,18 @@ whis -v                        # Verbose output
 
 # Presets
 whis --as email                # Use preset (auto-enables post-processing)
-whis presets                   # List all
-whis presets new xyz           # Create new preset
-whis presets edit xyz          # Edit in $EDITOR
+whis preset                    # List all
+whis preset new                # Print template for new preset
+whis preset edit xyz           # Edit preset in $EDITOR
 
-# Post-process with LLM
-whis --post-process            # Clean up with Ollama
+# Post-process with LLM (presets define the transformation)
+whis --post-process
 
 # Configuration
 whis config                    # Show current settings
 whis config provider openai    # Set provider
 whis config language en        # Set language hint
-whis models                    # List available models
+whis model                     # List available models
 ```
 
 ## Environment Variables
@@ -80,16 +78,18 @@ OLLAMA_MODEL=qwen2.5:1.5b           # Default post-processing model
 
 ## Requirements
 
-- API key from [OpenAI](https://platform.openai.com/api-keys), Mistral, Groq, Deepgram, or ElevenLabs — or use local Whisper (no API key needed)
-- FFmpeg (`sudo apt install ffmpeg` or `brew install ffmpeg`)
+- API key from [OpenAI](https://platform.openai.com/api-keys), Mistral, Groq, Deepgram, or ElevenLabs — or use local Whisper/Parakeet (no API key needed)
 - Linux (X11/Wayland), macOS, or Windows
 
-**For hotkey mode** (one-time setup on Linux):
+**For hotkey mode** (Linux):
 ```bash
+# Option 1: Compositor keybinding (no permissions needed)
+# GNOME: Settings > Keyboard > Custom Shortcuts → whis toggle
+# Sway:  bindsym Ctrl+Alt+w exec whis toggle
+
+# Option 2: Direct capture
 sudo usermod -aG input $USER
-echo 'KERNEL=="uinput", GROUP="input", MODE="0660"' | sudo tee /etc/udev/rules.d/99-uinput.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger
-# Logout and login again
+# Logout and login, then: whis start
 ```
 
 ## Prefer a GUI?

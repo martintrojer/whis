@@ -76,7 +76,6 @@ It keeps development and CI nicely aligned across platforms. That said, it's jus
 ### CLI
 
 - Rust (latest stable)
-- FFmpeg
 - Linux only:
   - ALSA dev libraries (`libasound2-dev`)
   - Vulkan SDK (for local transcription): `libvulkan-dev`, `vulkan-tools`, `glslc`, `libshaderc-dev`

@@ -122,13 +122,12 @@ const unlisten = await listen(BUBBLE_CLICK_EVENT, (event) => {
 You can change the bubble's visual state to indicate recording or other states:
 
 ```typescript
-import { setBubbleRecording } from 'tauri-plugin-floating-bubble'
+import { setBubbleState } from 'tauri-plugin-floating-bubble'
 
-// Show recording state (red background, pause icon)
-await setBubbleRecording(true)
-
-// Show idle state (indigo background, microphone icon)
-await setBubbleRecording(false)
+// Set bubble to different states
+await setBubbleState('idle')       // Default state
+await setBubbleState('recording')  // Recording indicator
+await setBubbleState('processing') // Processing indicator
 ```
 
 ### Checking Bubble Visibility
@@ -153,7 +152,7 @@ if (visible) {
 | `isBubbleVisible()` | Check if the bubble is currently visible |
 | `requestOverlayPermission()` | Request the overlay permission (opens system settings) |
 | `hasOverlayPermission()` | Check if overlay permission is granted |
-| `setBubbleRecording(recording)` | Update bubble appearance for recording state |
+| `setBubbleState(state)` | Update bubble visual state (idle, recording, processing) |
 | `onBubbleClick(callback)` | Register a listener for bubble click events |
 
 ### Types

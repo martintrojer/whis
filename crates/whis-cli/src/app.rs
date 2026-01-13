@@ -15,24 +15,6 @@ pub struct TranscriptionConfig {
     pub language: Option<String>,
 }
 
-pub fn ensure_ffmpeg_installed() -> Result<()> {
-    if std::process::Command::new("ffmpeg")
-        .arg("-version")
-        .output()
-        .is_err()
-    {
-        eprintln!("Error: FFmpeg is not installed or not in PATH.");
-        eprintln!("\nwhis requires FFmpeg for audio compression.");
-        eprintln!("Please install FFmpeg:");
-        eprintln!("  - Ubuntu/Debian: sudo apt install ffmpeg");
-        eprintln!("  - macOS: brew install ffmpeg");
-        eprintln!("  - Windows: choco install ffmpeg or download from ffmpeg.org");
-        eprintln!("  - Or visit: https://ffmpeg.org/download.html\n");
-        std::process::exit(1);
-    }
-    Ok(())
-}
-
 /// Load transcription config with optional language override
 pub fn load_transcription_config_with_language(
     language_override: Option<String>,

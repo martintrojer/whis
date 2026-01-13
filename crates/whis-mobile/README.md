@@ -25,8 +25,9 @@ An Android app for voice-to-text on mobile. Lightweight, cloud-powered, and copi
 
 ## Features
 
-- **Voice-to-text** — tap to record, tap to transcribe
-- **Cloud providers** — OpenAI Whisper, Mistral Voxtral (more providers coming)
+- **Voice-to-text** — tap to toggle recording (auto-transcribes)
+- **Floating bubble** — persistent overlay for quick access
+- **Cloud providers** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs
 - **Clipboard** — transcriptions copied automatically
 
 ## Building

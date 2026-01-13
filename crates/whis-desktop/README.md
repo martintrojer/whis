@@ -33,7 +33,7 @@ flatpak install flathub ink.whis.Whis
 
 - **System tray** — lives in your taskbar, out of the way
 - **Global shortcut** — Ctrl+Alt+W (Linux), Cmd+Option+W (macOS)
-- **6 providers** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
+- **Multiple providers** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper/Parakeet
 - **Post-processing** — clean up grammar and filler words with Ollama
 - **Presets** — save custom post-processing prompts
 - **Settings UI** — provider, language, microphone, shortcuts, and more
@@ -61,7 +61,7 @@ flatpak install flathub ink.whis.Whis
 
 ## Requirements
 
-- API key from [OpenAI](https://platform.openai.com/api-keys), Mistral, Groq, Deepgram, or ElevenLabs — or use local Whisper (no API key needed)
+- API key from [OpenAI](https://platform.openai.com/api-keys), Mistral, Groq, Deepgram, or ElevenLabs — or use local Whisper/Parakeet (no API key needed)
 - Linux (X11/Wayland), macOS, or Windows
 
 ## Prefer the terminal?

@@ -4,9 +4,6 @@ use whis_core::Settings;
 use whis_core::settings::CliShortcutMode;
 
 pub fn run() -> Result<()> {
-    // Check if FFmpeg is available
-    app::ensure_ffmpeg_installed()?;
-
     // Check if service is already running
     if ipc::is_service_running() {
         eprintln!("Error: whis service is already running.");

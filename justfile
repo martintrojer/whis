@@ -151,22 +151,6 @@ setup-cli:
         exit 1
     fi
 
-    # Check ffmpeg
-    if command -v ffmpeg >/dev/null 2>&1; then
-        echo "✓ ffmpeg installed"
-    else
-        echo "❌ ffmpeg not found"
-        if command -v apt >/dev/null 2>&1; then
-            echo "   Run: sudo apt install ffmpeg"
-        elif command -v dnf >/dev/null 2>&1; then
-            echo "   Run: sudo dnf install ffmpeg"
-        elif command -v pacman >/dev/null 2>&1; then
-            echo "   Run: sudo pacman -S ffmpeg"
-        else
-            echo "   Install ffmpeg using your package manager"
-        fi
-    fi
-
     # Check ALSA development libs (using pkg-config for portability)
     if pkg-config --exists alsa 2>/dev/null; then
         echo "✓ ALSA development libraries"
@@ -220,14 +204,6 @@ setup-cli:
         exit 1
     fi
 
-    # Check ffmpeg
-    if command -v ffmpeg >/dev/null 2>&1; then
-        echo "✓ ffmpeg installed"
-    else
-        echo "❌ ffmpeg not found"
-        echo "   Run: brew install ffmpeg"
-    fi
-
     echo ""
     echo "If all checks pass, run: just build-cli"
 
@@ -247,15 +223,6 @@ setup-cli:
         echo "   Install Rust: https://rustup.rs"
         echo ""
         exit 1
-    fi
-
-    # Check ffmpeg
-    if command -v ffmpeg >/dev/null 2>&1; then
-        echo "✓ ffmpeg installed"
-    else
-        echo "❌ ffmpeg not found"
-        echo "   Download from: https://ffmpeg.org/download.html"
-        echo "   Add to PATH after installation"
     fi
 
     echo ""

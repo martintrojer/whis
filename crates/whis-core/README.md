@@ -17,70 +17,75 @@
 
 ## Features
 
-- **Audio recording** — capture microphone input via cpal
-- **Multi-provider transcription** — OpenAI, Mistral, Groq, Deepgram, ElevenLabs, or local Whisper
-- **Parallel processing** — split long recordings into chunks for parallel transcription
-- **LLM post-processing** — clean up transcriptions using Ollama
-- **Clipboard** — copy results to system clipboard (X11, Wayland, Flatpak)
-- **Config management** — persistent settings in `~/.config/whis/`
+- **Audio recording** — capture microphone input
+- **Transcription** — cloud providers or local models
+- **Progressive chunking** — transcribe long recordings in real-time
+- **LLM post-processing** — transform transcripts with custom prompts
+- **Clipboard** — copy results to system clipboard
+- **Config management** — persistent settings (platform-aware paths)
 
 ## Usage
 
 ```rust
 use whis_core::{
-    AudioRecorder, TranscriptionProvider, RecordingOutput,
-    transcribe_audio, copy_to_clipboard, ClipboardMethod,
+    AudioRecorder, TranscriptionProvider, Settings,
+    ProgressiveChunker, ChunkerConfig, ProgressiveChunk,
+    progressive_transcribe_cloud, copy_to_clipboard, ClipboardMethod,
 };
+use tokio::sync::mpsc;
 
-// Configure provider and API key
-let provider = TranscriptionProvider::OpenAI;
-let api_key = std::env::var("OPENAI_API_KEY")?;
+// Load settings and get provider config
+let settings = Settings::load();
+let provider = settings.transcription.provider.clone();
+let api_key = settings.transcription.api_key_for(&provider).unwrap();
+
+// Set up progressive chunking channel
+let (chunk_tx, chunk_rx) = mpsc::unbounded_channel::<ProgressiveChunk>();
+let chunker = ProgressiveChunker::new(ChunkerConfig::default(), chunk_tx);
 
 // Record audio
 let mut recorder = AudioRecorder::new()?;
 recorder.start_recording()?;
-// ... wait for user input ...
-let output = recorder.finalize_recording()?;
+// ... feed audio samples to chunker during recording ...
+let recording = recorder.stop_recording()?;
 
-// Extract audio data from RecordingOutput
-let audio_data = match output {
-    RecordingOutput::Single(data) => data,
-    RecordingOutput::Chunked(chunks) => {
-        // For chunked audio, use parallel_transcribe instead
-        chunks.into_iter().next().unwrap().data
-    }
-};
-
-// Transcribe
-let text = transcribe_audio(&provider, &api_key, None, audio_data)?;
+// Transcribe progressively
+let text = progressive_transcribe_cloud(
+    &provider,
+    &api_key,
+    None, // language hint
+    chunk_rx,
+    None, // progress callback
+).await?;
 
 // Copy to clipboard
 copy_to_clipboard(&text, ClipboardMethod::Auto)?;
 ```
 
+For simpler use cases, see the CLI implementation in `whis-cli` which handles
+the recording → chunking → transcription → clipboard pipeline.
+
 ## Feature Flags
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `ffmpeg` | Yes | Desktop audio encoding via FFmpeg subprocess |
+| `embedded-encoder` | Yes | MP3 encoding via embedded LAME library |
 | `clipboard` | Yes | Clipboard support via arboard/xclip/wl-copy |
 | `local-transcription` | Yes | Local transcription via Whisper/Parakeet (requires model) |
-| `embedded-encoder` | No | Mobile MP3 encoding via mp3lame (no FFmpeg) |
+| `vad` | Yes | Voice Activity Detection to skip silence |
+| `realtime` | Yes | OpenAI/Deepgram Realtime API for streaming |
 
 ## Modules
 
 | Module | Description |
 |--------|-------------|
-| `audio` | `AudioRecorder`, `AudioChunk`, `RecordingOutput`, recording utilities |
-| `transcribe` | Single-file and parallel chunked transcription |
+| `audio` | `AudioRecorder`, `ProgressiveChunker`, `RecordingData`, VAD processing |
+| `transcription` | Progressive transcription, post-processing, Ollama integration |
 | `provider` | Provider registry and `TranscriptionBackend` trait |
-| `config` | `TranscriptionProvider` enum (OpenAI, Mistral, Groq, etc.) |
+| `configuration` | `TranscriptionProvider` enum, presets, defaults |
 | `settings` | User preferences (provider, API keys, language, hotkeys) |
-| `preset` | Named configuration presets |
-| `post_processing` | LLM-based transcription cleanup |
-| `ollama` | Ollama client for local LLM post-processing |
 | `clipboard` | System clipboard operations with multiple backends |
-| `model` | Whisper model management |
+| `model` | Whisper/Parakeet model management |
 | `state` | Recording state machine |
 | `verbose` | Debug logging utilities |
 

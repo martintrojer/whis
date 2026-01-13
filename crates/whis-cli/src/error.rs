@@ -96,7 +96,7 @@ pub fn display_error(err: &WhisError) {
             eprintln!("{}", msg);
             eprintln!();
             eprintln!("Hint: This is usually a system configuration issue.");
-            eprintln!("  Try reinstalling whis or check FFmpeg installation");
+            eprintln!("  Try reinstalling whis or report this issue.");
         }
 
         WhisError::Audio(AudioError::LoadFailed(msg)) => {

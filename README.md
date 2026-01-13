@@ -27,9 +27,8 @@
 # Install
 cargo install whis
 
-# Setup (pick one)
-whis setup cloud   # Cloud providers (guided wizard)
-whis setup local   # Fully local (private, free)
+# Setup (interactive wizard)
+whis setup
 
 # Run
 whis               # Press Enter to stop — text copied!
@@ -49,21 +48,21 @@ whis
 whis start         # Start background service
 whis toggle        # Toggle recording (bind to your compositor hotkey)
 
-# Post-process with AI (cleanup grammar/filler)
+# Post-process with AI (presets define the transformation)
 whis --post-process
 
 # Use with terminal AI assistants
-claude "$(whis --as ai-prompt)"   # Start session with voice prompt
-!whis --as ai-prompt              # Or use shell mode inside session
+claude "$(whis --as ai-prompt)"    # Start session with voice prompt
+whis --as ai-prompt --print        # For shell mode (outputs to stdout)
 
 # Presets
 whis --as email          # Use preset
-whis presets             # List all
-whis presets new xyz     # Create new preset
-whis presets edit xyz    # Edit in $EDITOR
+whis preset              # List all
+whis preset new xyz      # Print template for new preset
+whis preset edit xyz     # Edit in $EDITOR
 
-# Transcribe existing audio 
-whis -f audio.mp3
+# Transcribe existing audio
+whis -f recording.wav
 
 # Help - for you or your helper
 whis --help 
@@ -80,7 +79,6 @@ Or download binaries from [GitHub Releases](https://github.com/frankdierolf/whis
 ## Requirements
 
 - API key from [OpenAI](https://platform.openai.com/api-keys), [Mistral](https://console.mistral.ai/api-keys), [Groq](https://console.groq.com/keys), [Deepgram](https://deepgram.com), or [ElevenLabs](https://elevenlabs.io) — or use local Whisper/Parakeet (no API key needed)
-- FFmpeg (`sudo apt install ffmpeg`, `brew install ffmpeg`, or `scoop install ffmpeg`)
 - **Linux only**: Vulkan SDK for local transcription
   ```bash
   sudo apt install libvulkan-dev vulkan-tools glslc libshaderc-dev  # Ubuntu/Debian
@@ -91,14 +89,14 @@ Or download binaries from [GitHub Releases](https://github.com/frankdierolf/whis
 **For hotkey mode** (Linux, pick one):
 
 ```bash
-# Option 1: Direct capture (recommended)
-sudo usermod -aG input $USER && logout
-# Then: whis start
-
-# Option 2: Compositor keybinding (no permissions needed)
+# Option 1: Compositor keybinding (no permissions needed)
 # GNOME: Settings > Keyboard > Custom Shortcuts → whis toggle
 # Sway:  bindsym Ctrl+Alt+w exec whis toggle
 # Hyprland: bind = CTRL ALT, W, exec, whis toggle
+
+# Option 2: Direct capture
+sudo usermod -aG input $USER && logout
+# Then: whis start
 ```
 
 ## Desktop & Mobile
