@@ -18,8 +18,8 @@ const sidebarOpen = ref(false)
 
 const navItems = [
   { path: '/', name: 'home', label: 'home' },
-  { path: '/presets', name: 'presets', label: 'presets' },
   { path: '/settings', name: 'settings', label: 'settings' },
+  { path: '/presets', name: 'presets', label: 'presets' },
   { path: '/about', name: 'about', label: 'about' },
 ]
 
@@ -175,10 +175,6 @@ onUnmounted(() => {
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
-
-      <div class="sidebar-footer">
-        <span class="version-badge">v0.6.4</span>
-      </div>
     </aside>
 
     <!-- Content -->
@@ -345,18 +341,6 @@ onUnmounted(() => {
 
 .nav-item.active .nav-marker {
   color: var(--accent);
-}
-
-.sidebar-footer {
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  margin-top: auto;
-}
-
-.version-badge {
-  font-size: 12px;
-  color: var(--text-weak);
-  opacity: 0.6;
 }
 
 /* Content */

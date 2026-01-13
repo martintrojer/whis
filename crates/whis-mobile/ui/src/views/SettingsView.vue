@@ -135,6 +135,15 @@ const postProcessor = computed({
   set: val => settingsStore.setPostProcessor(val as PostProcessor),
 })
 
+// Check if post-processor is missing its required API key
+const postProcessorMissingKey = computed(() => {
+  if (postProcessor.value === 'openai' && !openaiApiKey.value)
+    return 'OpenAI'
+  if (postProcessor.value === 'mistral' && !mistralApiKey.value)
+    return 'Mistral'
+  return null
+})
+
 // Active preset (read-only display)
 const activePresetName = computed(() => {
   const active = presetsStore.state.presets.find(p => p.is_active)
@@ -379,14 +388,6 @@ if (typeof document !== 'undefined') {
             aria-label="Select language"
           />
         </div>
-
-        <!-- Active Preset (read-only) -->
-        <div class="field">
-          <label>active preset</label>
-          <div class="field-value">
-            {{ activePresetName }}
-          </div>
-        </div>
       </div>
 
       <!-- Post-Processing Section -->
@@ -403,6 +404,18 @@ if (typeof document !== 'undefined') {
             :options="postProcessorOptions"
             aria-label="Select post-processor"
           />
+          <div v-if="postProcessorMissingKey" class="api-key-warning">
+            <span class="warning-marker">[!]</span>
+            <span>Add your {{ postProcessorMissingKey }} API key in Provider</span>
+          </div>
+        </div>
+
+        <!-- Active Preset (only shown when post-processing is enabled) -->
+        <div v-if="postProcessor !== 'none'" class="field">
+          <label>active preset</label>
+          <div class="field-value">
+            {{ activePresetName }}
+          </div>
         </div>
       </div>
 
@@ -525,6 +538,19 @@ if (typeof document !== 'undefined') {
   color: var(--text-weak);
   margin-top: 8px;
   line-height: 1.5;
+}
+
+.api-key-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-weak);
+}
+
+.warning-marker {
+  color: var(--accent);
 }
 
 .warning-hint {

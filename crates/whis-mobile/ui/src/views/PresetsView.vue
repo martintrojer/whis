@@ -4,6 +4,10 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppInput from '../components/AppInput.vue'
 import { headerStore } from '../stores/header'
 import { presetsStore } from '../stores/presets'
+import { settingsStore } from '../stores/settings'
+
+// Post-processing state
+const postProcessingEnabled = computed(() => settingsStore.state.post_processor !== 'none')
 
 // List state
 const presets = computed(() => presetsStore.state.presets)
@@ -217,6 +221,7 @@ onUnmounted(() => {
           :class="{
             active: preset.is_active,
             selected: selectedPreset?.name === preset.name && panelOpen,
+            disabled: !postProcessingEnabled,
           }"
           @click="openPreset(preset.name)"
         >
@@ -229,6 +234,12 @@ onUnmounted(() => {
             <span class="preset-description">{{ preset.description }}</span>
           </div>
         </button>
+
+        <!-- Post-processing disabled notice -->
+        <div v-if="!postProcessingEnabled" class="disabled-notice">
+          <span class="notice-marker">[!]</span>
+          <span>Enable post-processing in Settings to activate presets</span>
+        </div>
       </div>
 
       <!-- Empty State -->
@@ -285,20 +296,23 @@ onUnmounted(() => {
 
           <!-- Actions -->
           <div class="panel-actions">
-            <button
-              v-if="!currentPresetInfo?.is_active"
-              class="btn btn-primary"
-              @click="activatePreset(selectedPreset.name)"
-            >
-              Activate
-            </button>
-            <button
-              v-else
-              class="btn btn-secondary"
-              @click="deactivatePreset"
-            >
-              Deactivate
-            </button>
+            <!-- Activate/Deactivate only shown when post-processing is enabled -->
+            <template v-if="postProcessingEnabled">
+              <button
+                v-if="!currentPresetInfo?.is_active"
+                class="btn btn-primary"
+                @click="activatePreset(selectedPreset.name)"
+              >
+                Activate
+              </button>
+              <button
+                v-else
+                class="btn btn-secondary"
+                @click="deactivatePreset"
+              >
+                Deactivate
+              </button>
+            </template>
 
             <button
               v-if="canEdit"
@@ -497,6 +511,31 @@ onUnmounted(() => {
   font-size: 12px;
   color: var(--text-weak);
   line-height: 1.4;
+}
+
+/* Disabled state when post-processing is off */
+.preset-card.disabled {
+  opacity: 0.5;
+  border-color: var(--border);
+}
+
+.preset-card.disabled .preset-marker {
+  display: none;
+}
+
+/* Post-processing disabled notice */
+.disabled-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  font-size: 13px;
+  color: var(--text-weak);
+}
+
+.notice-marker {
+  color: var(--accent);
 }
 
 /* Empty State */
