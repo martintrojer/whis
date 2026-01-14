@@ -1,10 +1,10 @@
 [package]
-name = "whis"
+name = "whis-cli"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Voice-to-text CLI using OpenAI Whisper API"
+description = "Voice-to-text CLI for terminal users"
 repository.workspace = true
 homepage.workspace = true
 keywords = ["voice", "transcription", "whisper", "cli", "audio"]

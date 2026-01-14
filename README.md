@@ -25,7 +25,7 @@
 
 ```bash
 # Install
-cargo install whis
+cargo install whis-cli
 
 # Setup (interactive wizard)
 whis setup
@@ -71,7 +71,7 @@ whis --help
 ## Installation
 
 ```bash
-cargo install whis
+cargo install whis-cli
 ```
 
 Or download binaries from [GitHub Releases](https://github.com/frankdierolf/whis/releases).

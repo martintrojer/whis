@@ -22,7 +22,7 @@ The terminal-native voice-to-text tool. Record, transcribe, paste — all from y
 ## Quick Start
 
 ```bash
-cargo install whis
+cargo install whis-cli
 whis setup         # Interactive wizard
 whis
 ```

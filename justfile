@@ -247,17 +247,17 @@ deps-cli: _check-cargo
 # Build CLI
 [group('cli')]
 build-cli: _check-cargo
-    cargo build -p whis
+    cargo build -p whis-cli
 
 # Lint CLI code
 [group('cli')]
 lint-cli: _check-cargo
-    cargo clippy -p whis --all-targets --fix --allow-dirty --allow-staged
+    cargo clippy -p whis-cli --all-targets --fix --allow-dirty --allow-staged
 
 # Format CLI code
 [group('cli')]
 fmt-cli: _check-cargo
-    cargo fmt -p whis
+    cargo fmt -p whis-cli
 
 # Install CLI to ~/.cargo/bin
 [group('cli')]
@@ -1008,7 +1008,7 @@ build-all: deps-all
     (cd crates/whis-desktop/ui && npm run build)
     (cd crates/whis-mobile/ui && npm run build)
     (cd website && npm run build)
-    cargo build -p whis -p whis-desktop -p whis-mobile
+    cargo build -p whis-cli -p whis-desktop -p whis-mobile
 
 # Lint all code
 [group('all')]
@@ -1117,12 +1117,12 @@ flathub-update:
 # Build CLI release binary (native)
 [group('release')]
 build-release-cli: _check-cargo
-    cargo build --release -p whis
+    cargo build --release -p whis-cli
 
 # Build CLI for specific target (cross-compilation)
 [group('release')]
 build-release-cli-cross target: _check-cargo
-    cross build --release -p whis --target {{target}}
+    cross build --release -p whis-cli --target {{target}}
 
 # Build CLI for macOS target
 [group('release')]
@@ -1130,7 +1130,7 @@ build-release-cli-macos target: _check-cargo
     #!/usr/bin/env bash
     set -euo pipefail
     rustup target add {{target}}
-    cargo build --release -p whis --target {{target}}
+    cargo build --release -p whis-cli --target {{target}}
 
 # Build desktop release (outputs platform-appropriate bundles)
 [group('release')]
@@ -1164,7 +1164,7 @@ publish-crates-core: _check-cargo
 # Publish whis CLI to crates.io
 [group('release')]
 publish-crates-cli: _check-cargo
-    cargo publish -p whis --no-verify
+    cargo publish -p whis-cli --no-verify
 
 # Publish all crates (core first, then CLI)
 [group('release')]
