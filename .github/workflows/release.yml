@@ -56,7 +56,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libasound2-dev libx11-dev libxtst-dev libvulkan-dev vulkan-tools glslc
+          sudo apt-get install -y libasound2-dev libx11-dev libxtst-dev libvulkan-dev libpulse-dev
+
+      - name: Install Vulkan SDK
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: latest
+          cache: true
 
       - name: Build
         run: just build-release-cli
@@ -89,6 +95,17 @@ jobs:
 
       - name: Install cross
         run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvulkan-dev libpulse-dev
+
+      - name: Install Vulkan SDK
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: latest
+          cache: true
 
       - name: Build with cross
         run: just build-release-cli-cross aarch64-unknown-linux-gnu
@@ -161,10 +178,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Vulkan SDK
-        uses: awalsh128/cache-apt-pkgs-action@latest
+        uses: jakoch/install-vulkan-sdk-action@v1
         with:
-          packages: vulkan-sdk
-          version: 1.3.290.0
+          vulkan_version: latest
+          cache: true
 
       - name: Build
         run: just build-release-cli
@@ -209,9 +226,13 @@ jobs:
             librsvg2-dev \
             patchelf \
             libasound2-dev \
-            libvulkan-dev \
-            vulkan-tools \
-            glslc
+            libvulkan-dev
+
+      - name: Install Vulkan SDK
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: latest
+          cache: true
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli
@@ -256,10 +277,10 @@ jobs:
           node-version: '20'
 
       - name: Install Vulkan SDK
-        uses: awalsh128/cache-apt-pkgs-action@latest
+        uses: jakoch/install-vulkan-sdk-action@v1
         with:
-          packages: vulkan-sdk
-          version: 1.3.290.0
+          vulkan_version: latest
+          cache: true
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli
@@ -372,9 +393,13 @@ jobs:
             librsvg2-dev \
             patchelf \
             libasound2-dev \
-            libvulkan-dev \
-            vulkan-tools \
-            glslc
+            libvulkan-dev
+
+      - name: Install Vulkan SDK
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: latest
+          cache: true
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli
