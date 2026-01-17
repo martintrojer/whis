@@ -78,16 +78,26 @@ pub fn setup_shortcuts(app: &tauri::App) {
     let state = app.state::<crate::state::AppState>();
     let settings = state.settings.lock().unwrap();
     let shortcut_str = settings.shortcuts.desktop_key.clone();
+    let push_to_talk = settings.shortcuts.push_to_talk;
     drop(settings);
 
     let compositor_name = capability.platform_info.compositor.display_name();
     let platform_name = platform_display_name(&capability.platform_info.platform);
-    println!("Detected environment: {} ({})", compositor_name, platform_name);
+    let mode_str = if push_to_talk {
+        "push-to-talk"
+    } else {
+        "toggle"
+    };
+    println!(
+        "Detected environment: {} ({}, backend: {:?}, mode: {})",
+        compositor_name, platform_name, capability.backend, mode_str
+    );
 
     match capability.backend {
         ShortcutBackend::TauriPlugin => {
-            if let Err(e) = setup_tauri_shortcut(app, &shortcut_str) {
-                eprintln!("Shortcut setup failed: {e}");
+            if let Err(e) = setup_tauri_shortcut(app, &shortcut_str, push_to_talk) {
+                eprintln!("Failed to setup Tauri shortcut: {e}");
+                eprintln!("Falling back to manual setup mode");
                 print_manual_setup_instructions(
                     &capability.platform_info.compositor,
                     &shortcut_str,
@@ -98,13 +108,13 @@ pub fn setup_shortcuts(app: &tauri::App) {
         }
         #[cfg(target_os = "linux")]
         ShortcutBackend::RdevGrab => {
-            match setup_rdev_grab(app, &shortcut_str) {
+            match setup_rdev_grab(app, &shortcut_str, push_to_talk) {
                 Ok(guard) => {
                     // Store the guard to keep the thread alive
                     state.rdev_guard.lock().unwrap().replace(guard);
                     // Clear any previous error
                     state.rdev_grab_error.lock().unwrap().take();
-                    println!("Direct shortcut registered: {shortcut_str}");
+                    println!("RdevGrab shortcut registered: {shortcut_str} ({mode_str} mode)");
                 }
                 Err(e) => {
                     // Store the error for UI display
@@ -124,6 +134,12 @@ pub fn setup_shortcuts(app: &tauri::App) {
         }
         #[cfg(target_os = "linux")]
         ShortcutBackend::PortalGlobalShortcuts => {
+            // Note: Portal shortcuts only support toggle mode (no key release events)
+            if push_to_talk {
+                eprintln!("Warning: Push-to-talk mode not supported with Portal backend (Wayland)");
+                eprintln!("Portal shortcuts only fire on activation, not release");
+                eprintln!("Using toggle mode instead");
+            }
             let app_handle = app.handle().clone();
             let app_handle_for_state = app.handle().clone();
             tauri::async_runtime::spawn(async move {

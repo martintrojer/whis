@@ -6,6 +6,7 @@ import DirectCaptureSetup from '../components/DirectCaptureSetup.vue'
 import ManualShortcutSetup from '../components/ManualShortcutSetup.vue'
 
 import PortalShortcutBind from '../components/PortalShortcutBind.vue'
+import ToggleSwitch from '../components/settings/ToggleSwitch.vue'
 // Components
 import ShortcutInput from '../components/ShortcutInput.vue'
 import ShortcutTabs from '../components/ShortcutTabs.vue'
@@ -53,6 +54,19 @@ const isFlatpak = computed(() => backendInfo.value?.is_flatpak ?? false)
 
 // Direct capture is working if user is in input group and no error
 const directCaptureWorking = computed(() => isInInputGroup.value && !rdevGrabError.value)
+
+// Push-to-talk mode
+const pushToTalk = computed({
+  get: () => settingsStore.state.shortcuts.push_to_talk,
+  set: (val: boolean) => {
+    settingsStore.setPushToTalk(val)
+    // Push-to-talk change requires restart
+    needsRestart.value = true
+  },
+})
+
+// Push-to-talk is not supported on Portal backend (no key release events)
+const pushToTalkSupported = computed(() => backendInfo.value?.backend !== 'PortalGlobalShortcuts')
 
 // Compositor checks
 const isGnome = computed(() =>
@@ -261,6 +275,23 @@ async function openKeyboardSettings() {
         </button>
       </template>
 
+      <!-- Push-to-talk toggle (not available for Portal backend) -->
+      <div v-if="pushToTalkSupported" class="field push-to-talk-field">
+        <div class="field-row">
+          <div class="field-label">
+            <label>Push-to-talk mode</label>
+            <span class="field-hint">Hold to record, release to stop</span>
+          </div>
+          <ToggleSwitch v-model="pushToTalk" />
+        </div>
+      </div>
+
+      <!-- Portal push-to-talk warning -->
+      <div v-else class="portal-ptt-warning">
+        <span class="warning-icon">ⓘ</span>
+        <span>Push-to-talk not available with Portal shortcuts (no key release events)</span>
+      </div>
+
       <!-- Restart banner (shown for any backend when shortcut change requires restart) -->
       <div v-if="needsRestart" class="restart-banner">
         <span>[*] Restart required</span>
@@ -319,5 +350,55 @@ async function openKeyboardSettings() {
   border-radius: 4px;
   font-size: 12px;
   color: var(--text);
+}
+
+/* Push-to-talk field */
+.push-to-talk-field {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field-label label {
+  font-size: 12px;
+  color: var(--text);
+  text-transform: none;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--text-weak);
+}
+
+/* Portal push-to-talk warning */
+.portal-ptt-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: hsla(45, 80%, 50%, 0.1);
+  border: 1px solid hsla(45, 80%, 50%, 0.2);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-weak);
+}
+
+.warning-icon {
+  font-size: 14px;
+  color: hsl(45, 80%, 50%);
 }
 </style>

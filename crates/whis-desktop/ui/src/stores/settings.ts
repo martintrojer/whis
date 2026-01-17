@@ -75,8 +75,8 @@ function getDefaultSettings(): Settings {
     shortcuts: {
       cli_mode: 'system' as CliShortcutMode,
       cli_key: defaults.desktop_key,
-      cli_push_to_talk: false,
       desktop_key: defaults.desktop_key,
+      push_to_talk: false,
     },
     ui: {
       clipboard_backend: 'auto',
@@ -202,8 +202,8 @@ async function load() {
     state.shortcuts = {
       cli_mode: settings.shortcuts?.cli_mode || 'system',
       cli_key: settings.shortcuts?.cli_key || defaults.desktop_key,
-      cli_push_to_talk: settings.shortcuts?.cli_push_to_talk ?? false,
       desktop_key: settings.shortcuts?.desktop_key || defaults.desktop_key,
+      push_to_talk: settings.shortcuts?.push_to_talk ?? false,
     }
     state.ui = {
       clipboard_backend: settings.ui.clipboard_backend,
@@ -408,6 +408,10 @@ function setDesktopKey(value: string) {
   state.shortcuts.desktop_key = value
 }
 
+function setPushToTalk(value: boolean) {
+  state.shortcuts.push_to_talk = value
+}
+
 function setPortalShortcut(value: string | null) {
   state.portalShortcut = value
 }
@@ -537,6 +541,7 @@ export const settingsStore = {
   setOllamaModel,
   setPostProcessingPrompt,
   setDesktopKey,
+  setPushToTalk,
   setPortalShortcut,
   setMicrophoneDevice,
   setBubbleEnabled,

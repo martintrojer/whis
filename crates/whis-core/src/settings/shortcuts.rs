@@ -85,13 +85,14 @@ pub struct ShortcutsSettings {
     #[serde(default = "default_shortcut")]
     pub desktop_key: String,
 
-    /// Push-to-talk mode for CLI direct hotkey.
+    /// Push-to-talk mode for hotkeys.
     ///
     /// When enabled, recording starts when the hotkey is pressed and stops
     /// when released. When disabled (default), the hotkey toggles recording.
-    /// Only used when `cli_mode` is `direct`.
+    /// Applies to both CLI (when `cli_mode` is `direct`) and Desktop.
+    /// Note: Not supported with Portal backend (Wayland) as it only fires activation events.
     #[serde(default)]
-    pub cli_push_to_talk: bool,
+    pub push_to_talk: bool,
 }
 
 impl Default for ShortcutsSettings {
@@ -100,7 +101,7 @@ impl Default for ShortcutsSettings {
             cli_mode: CliShortcutMode::default(),
             cli_key: default_shortcut(),
             desktop_key: default_shortcut(),
-            cli_push_to_talk: false,
+            push_to_talk: false,
         }
     }
 }

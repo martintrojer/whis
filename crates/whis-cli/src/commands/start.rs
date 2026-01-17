@@ -26,7 +26,7 @@ pub fn run() -> Result<()> {
         CliShortcutMode::Direct => {
             // Try to set up hotkey via evdev/rdev
             let shortcut = &settings.shortcuts.cli_key;
-            let push_to_talk = settings.shortcuts.cli_push_to_talk;
+            let push_to_talk = settings.shortcuts.push_to_talk;
             match hotkey::setup(shortcut) {
                 Ok((hotkey_rx, _guard)) => {
                     if push_to_talk {

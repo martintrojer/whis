@@ -69,3 +69,49 @@ pub fn toggle_recording(app: AppHandle) {
         }
     }
 }
+
+/// Start recording (push-to-talk mode: called on key press)
+/// Only starts if currently idle; ignores if already recording or transcribing
+pub fn start_recording(app: AppHandle) {
+    let state = app.state::<AppState>();
+    let current_state = *state.state.lock().unwrap();
+
+    if current_state != RecordingState::Idle {
+        return; // Only start from idle state
+    }
+
+    if let Err(e) = start_recording_sync(&app, &state) {
+        error!("Failed to start recording: {e}");
+    } else {
+        // Update UI (tray icon turns red, show bubble)
+        tray::menu::update_tray(&app, RecordingState::Recording);
+        bubble::show_bubble(&app);
+    }
+}
+
+/// Stop recording and transcribe (push-to-talk mode: called on key release)
+/// Only stops if currently recording; ignores if idle or already transcribing
+pub fn stop_recording(app: AppHandle) {
+    let state = app.state::<AppState>();
+    let current_state = *state.state.lock().unwrap();
+
+    if current_state != RecordingState::Recording {
+        return; // Only stop from recording state
+    }
+
+    let app_clone = app.clone();
+    tauri::async_runtime::spawn(async move {
+        // Update UI to transcribing state (tray icon changes to processing)
+        tray::menu::update_tray(&app_clone, RecordingState::Transcribing);
+        bubble::update_bubble_state(&app_clone, RecordingState::Transcribing);
+
+        // Run transcription pipeline
+        if let Err(e) = stop_and_transcribe(&app_clone).await {
+            error!("Failed to transcribe: {e}");
+        }
+
+        // Update UI back to idle (tray icon returns to normal)
+        tray::menu::update_tray(&app_clone, RecordingState::Idle);
+        bubble::hide_bubble(&app_clone);
+    });
+}

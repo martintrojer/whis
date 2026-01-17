@@ -1,7 +1,12 @@
-//! IPC Toggle Server
+//! IPC Command Server
 //!
-//! Provides Unix socket-based IPC for external toggle commands.
+//! Provides Unix socket-based IPC for external commands.
 //! Allows CLI invocations like `whis-desktop --toggle` to communicate with the running instance.
+//!
+//! Supported commands:
+//! - `toggle`: Toggle recording state (start if idle, stop if recording)
+//! - `start`: Start recording (for push-to-talk mode)
+//! - `stop`: Stop recording (for push-to-talk mode)
 
 use std::env;
 use tauri::AppHandle;
@@ -61,13 +66,31 @@ pub fn start_ipc_listener(app_handle: AppHandle) {
                     let mut buf = [0u8; 64];
                     if let Ok(n) = stream.read(&mut buf) {
                         let cmd = String::from_utf8_lossy(&buf[..n]);
-                        if cmd.trim() == "toggle" {
-                            println!("IPC: toggle command received");
-                            let handle = app_handle.clone();
-                            // Dispatch to Tauri's async runtime - the IPC thread has no Tokio runtime
-                            tauri::async_runtime::spawn(async move {
-                                crate::recording::toggle_recording(handle);
-                            });
+                        let cmd = cmd.trim();
+                        let handle = app_handle.clone();
+
+                        match cmd {
+                            "toggle" => {
+                                println!("IPC: toggle command received");
+                                tauri::async_runtime::spawn(async move {
+                                    crate::recording::toggle_recording(handle);
+                                });
+                            }
+                            "start" => {
+                                println!("IPC: start command received");
+                                tauri::async_runtime::spawn(async move {
+                                    crate::recording::start_recording(handle);
+                                });
+                            }
+                            "stop" => {
+                                println!("IPC: stop command received");
+                                tauri::async_runtime::spawn(async move {
+                                    crate::recording::stop_recording(handle);
+                                });
+                            }
+                            _ => {
+                                eprintln!("IPC: unknown command: {cmd}");
+                            }
                         }
                     }
                 }

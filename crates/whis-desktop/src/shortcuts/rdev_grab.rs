@@ -3,6 +3,10 @@
 //! Uses rdev::grab() for global keyboard shortcuts on Linux Wayland.
 //! This is the same approach used by whis-cli, which works on both X11 and Wayland.
 //!
+//! Supports two modes:
+//! - Toggle mode (default): Press to start/stop recording
+//! - Push-to-talk mode: Hold to record, release to stop
+//!
 //! Requirements:
 //! - User must be in the `input` group
 //! - uinput device must be accessible
@@ -24,6 +28,7 @@ pub struct RdevGrabGuard {
 pub fn setup_rdev_grab(
     app: &tauri::App,
     shortcut_str: &str,
+    push_to_talk: bool,
 ) -> Result<RdevGrabGuard, Box<dyn std::error::Error>> {
     let hotkey = Hotkey::parse(shortcut_str)?;
     let app_handle = app.handle().clone();
@@ -32,7 +37,7 @@ pub fn setup_rdev_grab(
     let (startup_tx, startup_rx) = mpsc::channel::<Result<(), String>>();
 
     let thread_handle = std::thread::spawn(move || {
-        match start_keyboard_grab(hotkey, app_handle) {
+        match start_keyboard_grab(hotkey, app_handle, push_to_talk) {
             Ok(()) => {
                 // This only returns if grab() exits cleanly (unlikely)
             }
@@ -61,18 +66,38 @@ pub fn setup_rdev_grab(
 
 /// Start the keyboard grab and listen for hotkey events.
 /// This function blocks indefinitely while the grab is active.
-fn start_keyboard_grab(hotkey: Hotkey, app_handle: AppHandle) -> Result<(), String> {
-    // Use shared callback from whis-core (same pattern as CLI)
-    // Desktop uses toggle mode only, so on_release is a no-op
+fn start_keyboard_grab(
+    hotkey: Hotkey,
+    app_handle: AppHandle,
+    push_to_talk: bool,
+) -> Result<(), String> {
+    let app_handle_release = app_handle.clone();
+
+    // Use shared callback from whis-core with separate press/release handlers
     let callback = whis_core::hotkey::create_grab_callback(
         hotkey,
         move || {
+            // On key press
             let handle = app_handle.clone();
-            tauri::async_runtime::spawn(async move {
-                crate::recording::toggle_recording(handle);
-            });
+            if push_to_talk {
+                tauri::async_runtime::spawn(async move {
+                    crate::recording::start_recording(handle);
+                });
+            } else {
+                tauri::async_runtime::spawn(async move {
+                    crate::recording::toggle_recording(handle);
+                });
+            }
         },
-        || {}, // Desktop doesn't use push-to-talk
+        move || {
+            // On key release (only used in push-to-talk mode)
+            if push_to_talk {
+                let handle = app_handle_release.clone();
+                tauri::async_runtime::spawn(async move {
+                    crate::recording::stop_recording(handle);
+                });
+            }
+        },
     );
 
     // rdev::grab() blocks the thread

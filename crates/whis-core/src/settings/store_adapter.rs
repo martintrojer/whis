@@ -22,8 +22,8 @@
 //! ollama_model          → services.ollama.model
 //! cli_mode              → shortcuts.cli_mode
 //! cli_key               → shortcuts.cli_key
-//! cli_push_to_talk      → shortcuts.cli_push_to_talk
 //! desktop_key           → shortcuts.desktop_key
+//! push_to_talk          → shortcuts.push_to_talk
 //! vad_enabled           → ui.vad.enabled
 //! vad_threshold         → ui.vad.threshold
 //! ```
@@ -125,8 +125,8 @@ impl Settings {
             settings.shortcuts.desktop_key = key.clone();
         }
 
-        if let Some(Value::Bool(ptt)) = map.get("cli_push_to_talk") {
-            settings.shortcuts.cli_push_to_talk = *ptt;
+        if let Some(Value::Bool(ptt)) = map.get("push_to_talk") {
+            settings.shortcuts.push_to_talk = *ptt;
         }
 
         if let Some(Value::Bool(enabled)) = map.get("vad_enabled") {
@@ -210,8 +210,8 @@ impl Settings {
             Value::String(self.shortcuts.desktop_key.clone()),
         );
         map.insert(
-            "cli_push_to_talk".to_string(),
-            Value::Bool(self.shortcuts.cli_push_to_talk),
+            "push_to_talk".to_string(),
+            Value::Bool(self.shortcuts.push_to_talk),
         );
 
         map.insert("vad_enabled".to_string(), Value::Bool(self.ui.vad.enabled));

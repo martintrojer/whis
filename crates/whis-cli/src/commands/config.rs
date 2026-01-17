@@ -23,8 +23,8 @@ const VALID_KEYS: &[&str] = &[
     "microphone-device",
     "cli-mode",
     "cli-key",
-    "cli-push-to-talk",
     "desktop-key",
+    "push-to-talk",
     "vad",
     "vad-threshold",
     "chunk-size",
@@ -250,12 +250,12 @@ fn set_config(key: &str, value: &str) -> Result<()> {
             settings.shortcuts.validate()?;
             println!("desktop-key = {}", value_trimmed);
         }
-        "cli-push-to-talk" => {
+        "push-to-talk" => {
             let enabled = value_trimmed
                 .parse::<bool>()
                 .context("Invalid value. Use 'true' or 'false'")?;
-            settings.shortcuts.cli_push_to_talk = enabled;
-            println!("cli-push-to-talk = {}", enabled);
+            settings.shortcuts.push_to_talk = enabled;
+            println!("push-to-talk = {}", enabled);
         }
         _ => unreachable!("Key validation should prevent this"),
     }
@@ -326,8 +326,8 @@ fn get_config(key: &str) -> Result<()> {
         "chunk-size" => println!("{}s", settings.ui.chunk_duration_secs),
         "cli-mode" => println!("{}", settings.shortcuts.cli_mode),
         "cli-key" => println!("{}", settings.shortcuts.cli_key),
-        "cli-push-to-talk" => println!("{}", settings.shortcuts.cli_push_to_talk),
         "desktop-key" => println!("{}", settings.shortcuts.desktop_key),
+        "push-to-talk" => println!("{}", settings.shortcuts.push_to_talk),
         _ => unreachable!("Key validation should prevent this"),
     }
 
@@ -430,8 +430,8 @@ fn show_all_settings() -> Result<()> {
     println!("[Shortcuts]");
     println!("cli-mode = {}", settings.shortcuts.cli_mode);
     println!("cli-key = {}", settings.shortcuts.cli_key);
-    println!("cli-push-to-talk = {}", settings.shortcuts.cli_push_to_talk);
     println!("desktop-key = {}", settings.shortcuts.desktop_key);
+    println!("push-to-talk = {}", settings.shortcuts.push_to_talk);
 
     println!();
     println!("[Presets]");
