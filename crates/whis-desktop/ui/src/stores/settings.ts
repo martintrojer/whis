@@ -256,6 +256,8 @@ async function loadBackendInfo() {
     if (state.backendInfo?.backend === 'PortalGlobalShortcuts') {
       state.portalShortcut = await invoke<string | null>('portal_shortcut')
       state.portalBindError = await invoke<string | null>('portal_bind_error')
+      // Also read GNOME custom shortcut for display (Flatpak uses custom keybindings)
+      state.systemShortcut = await invoke<string | null>('system_shortcut_from_dconf')
     }
 
     // For RdevGrab backend, fetch any grab errors and check input group

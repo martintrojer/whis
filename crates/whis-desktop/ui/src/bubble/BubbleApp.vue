@@ -91,8 +91,9 @@ async function handleWindowMouseUp(_e: MouseEvent) {
     if (hasMoved.value) {
       // Save the new position after dragging
       try {
-        const pos = await invoke<{ x: number, y: number }>('bubble_get_position')
-        await invoke('bubble_save_position', { x: pos.x, y: pos.y })
+        // bubble_get_position returns (f64, f64) tuple which serializes as [x, y] array
+        const pos = await invoke<[number, number]>('bubble_get_position')
+        await invoke('bubble_save_position', { x: pos[0], y: pos[1] })
       }
       catch (err) {
         console.error('Failed to save bubble position:', err)
