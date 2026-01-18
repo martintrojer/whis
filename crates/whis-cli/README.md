@@ -41,9 +41,11 @@ whis status                    # Check if running
 # Transcribe from file
 whis -f recording.wav          # Transcribe a WAV file
 
-# Output options
-whis --print                   # Print to stdout instead of clipboard
-whis --type                    # Type text into active window (instead of clipboard)
+# Output options (mutually exclusive)
+whis --print                   # Print to stdout
+whis --type                    # Type into active window
+whis -o out.txt                # Save to file
+whis                           # Use config (default: clipboard)
 whis -d 10                     # Record for 10 seconds (non-interactive)
 whis -v                        # Verbose output
 

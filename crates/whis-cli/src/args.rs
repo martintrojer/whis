@@ -85,18 +85,21 @@ impl OutputFormat {
 }
 
 /// Output options for transcription results
+///
+/// These options are mutually exclusive (priority: --print > -o > --type > config).
+/// If none are specified, uses the `output_method` from settings (default: clipboard).
 #[derive(Args)]
 pub struct OutputOptions {
-    /// Print output to stdout instead of copying to clipboard
-    #[arg(long)]
+    /// Print to stdout (overrides clipboard/typing)
+    #[arg(long, conflicts_with_all = ["output", "type_to_window"])]
     pub print: bool,
 
-    /// Type output into active window instead of copying to clipboard
+    /// Type into active window (overrides clipboard)
     /// Uses wrtype on Wayland, enigo on X11/macOS/Windows
-    #[arg(long = "type")]
+    #[arg(long = "type", conflicts_with = "output")]
     pub type_to_window: bool,
 
-    /// Save output to file instead of copying to clipboard
+    /// Save to file (overrides clipboard/typing)
     #[arg(short = 'o', long, value_name = "PATH", value_hint = ValueHint::FilePath)]
     pub output: Option<std::path::PathBuf>,
 
