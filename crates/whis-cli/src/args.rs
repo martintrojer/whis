@@ -91,11 +91,6 @@ pub struct OutputOptions {
     #[arg(long)]
     pub print: bool,
 
-    /// Autotype output into active window instead of copying to clipboard
-    /// Uses wtype/xdotool on Linux, enigo on macOS/Windows
-    #[arg(long = "autotype")]
-    pub autotype: bool,
-
     /// Save output to file instead of copying to clipboard
     #[arg(short = 'o', long, value_name = "PATH", value_hint = ValueHint::FilePath)]
     pub output: Option<std::path::PathBuf>,
@@ -135,7 +130,11 @@ pub struct Cli {
 #[allow(clippy::large_enum_variant)]
 pub enum Commands {
     /// Start the background service (uses shortcut_mode from settings)
-    Start,
+    Start {
+        /// Override output method to autotype into active window
+        #[arg(long)]
+        autotype: bool,
+    },
 
     /// Stop the background service
     Stop,

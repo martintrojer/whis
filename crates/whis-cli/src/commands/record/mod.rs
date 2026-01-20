@@ -102,8 +102,6 @@ pub fn run(config: RecordConfig) -> Result<()> {
         pipeline::OutputMode::Print
     } else if let Some(path) = config.output_path {
         pipeline::OutputMode::File(path)
-    } else if config.autotype {
-        pipeline::OutputMode::Autotype
     } else {
         pipeline::OutputMode::Clipboard
     };

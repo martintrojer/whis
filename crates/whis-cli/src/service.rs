@@ -65,10 +65,15 @@ pub struct Service {
     api_key: String,
     language: Option<String>,
     recording_counter: Arc<Mutex<u32>>,
+    /// CLI override for output method (e.g., --autotype flag)
+    output_method_override: Option<OutputMethod>,
 }
 
 impl Service {
-    pub fn new(config: TranscriptionConfig) -> Result<Self> {
+    pub fn new(
+        config: TranscriptionConfig,
+        output_method_override: Option<OutputMethod>,
+    ) -> Result<Self> {
         Ok(Self {
             state: Arc::new(Mutex::new(ServiceState::Idle)),
             recorder: Arc::new(Mutex::new(None)),
@@ -78,6 +83,7 @@ impl Service {
             api_key: config.api_key,
             language: config.language,
             recording_counter: Arc::new(Mutex::new(0)),
+            output_method_override,
         })
     }
 
@@ -452,8 +458,12 @@ impl Service {
         };
 
         // Output based on configured method (blocking operation)
+        // Use CLI override if present, otherwise use settings from config file
         let clipboard_method = settings.ui.clipboard_backend.clone();
-        let output_method = settings.ui.output_method.clone();
+        let output_method = self
+            .output_method_override
+            .clone()
+            .unwrap_or(settings.ui.output_method.clone());
         let autotype_backend = settings.ui.autotype_backend.clone();
         let autotype_delay_ms = settings.ui.autotype_delay_ms;
 

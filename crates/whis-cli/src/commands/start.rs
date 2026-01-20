@@ -1,9 +1,10 @@
 use crate::{app, hotkey, ipc, service};
 use anyhow::Result;
 use whis_core::Settings;
+use whis_core::autotyping::OutputMethod;
 use whis_core::settings::CliShortcutMode;
 
-pub fn run() -> Result<()> {
+pub fn run(autotype: bool) -> Result<()> {
     // Check if service is already running
     if ipc::is_service_running() {
         eprintln!("Error: whis service is already running.");
@@ -13,6 +14,13 @@ pub fn run() -> Result<()> {
 
     // Load settings and transcription configuration
     let settings = Settings::load();
+
+    // Determine output method override from CLI flag
+    let output_method_override = if autotype {
+        Some(OutputMethod::Autotype)
+    } else {
+        None
+    };
     let config = app::load_transcription_config()?;
 
     // Create Tokio runtime
@@ -27,7 +35,9 @@ pub fn run() -> Result<()> {
             // Try to set up hotkey via evdev/rdev
             let shortcut = &settings.shortcuts.cli_key;
             let push_to_talk = settings.shortcuts.cli_push_to_talk;
-            let output_method = &settings.ui.output_method;
+            let output_method = output_method_override
+                .as_ref()
+                .unwrap_or(&settings.ui.output_method);
             match hotkey::setup(shortcut) {
                 Ok((hotkey_rx, _guard)) => {
                     if push_to_talk {
@@ -43,7 +53,7 @@ pub fn run() -> Result<()> {
                     }
 
                     runtime.block_on(async {
-                        let service = service::Service::new(config)?;
+                        let service = service::Service::new(config, output_method_override)?;
                         tokio::select! {
                             result = service.run(Some(hotkey_rx), push_to_talk) => result,
                             _ = tokio::signal::ctrl_c() => {
@@ -68,14 +78,16 @@ pub fn run() -> Result<()> {
         }
         _ => {
             // "system" mode (or any other value) - IPC only
-            let output_method = &settings.ui.output_method;
+            let output_method = output_method_override
+                .as_ref()
+                .unwrap_or(&settings.ui.output_method);
             println!(
                 "Listening. Press your configured shortcut to record. Output: {}. Ctrl+C to stop.",
                 output_method
             );
 
             runtime.block_on(async {
-                let service = service::Service::new(config)?;
+                let service = service::Service::new(config, output_method_override)?;
                 tokio::select! {
                     result = service.run(None, false) => result,
                     _ = tokio::signal::ctrl_c() => {

@@ -13,5 +13,5 @@ pub fn run() -> Result<()> {
     }
 
     // Start the service (uses settings for shortcut_mode)
-    crate::commands::start::run()
+    crate::commands::start::run(false)
 }

@@ -16,8 +16,6 @@ pub enum OutputMode {
     Print,
     /// Copy to clipboard (or autotype to window, based on settings)
     Clipboard,
-    /// Autotype directly to active window (overrides settings)
-    Autotype,
     /// Write to file
     File(PathBuf),
 }
@@ -179,17 +177,6 @@ pub fn output(
                         println!("Copied to clipboard and autotyped to active window!")
                     }
                 }
-            }
-        }
-        OutputMode::Autotype => {
-            let settings = Settings::load();
-            autotype_text(
-                &formatted,
-                settings.ui.autotype_backend,
-                settings.ui.autotype_delay_ms,
-            )?;
-            if !quiet && io::stdout().is_terminal() {
-                println!("Autotyped to active window!");
             }
         }
     }
