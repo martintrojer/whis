@@ -92,7 +92,6 @@ function getDefaultSettings(): Settings {
       active_preset: null,
       bubble: {
         enabled: false,
-        position: 'none',
       },
       model_memory: {
         keep_model_loaded: true,
@@ -118,6 +117,9 @@ const state = reactive({
 
   // Loading state
   loaded: false,
+
+  // Platform capability state
+  bubbleSupportsDrag: true,
 
   // Window visibility state (for smooth show/hide transitions)
   windowVisible: false,
@@ -222,7 +224,6 @@ async function load() {
       active_preset: settings.ui.active_preset,
       bubble: {
         enabled: settings.ui.bubble?.enabled ?? false,
-        position: settings.ui.bubble?.position ?? 'none',
       },
       model_memory: {
         keep_model_loaded: settings.ui.model_memory?.keep_model_loaded ?? true,
@@ -292,6 +293,14 @@ async function initialize() {
   await loadDefaults()
   await loadBackendInfo()
   await load()
+
+  // Check if bubble drag is supported on this platform
+  try {
+    state.bubbleSupportsDrag = await invoke<boolean>('bubble_supports_drag')
+  }
+  catch {
+    state.bubbleSupportsDrag = true // Default to true on error
+  }
 
   // Query backend for active download state (survives window close/reopen)
   try {
