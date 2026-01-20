@@ -42,7 +42,7 @@ use crate::ipc::{IpcMessage, IpcResponse, IpcServer};
 use std::time::Duration;
 use whis_core::{
     AudioRecorder, DEFAULT_POST_PROCESSING_PROMPT, OutputMethod, Settings, TranscriptionProvider,
-    copy_to_clipboard, post_process, type_text,
+    autotype_text, copy_to_clipboard, post_process,
 };
 
 // Type aliases to reduce complexity warnings
@@ -115,23 +115,23 @@ impl Service {
             }
 
             // Check for hotkey events
-            if let Some(ref rx) = hotkey_rx {
-                if let Ok(event) = rx.try_recv() {
-                    if push_to_talk {
-                        // Push-to-talk mode: press starts, release stops
-                        match event {
-                            HotkeyEvent::Pressed => {
-                                self.handle_start().await;
-                            }
-                            HotkeyEvent::Released => {
-                                self.handle_stop().await;
-                            }
+            if let Some(ref rx) = hotkey_rx
+                && let Ok(event) = rx.try_recv()
+            {
+                if push_to_talk {
+                    // Push-to-talk mode: press starts, release stops
+                    match event {
+                        HotkeyEvent::Pressed => {
+                            self.handle_start().await;
                         }
-                    } else {
-                        // Toggle mode: only respond to press events
-                        if event == HotkeyEvent::Pressed {
-                            self.handle_toggle().await;
+                        HotkeyEvent::Released => {
+                            self.handle_stop().await;
                         }
+                    }
+                } else {
+                    // Toggle mode: only respond to press events
+                    if event == HotkeyEvent::Pressed {
+                        self.handle_toggle().await;
                     }
                 }
             }
@@ -454,20 +454,20 @@ impl Service {
         // Output based on configured method (blocking operation)
         let clipboard_method = settings.ui.clipboard_backend.clone();
         let output_method = settings.ui.output_method.clone();
-        let typing_backend = settings.ui.typing_backend.clone();
-        let typing_delay_ms = settings.ui.typing_delay_ms;
+        let autotype_backend = settings.ui.autotype_backend.clone();
+        let autotype_delay_ms = settings.ui.autotype_delay_ms;
 
         tokio::task::spawn_blocking(move || {
             match output_method {
                 OutputMethod::Clipboard => {
                     copy_to_clipboard(&final_text, clipboard_method)?;
                 }
-                OutputMethod::TypeToWindow => {
-                    type_text(&final_text, typing_backend, typing_delay_ms)?;
+                OutputMethod::Autotype => {
+                    autotype_text(&final_text, autotype_backend, autotype_delay_ms)?;
                 }
                 OutputMethod::Both => {
                     copy_to_clipboard(&final_text, clipboard_method)?;
-                    type_text(&final_text, typing_backend, typing_delay_ms)?;
+                    autotype_text(&final_text, autotype_backend, autotype_delay_ms)?;
                 }
             }
             Ok::<(), anyhow::Error>(())

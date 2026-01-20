@@ -60,8 +60,8 @@ export interface Settings {
     microphone_device: string | null
     chunk_duration_secs: number
     output_method: OutputMethod
-    typing_backend: TypingBackend
-    typing_delay_ms: number | null
+    autotype_backend: AutotypeBackend
+    autotype_delay_ms: number | null
     vad: {
       enabled: boolean
       threshold: number
@@ -78,10 +78,17 @@ export interface Settings {
 }
 
 // How transcribed text should be output
-export type OutputMethod = 'clipboard' | 'type_to_window' | 'both'
+export type OutputMethod = 'clipboard' | 'autotype' | 'both'
 
-// Which backend to use for typing (when OutputMethod includes typing)
-export type TypingBackend = 'auto' | 'wrtype' | 'enigo'
+// Which backend to use for autotyping (when OutputMethod includes autotype)
+export type AutotypeBackend = 'auto' | 'tools' | 'enigo'
+
+// Status of autotyping tool availability
+export interface AutotypeToolStatus {
+  available: string[]
+  recommended: string | null
+  install_hint: string | null
+}
 
 // Shortcut backend information
 export interface BackendInfo {

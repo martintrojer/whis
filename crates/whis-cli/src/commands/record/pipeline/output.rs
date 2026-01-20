@@ -4,7 +4,7 @@ use anyhow::Result;
 use std::fs;
 use std::io::{self, IsTerminal};
 use std::path::PathBuf;
-use whis_core::{OutputMethod, Settings, copy_to_clipboard, type_text};
+use whis_core::{OutputMethod, Settings, autotype_text, copy_to_clipboard};
 
 use crate::args::OutputFormat;
 
@@ -14,10 +14,10 @@ use super::super::types::ProcessedResult;
 pub enum OutputMode {
     /// Print to stdout
     Print,
-    /// Copy to clipboard (or type to window, based on settings)
+    /// Copy to clipboard (or autotype to window, based on settings)
     Clipboard,
-    /// Type directly to active window (overrides settings)
-    TypeToWindow,
+    /// Autotype directly to active window (overrides settings)
+    Autotype,
     /// Write to file
     File(PathBuf),
 }
@@ -154,19 +154,19 @@ pub fn output(
                 OutputMethod::Clipboard => {
                     copy_to_clipboard(&formatted, settings.ui.clipboard_backend)?;
                 }
-                OutputMethod::TypeToWindow => {
-                    type_text(
+                OutputMethod::Autotype => {
+                    autotype_text(
                         &formatted,
-                        settings.ui.typing_backend,
-                        settings.ui.typing_delay_ms,
+                        settings.ui.autotype_backend,
+                        settings.ui.autotype_delay_ms,
                     )?;
                 }
                 OutputMethod::Both => {
                     copy_to_clipboard(&formatted, settings.ui.clipboard_backend)?;
-                    type_text(
+                    autotype_text(
                         &formatted,
-                        settings.ui.typing_backend,
-                        settings.ui.typing_delay_ms,
+                        settings.ui.autotype_backend,
+                        settings.ui.autotype_delay_ms,
                     )?;
                 }
             }
@@ -174,22 +174,22 @@ pub fn output(
             if !quiet && io::stdout().is_terminal() {
                 match settings.ui.output_method {
                     OutputMethod::Clipboard => println!("Copied to clipboard!"),
-                    OutputMethod::TypeToWindow => println!("Typed to active window!"),
+                    OutputMethod::Autotype => println!("Autotyped to active window!"),
                     OutputMethod::Both => {
-                        println!("Copied to clipboard and typed to active window!")
+                        println!("Copied to clipboard and autotyped to active window!")
                     }
                 }
             }
         }
-        OutputMode::TypeToWindow => {
+        OutputMode::Autotype => {
             let settings = Settings::load();
-            type_text(
+            autotype_text(
                 &formatted,
-                settings.ui.typing_backend,
-                settings.ui.typing_delay_ms,
+                settings.ui.autotype_backend,
+                settings.ui.autotype_delay_ms,
             )?;
             if !quiet && io::stdout().is_terminal() {
-                println!("Typed to active window!");
+                println!("Autotyped to active window!");
             }
         }
     }

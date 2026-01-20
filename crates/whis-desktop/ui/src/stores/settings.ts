@@ -1,4 +1,4 @@
-import type { BackendInfo, CliShortcutMode, OutputMethod, PostProcessor, Provider, Settings, ShortcutPathMismatch, TypingBackend } from '../types'
+import type { AutotypeBackend, AutotypeToolStatus, BackendInfo, CliShortcutMode, OutputMethod, PostProcessor, Provider, Settings, ShortcutPathMismatch } from '../types'
 import { invoke } from '@tauri-apps/api/core'
 import { nextTick, reactive, readonly, watch } from 'vue'
 
@@ -83,8 +83,8 @@ function getDefaultSettings(): Settings {
       microphone_device: null,
       chunk_duration_secs: 90,
       output_method: 'clipboard' as OutputMethod,
-      typing_backend: 'auto' as TypingBackend,
-      typing_delay_ms: null,
+      autotype_backend: 'auto' as AutotypeBackend,
+      autotype_delay_ms: null,
       vad: {
         enabled: defaults.vad_enabled,
         threshold: defaults.vad_threshold,
@@ -114,6 +114,9 @@ const state = reactive({
   isInInputGroup: false,
   systemShortcut: null as string | null, // GNOME custom shortcut (RdevGrab backend)
   shortcutPathMismatch: null as ShortcutPathMismatch | null, // Path mismatch warning
+
+  // Autotype tool status
+  autotypeToolStatus: null as AutotypeToolStatus | null,
 
   // Loading state
   loaded: false,
@@ -215,8 +218,8 @@ async function load() {
       microphone_device: settings.ui.microphone_device,
       chunk_duration_secs: Math.max(10, Math.min(300, settings.ui.chunk_duration_secs ?? 90)),
       output_method: settings.ui.output_method ?? 'clipboard',
-      typing_backend: settings.ui.typing_backend ?? 'auto',
-      typing_delay_ms: settings.ui.typing_delay_ms ?? null,
+      autotype_backend: settings.ui.autotype_backend ?? 'auto',
+      autotype_delay_ms: settings.ui.autotype_delay_ms ?? null,
       vad: {
         enabled: settings.ui.vad.enabled ?? defaults.vad_enabled,
         threshold: settings.ui.vad.threshold ?? defaults.vad_threshold,
@@ -288,10 +291,20 @@ async function loadDefaults() {
   }
 }
 
+async function loadAutotypeToolStatus() {
+  try {
+    state.autotypeToolStatus = await invoke<AutotypeToolStatus>('get_autotype_tool_status_cmd')
+  }
+  catch (e) {
+    console.error('Failed to load autotype tool status:', e)
+  }
+}
+
 async function initialize() {
   // Load canonical defaults from backend first (single source of truth)
   await loadDefaults()
   await loadBackendInfo()
+  await loadAutotypeToolStatus()
   await load()
 
   // Check if bubble drag is supported on this platform
@@ -454,6 +467,10 @@ function setOllamaKeepAlive(value: string | null) {
   state.services.ollama.keep_alive = value
 }
 
+function setOutputMethod(value: OutputMethod) {
+  state.ui.output_method = value
+}
+
 // Post-processing orchestration methods
 function enablePostProcessing() {
   state.post_processing.enabled = true
@@ -561,6 +578,7 @@ export const settingsStore = {
   setKeepModelLoaded,
   setUnloadAfterMinutes,
   setOllamaKeepAlive,
+  setOutputMethod,
   setWindowVisible,
 
   // Post-processing orchestration

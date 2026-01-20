@@ -50,8 +50,8 @@ pub struct RecordConfig {
     pub preset: Option<Preset>,
     /// Whether to print to stdout instead of clipboard
     pub print: bool,
-    /// Whether to type to active window instead of clipboard
-    pub type_to_window: bool,
+    /// Whether to autotype to active window instead of clipboard
+    pub autotype: bool,
     /// Output file path (None = clipboard)
     pub output_path: Option<PathBuf>,
     /// Output format (txt, srt, vtt)
@@ -95,7 +95,7 @@ impl RecordConfig {
             post_process: processing.post_process,
             preset,
             print: output.print,
-            type_to_window: output.type_to_window,
+            autotype: output.autotype,
             output_path: output.output.clone(),
             format,
             duration: processing.duration,

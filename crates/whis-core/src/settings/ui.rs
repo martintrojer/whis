@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "clipboard")]
 use crate::clipboard::ClipboardMethod;
 
-#[cfg(feature = "typing")]
-use crate::typing::{OutputMethod, TypingBackend};
+#[cfg(feature = "autotyping")]
+use crate::autotyping::{AutotypeBackend, OutputMethod};
 
 /// Settings for UI behavior and device configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,29 +89,30 @@ pub struct UiSettings {
     /// Output method for transcribed text.
     ///
     /// - `clipboard`: Copy to clipboard only (default, current behavior)
-    /// - `type_to_window`: Type directly into active window
-    /// - `both`: Both copy to clipboard and type to window
+    /// - `autotype`: Type directly into active window
+    /// - `both`: Both copy to clipboard and autotype to window
     ///
-    /// Type-to-window simulates keyboard input to paste text directly.
+    /// Autotype simulates keyboard input to paste text directly.
     /// Useful when clipboard pasting doesn't work (e.g., some terminals).
-    #[cfg(feature = "typing")]
+    #[cfg(feature = "autotyping")]
     #[serde(default)]
     pub output_method: OutputMethod,
 
-    /// Backend for typing text into the active window.
+    /// Backend for autotyping text into the active window.
     ///
     /// - `auto`: Auto-detect based on platform (recommended)
-    ///   - Wayland: uses wrtype (virtual keyboard protocol)
-    ///   - X11/macOS/Windows: uses enigo (pure Rust)
-    /// - `wrtype`: Force Wayland virtual keyboard
+    ///   - Wayland: uses wtype/dotool/ydotool (external tools)
+    ///   - X11: uses xdotool/ydotool (external tools)
+    ///   - macOS/Windows: uses enigo (pure Rust)
+    /// - `tools`: Force external CLI tools (Linux only)
     /// - `enigo`: Force cross-platform input simulation
     ///
-    /// Only used when `output_method` is `type_to_window` or `both`.
-    #[cfg(feature = "typing")]
+    /// Only used when `output_method` is `autotype` or `both`.
+    #[cfg(feature = "autotyping")]
     #[serde(default)]
-    pub typing_backend: TypingBackend,
+    pub autotype_backend: AutotypeBackend,
 
-    /// Delay between keystrokes when typing to window (milliseconds).
+    /// Delay between keystrokes when autotyping to window (milliseconds).
     ///
     /// Some applications drop input if keys are sent too fast.
     /// Set this to add a delay between each character.
@@ -119,9 +120,9 @@ pub struct UiSettings {
     /// - `null`: No delay (fastest, works for most apps)
     /// - `10-50`: Slight delay for slower apps
     /// - `100+`: For very slow input handlers
-    #[cfg(feature = "typing")]
+    #[cfg(feature = "autotyping")]
     #[serde(default)]
-    pub typing_delay_ms: Option<u32>,
+    pub autotype_delay_ms: Option<u32>,
 }
 
 fn default_chunk_duration() -> u64 {
@@ -236,12 +237,12 @@ impl Default for UiSettings {
             chunk_duration_secs: crate::configuration::DEFAULT_CHUNK_DURATION_SECS,
             bubble: BubbleSettings::default(),
             model_memory: ModelMemorySettings::default(),
-            #[cfg(feature = "typing")]
+            #[cfg(feature = "autotyping")]
             output_method: OutputMethod::default(),
-            #[cfg(feature = "typing")]
-            typing_backend: TypingBackend::default(),
-            #[cfg(feature = "typing")]
-            typing_delay_ms: None,
+            #[cfg(feature = "autotyping")]
+            autotype_backend: AutotypeBackend::default(),
+            #[cfg(feature = "autotyping")]
+            autotype_delay_ms: None,
         }
     }
 }

@@ -11,9 +11,9 @@ use crate::state::{AppState, RecordingState};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use whis_core::{
-    ClipboardMethod, DEFAULT_POST_PROCESSING_PROMPT, OutputMethod, PostProcessConfig,
-    PostProcessor, TranscriptionProvider, TypingBackend, copy_to_clipboard, ollama, post_process,
-    type_text, warn,
+    AutotypeBackend, ClipboardMethod, DEFAULT_POST_PROCESSING_PROMPT, OutputMethod,
+    PostProcessConfig, PostProcessor, TranscriptionProvider, autotype_text, copy_to_clipboard,
+    ollama, post_process, warn,
 };
 #[cfg(feature = "local-transcription")]
 use whis_core::{unload_parakeet, whisper_unload_model};
@@ -23,19 +23,21 @@ fn output_text(
     text: &str,
     output_method: &OutputMethod,
     clipboard_method: &ClipboardMethod,
-    typing_backend: &TypingBackend,
-    typing_delay_ms: Option<u32>,
+    autotype_backend: &AutotypeBackend,
+    autotype_delay_ms: Option<u32>,
 ) -> Result<(), String> {
     match output_method {
         OutputMethod::Clipboard => {
             copy_to_clipboard(text, clipboard_method.clone()).map_err(|e| e.to_string())?;
         }
-        OutputMethod::TypeToWindow => {
-            type_text(text, typing_backend.clone(), typing_delay_ms).map_err(|e| e.to_string())?;
+        OutputMethod::Autotype => {
+            autotype_text(text, autotype_backend.clone(), autotype_delay_ms)
+                .map_err(|e| e.to_string())?;
         }
         OutputMethod::Both => {
             copy_to_clipboard(text, clipboard_method.clone()).map_err(|e| e.to_string())?;
-            type_text(text, typing_backend.clone(), typing_delay_ms).map_err(|e| e.to_string())?;
+            autotype_text(text, autotype_backend.clone(), autotype_delay_ms)
+                .map_err(|e| e.to_string())?;
         }
     }
     Ok(())
@@ -88,12 +90,12 @@ async fn do_progressive_transcription(app: &AppHandle, state: &AppState) -> Resu
         .map_err(|e| format!("Transcription failed: {e}"))?;
 
     // Extract post-processing config and output settings from settings
-    let (post_process_config, clipboard_method, output_method, typing_backend, typing_delay_ms) = {
+    let (post_process_config, clipboard_method, output_method, autotype_backend, autotype_delay_ms) = {
         let settings = state.settings.lock().unwrap();
         let clipboard_method = settings.ui.clipboard_backend.clone();
         let output_method = settings.ui.output_method.clone();
-        let typing_backend = settings.ui.typing_backend.clone();
-        let typing_delay_ms = settings.ui.typing_delay_ms;
+        let autotype_backend = settings.ui.autotype_backend.clone();
+        let autotype_delay_ms = settings.ui.autotype_delay_ms;
         let post_process_config = if settings.post_processing.enabled
             && settings.post_processing.processor != PostProcessor::None
         {
@@ -135,8 +137,8 @@ async fn do_progressive_transcription(app: &AppHandle, state: &AppState) -> Resu
             post_process_config,
             clipboard_method,
             output_method,
-            typing_backend,
-            typing_delay_ms,
+            autotype_backend,
+            autotype_delay_ms,
         )
     };
 
@@ -160,8 +162,8 @@ async fn do_progressive_transcription(app: &AppHandle, state: &AppState) -> Resu
                     &transcription,
                     &output_method,
                     &clipboard_method,
-                    &typing_backend,
-                    typing_delay_ms,
+                    &autotype_backend,
+                    autotype_delay_ms,
                 )?;
 
                 println!(
@@ -218,8 +220,8 @@ async fn do_progressive_transcription(app: &AppHandle, state: &AppState) -> Resu
         &final_text,
         &output_method,
         &clipboard_method,
-        &typing_backend,
-        typing_delay_ms,
+        &autotype_backend,
+        autotype_delay_ms,
     )?;
 
     println!("Done: {}", &final_text[..final_text.len().min(50)]);
